@@ -198,30 +198,177 @@ def base_ring(r_b: float, beta: float, delta: float):
 
 
 # --------------------------------------------------------------------------- #
-# stubs  (yours to write)
+# platform ring
 # --------------------------------------------------------------------------- #
-def platform_ring(*args, **kwargs):
-    """The six platform-frame anchor points ``p`` (shape ``(3, 6)``).
-
-    Yours to write.  Expected contract: return ``p`` in the platform frame
-    {P}, millimetres, column ``i`` = leg ``i``, ordered so that leg ``i`` of
-    the platform pairs with leg ``i`` of the base ring.  Mirror
-    :func:`base_ring`'s signature style (a radius plus angular parameters in
-    degrees, validated on entry).
+def platform_ring(r_p: float, beta_p: float):
+    """The six platform-frame anchor points.
+ 
+    Same generating skeleton as :func:`base_ring`, with its own radius and pair
+    half-split and no servo frames (the platform carries ball joints, not
+    actuators)::
+ 
+        s       = (-1, +1, -1, +1, -1, +1)
+        phi_i   = 120 * floor(i / 2) + s_i * beta_p        # degrees, i = 0..5
+        p_i     = r_p (cos phi_i, sin phi_i, 0)
+ 
+    Parameters
+    ----------
+    r_p : float
+        Platform ring radius, mm (> 0).
+    beta_p : float
+        Pair half-split, **degrees**, in the open interval ``(0, 60)``.
+        ``beta_p == 30`` reproduces a regular hexagon.
+ 
+    Returns
+    -------
+    p : ndarray, shape (3, 6)
+ 
+    Raises
+    ------
+    ValueError
+        If ``r_p <= 0`` or ``beta_p`` is not in ``(0, 60)``.
+ 
+    Notes
+    -----
+    There is no separate rotation-relative-to-the-base parameter because a
+    continuous one is not admissible.  Requiring the *assembly* to keep D3 -
+    the legs, not merely the anchor points - forces the platform's mirror
+    lines onto the base's, which quantises the relative rotation to multiples
+    of 60 degrees.  Two admissible positions, not a continuum, and ``beta_p``
+    straddling 30 reaches both.
+ 
+    The labelling is the real content, and coinciding point sets are not
+    enough to establish it.  Rotating ``p`` by 60 degrees with the leg labels
+    kept produces the *same six points* as raising ``beta_p`` past 30, but is
+    not D3 as an assembly: the mirror then sends base legs 0<->1 while sending
+    platform legs 0<->5.  Building ``phi_i`` from the same
+    ``120 * floor(i / 2) + s_i * (.)`` skeleton as ``theta_i`` is what makes
+    the two permutations come out identical (both ``[1, 0, 5, 4, 3, 2]``), and
+    that agreement is what lets one scalar ``delta`` serve all six servo
+    planes.
     """
-    raise NotImplementedError("platform_ring is yours to write")
-
-
-def make_geometry(*args, **kwargs) -> "Geometry":
-    """Compose a base ring and a platform ring with ``a`` and ``d``.
-
-    Yours to write.  Call :func:`base_ring` and :func:`platform_ring`, choose
-    the servo-arm length ``a`` and push-rod length ``d``, and return
-    ``Geometry(p=..., b=..., n=..., u=..., a=..., d=...)`` - construction runs
-    every shape and unit-norm check for you.
+    r_p = float(r_p)
+    beta_p = float(beta_p)
+    if not r_p > 0.0:
+        raise ValueError(f"r_p must be > 0; got {r_p}")
+    if not 0.0 < beta_p < 60.0:
+        raise ValueError(f"beta_p must be in (0, 60) degrees; got {beta_p}")
+ 
+    i = np.arange(6)
+    s = np.array([-1.0, 1.0, -1.0, 1.0, -1.0, 1.0])
+ 
+    phi_deg = 120.0 * np.floor(i / 2.0) + s * beta_p
+    phi = np.deg2rad(phi_deg)
+ 
+    # z = 0: the anchors are coplanar and {P}'s origin lies in their plane.
+    # Both halves of that are design decisions - see make_geometry's Notes.
+    p = np.vstack((r_p * np.cos(phi), r_p * np.sin(phi), np.zeros(6)))
+ 
+    assert p.shape == (3, 6)
+    assert np.allclose(np.linalg.norm(p, axis=0), r_p), "p columns are off the ring"
+ 
+    if abs(beta_p - 30.0) < 1e-9:
+        ang = np.sort(np.mod(phi_deg, 360.0))
+        gaps = np.diff(np.concatenate((ang, ang[:1] + 360.0)))
+        assert np.allclose(gaps, 60.0, atol=1e-7), (
+            "beta_p = 30 must reproduce a regular hexagon; got angular gaps "
+            f"{np.round(gaps, 6).tolist()}"
+        )
+ 
+    return p
+ 
+ 
+# --------------------------------------------------------------------------- #
+# composition
+# --------------------------------------------------------------------------- #
+def make_geometry(r_b: float, beta: float, delta: float,
+                  r_p: float, beta_p: float,
+                  a: float, d: float) -> "Geometry":
+    """Compose a base ring and a platform ring with given ``a`` and ``d``.
+ 
+    Plumbing only: calls :func:`base_ring` and :func:`platform_ring`, passes
+    the servo frames straight through, and hands everything to
+    :class:`Geometry`, which validates it.
+ 
+    Parameters
+    ----------
+    r_b, beta, delta : float
+        Passed to :func:`base_ring`, which validates them.
+    r_p, beta_p : float
+        Passed to :func:`platform_ring`, which validates them.
+    a, d : float
+        Servo-arm and push-rod lengths, mm.  **Required.**  See Notes.
+ 
+    Returns
+    -------
+    Geometry
+ 
+    Raises
+    ------
+    ValueError
+        Propagated from :func:`base_ring`, :func:`platform_ring` or
+        :class:`Geometry`.
+ 
+    Notes
+    -----
+    **Two assumptions are baked in and neither is derived.**
+ 
+    First, ``p`` has ``z = 0`` throughout, which bundles two decisions: the six
+    anchors are coplanar (a flat plate rather than a dished or stepped one),
+    and ``{P}``'s origin lies *in* that plane.  The second is the one with
+    teeth, because the commanded ``T`` is the position of ``{P}``'s origin.
+    If the ball rolls on a surface above the anchor plane, ``T`` is not the
+    position of the rolling surface and every commanded height is offset by
+    the plate thickness.  Anchor plane, plate top and ball centre are three
+    different origins and this code silently picks the first.
+ 
+    Second, nothing enforces ``d > a``.  An earlier version raised on it with
+    the justification that the rod could not otherwise clear the arm circle,
+    which is wrong: the reachable annulus ``|a - rho| <= C <= a + rho`` is
+    well defined either way, and ``d < a`` merely moves the inner bound out.
+    ``d > a`` is what any platform sitting well above its base will satisfy by
+    a wide margin, not a validity condition, so it is documented rather than
+    checked.  Ball-joint angular travel is the real constraint in that corner
+    and it belongs to the component, not the geometry.
+ 
+    ``a`` and ``d`` are arguments, not choices made here, which is a departure
+    from the stub docstring.  Two reasons.  ``a`` is restricted to servo horns
+    that commercially exist, so any continuous formula for it pre-empts the
+    servo shortlist.  And a formula would have to be justified, which makes it
+    a design decision rather than plumbing.
+ 
+    For the record, one rule was tried and does not do what it looks like it
+    does.  Setting ``a^2 + d^2 = |L_home|^2`` gives ``P = a`` exactly, since
+    ``P = (|L|^2 + a^2 - d^2) / 2a`` and the two ``|L|^2`` cancel.  That is a
+    clean result but it does **not** make the home pose reachable.  Writing
+    ``a = k |L|``, the condition ``|P| <= C`` becomes::
+ 
+        a <= C = sqrt((L . u)^2 + z_home^2)     i.e.   |lambda| <= |L| sqrt(1 - k^2)
+ 
+    which is a statement about how far the leg lies out of its servo plane, so
+    it depends on ``delta`` and can fail.  The two-sphere bound
+    ``|d - a| < |L| < d + a`` is necessary but not sufficient and must not be
+    used to argue otherwise.
+ 
+    There is also no rank guard here.  Six legs whose anchors are an affine
+    image of the shafts span only three of the six wrench dimensions, and
+    ``beta_p == beta`` produces exactly that, but the test cannot be written
+    yet: with the servos locked the constraint on each leg is the rod, so the
+    screw direction is ``q_i - h_i``, and ``h_i`` needs the solver and a branch
+    rule.  Using ``q_i - b_i`` instead is wrong by the arm.  The angle between
+    the two at ``q`` depends only on the three side lengths ``a``, ``d`` and
+    ``|L|``, by the law of cosines on the triangle ``b h q``::
+ 
+        cos(angle at q) = (d^2 + |L|^2 - a^2) / (2 d |L|)
+        angle at q      <= arcsin(a / |L|)     equality iff the elbow is square
+ 
+    which runs about 1 to 27 degrees over ``a`` in [15, 60] mm and ``d`` in
+    [105, 155] mm on a 134 mm home leg.  Rejecting candidates is a scoring
+    decision in any case.
     """
-    raise NotImplementedError("make_geometry is yours to write")
-
+    b, n, u = base_ring(r_b, beta, delta)
+    p = platform_ring(r_p, beta_p)
+    return Geometry(p=p, b=b, n=n, u=u, a=a, d=d)
 
 # --------------------------------------------------------------------------- #
 # smoke geometry  (NOT a design - shape-checking only)
