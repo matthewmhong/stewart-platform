@@ -370,14 +370,48 @@ def make_geometry(r_b: float, beta: float, delta: float,
     ``|d - a| < |L| < d + a`` is necessary but not sufficient and must not be
     used to argue otherwise.
  
-    There is also no rank guard here.  Six legs whose anchors are an affine
-    image of the shafts span only three of the six wrench dimensions, and
-    ``beta_p == beta`` produces exactly that, but the test cannot be written
-    yet: with the servos locked the constraint on each leg is the rod, so the
-    screw direction is ``q_i - h_i``, and ``h_i`` needs the solver and a branch
-    rule.  Using ``q_i - b_i`` instead is wrong by the arm.  The angle between
-    the two at ``q`` depends only on the three side lengths ``a``, ``d`` and
-    ``|L|``, by the law of cosines on the triangle ``b h q``::
+    There is no rank guard here, and ``beta_p == beta`` is **not** the reason
+    there might need to be one.  This paragraph used to claim that case was an
+    affine architecture singularity spanning only three of the six wrench
+    dimensions, and that the test could not be written until a solver and a
+    branch rule existed.  **Both halves were wrong.**  The correction is kept
+    here because the mistake is an easy one to repeat.
+
+    Measured 2026-09-04 with the true rod lines ``q_i - h_i`` (``h_i`` from
+    :func:`~stewart.kinematics.ik`, whose branch is fixed): at
+    ``beta_p == beta`` the wrench matrix is **full rank 6**.  Writing
+    ``e = beta_p - beta``, ``sigma_min`` increases *monotonically* through
+    ``e = 0`` - not a dip, not a local minimum, not distinguished at all.  It
+    scales linearly in the arm length, ``sigma_min / a`` holding near 0.93
+    across a 14x span of ``a``, so the rank is bought by the arm and
+    degenerates only as ``a -> 0``.
+
+    The rank-3 result came from the proxy screw axis ``q_i - b_i``.  At
+    ``beta_p == beta`` the anchors are ``p_i = c b_i`` in-plane with
+    ``c = r_p / r_b``, so at ``R = I``, ``T = (0, 0, z_home)`` the proxy line
+    through ``b_i`` is::
+
+        X_i(t) = b_i [1 + t(c - 1)] + t (0, 0, z_home - h_p)
+
+    whose ``b_i`` coefficient vanishes at ``t = 1 / (1 - c)``, leaving::
+
+        X = (0, 0, -(z_home - h_p) / (c - 1))        independent of i
+
+    All six proxy lines pass through that one point - verified concurrent to
+    5e-16 - and six concurrent lines span only three dimensions.  The rank
+    drop was a property of the proxy, not of the mechanism.  The true rod
+    lines are not concurrent; a best-fit common point leaves a residual of
+    order ``a``.
+
+    The underlying error was importing a 6-UPS intuition.  There the leg
+    genuinely *is* the ``b -> q`` line, so an affine anchor map really does
+    give an architecture singularity.  In a 6-RSS the constraint is the rod,
+    the arm stands between ``b_i`` and it, and the result does not transfer.
+
+    ``q_i - b_i`` is still wrong by the arm for any conditioning measure built
+    on it.  The angle between the two at ``q`` depends only on the three side
+    lengths ``a``, ``d`` and ``|L|``, by the law of cosines on the triangle
+    ``b h q``::
  
         cos(angle at q) = (d^2 + |L|^2 - a^2) / (2 d |L|)
         angle at q      <= arcsin(a / |L|)     equality iff the elbow is square
