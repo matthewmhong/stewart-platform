@@ -56,14 +56,20 @@ code written before it is settled is provisional.
 | `phi_i` | anchor azimuth, `120*floor(i/2) + s_i*beta_p` — same skeleton as `theta_i`, which is what makes leg `i` pair with leg `i` | deg | derived | new |
 | `p_i` | platform anchor position | mm, `{P}` | design constant | key |
 | `h_p` | plate offset: the common `z` component of `p_i` in `{P}`, so `p_i = (r_p cos phi_i, r_p sin phi_i, -h_p)` | mm | **quantity settled 2026-09-03**; *symbol* still open, see §11 | new |
-| `mu` | a rotation of the whole platform ring inside `{P}` | deg | **not a parameter.** Gauge under `q_i = T + R p_i`, and leg-set D3 pins it. Recorded so it is not reintroduced. | new |
+| `mu` | a rotation of the whole platform ring inside `{P}` | deg | **not a parameter.** Gauge under `q_i = T + R p_i`: send `p -> Rz(mu) p` and `R -> R Rz(-mu)` and every world anchor is identical at every pose, so nothing measurable distinguishes them. Leg-set D3 pins the discrete residue — but see the caveat below. Recorded so it is not reintroduced. | new |
 
 **Plate offset — settled 2026-09-03.** The origin of `{P}` sits on the **plate
 top**, or one ball radius above it if what is being commanded is the ball-centre
-plane. The six anchors are **coplanar**, so all six share one `z` in `{P}` and the
-offset is a single scalar rather than six. That scalar is plate thickness plus the
-joint stack down to the ball-joint centres: a **hardware number that belongs in the
-model, not a sweep axis** — it is measured off the built plate, not searched over.
+plane, **because that is the surface the control law reasons about**. The six
+anchors are **coplanar**, so all six share one `z` in `{P}` and the offset is a
+single scalar rather than six. That scalar is plate thickness plus the joint stack
+down to the ball-joint centres: a **hardware number that belongs in the model, not a
+sweep axis** — it is measured off the built plate, not searched over.
+
+Putting the origin in the **anchor plane** instead is tempting — it gives
+`p_i,z = 0` and tidier algebra — and it is **wrong**: it makes a commanded tilt do
+something other than tilt the surface the ball is on. Recorded because the tidier
+algebra is what will argue for it again.
 
 It **cannot be absorbed into `T`**. Writing `p_i = p_i^flat - h_p * z_hat`,
 
@@ -72,10 +78,35 @@ q_i  =  T  +  R p_i^flat  -  h_p (R z_hat)
 ```
 
 and `R z_hat = z_hat` only when `R` fixes the vertical — i.e. under pure yaw. Under
-any tilt the offset term swings with the plate, so folding `h_p` into `T` is exact
-at yaw and wrong everywhere else.
+any tilt the offset acquires a **horizontal** component, so it enters
+`w_i = L_i · n_i` (with `n_i` horizontal), **so it changes the tuned `delta`**.
+Folding `h_p` into `T` is therefore exact at yaw and wrong everywhere else. Pure
+algebra, no geometry needed.
+
+Sequencing consequence: `delta` cannot be tuned before `h_p` is fixed. `h_p` comes
+from components, so component selection has to precede the inner `delta` tune, not
+follow it.
 
 Only the *quantity* is settled. The *symbol* `h_p` is still contested — see §11.
+
+**`mu` and the datum for `R = I` — convention adopted 2026-09-03.** Write the
+platform ring with **no `mu` term**, and read `R = I` as *the orientation in which
+the platform pair centres line up with the base pair centres*. The gauge argument
+above kills `mu` as a degree of freedom; this sentence is what gives the remaining
+`R = I` a physical meaning rather than leaving it a bare formula. `mu` becomes real
+only if something in `{P}` pins the frame — a marked front, a non-axisymmetric
+mount, a cable exit — and a circular plate with a ball rolling on it pins nothing.
+
+This interacts with the open rotation convention in derivation §6: settle that and
+the datum above stays true under either reading.
+
+*Caveat, still open (handoff 2026-09-03, open item 2).* The **continuous** `mu` is
+dead either way — the gauge argument does not depend on the pairing. What is not
+closed is the **discrete residue**: `mu ∈ {0, 180}` was derived under the identity
+pairing, while the pairing result ranged over all 720 bijections. Each argument
+froze what the other varied. This changes only how the result is *stated*, not
+whether `mu` is a sweep axis, but it should be stated correctly before it is
+written down as final.
 
 ## 5. Link lengths
 
