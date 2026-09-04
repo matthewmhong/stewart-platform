@@ -41,35 +41,50 @@ class Unreachable(ValueError):
         )
 
 
-def stage1(geom: Geometry, q: np.ndarray):
-    """First IK stage: the branch-independent per-leg coefficients.
+def _v(geom: Geometry) -> np.ndarray:
+    """In-plane basis partner of ``u``: ``v_i = n_i x u_i``, shape ``(3, 6)``.
 
-    Given world-frame platform anchors ``q`` (shape ``(3, 6)``), form, for
-    each leg, the coefficients of
+    Equals world ``z`` exactly while every ``n_i`` is horizontal (derivation
+    sec.8), but it is computed rather than assumed so a canted shaft does not
+    silently give a wrong answer.
+    """
+    return np.cross(geom.n, geom.u, axis=0)
 
-        A_i cos(alpha_i) + B_i sin(alpha_i) = P_i
 
-    with (``L_i = q_i - b_i``, ``v_i = n_i x u_i``)
+def stage1(geom: Geometry, R: np.ndarray, T: np.ndarray) -> np.ndarray:
+    """Stage 1 (derivation sec.3): platform anchors in the world frame.
 
-        A_i = 2 a (L_i . u_i)
-        B_i = 2 a (L_i . v_i)
-        P_i = |L_i|^2 + a^2 - d^2
-        C_i = hypot(A_i, B_i)
+        q_i = T + R p_i
 
-    ``C_i`` is the amplitude used by the reachability test ``|P_i| > C_i``
-    (see :func:`ik`).
+    ``R @ p`` - the rotation acts from the left on the column ``p_i``;
+    ``p @ R`` would silently apply ``R`` transposed.
 
     Parameters
     ----------
     geom : Geometry
-    q : ndarray, shape (3, 6)
-        Platform anchors in the world frame, mm.
+    R : ndarray, shape (3, 3)
+        Platform orientation, world-from-platform.
+    T : ndarray, shape (3,)
+        Platform origin in the world frame, mm.
 
     Returns
     -------
-    A, B, P, C : ndarray, each shape (6,)
+    q : ndarray, shape (3, 6)
+        Column ``i`` is anchor ``i``.
+
+    Notes
+    -----
+    This signature follows derivation sec.3, which names ``q_i = T + R p_i``
+    "stage 1", and the sec.7 check ``stage1(R=I, T=0) == p``.  The previous
+    stub docstring described a different function - the branch-independent
+    coefficients ``(A, B, P, C)``.  Those now live inside :func:`ik`, which is
+    their only consumer.
     """
-    raise NotImplementedError
+    R = np.asarray(R, dtype=float)
+    if R.shape != (3, 3):
+        raise ValueError(f"R must have shape (3, 3); got {R.shape}")
+    T = np.asarray(T, dtype=float).reshape(3, 1)
+    return R @ geom.p + T
 
 
 def legs(geom: Geometry, R: np.ndarray, T: np.ndarray) -> np.ndarray:
@@ -92,7 +107,17 @@ def legs(geom: Geometry, R: np.ndarray, T: np.ndarray) -> np.ndarray:
     -------
     L : ndarray, shape (3, 6)
     """
-    raise NotImplementedError
+    return stage1(geom, R, T) - geom.b
+
+
+def w(geom: Geometry, R: np.ndarray, T: np.ndarray) -> np.ndarray:
+    """Signed out-of-plane offsets ``w_i = L_i . n_i`` (notation key), shape ``(6,)``.
+
+    Only the horizontal part of ``L_i`` contributes while ``n_i`` is
+    horizontal.  Takes ``L`` from :func:`legs`; the inlined copy carried here
+    while ``legs`` was a stub is gone.
+    """
+    return np.einsum("ij,ij->j", legs(geom, R, T), geom.n)
 
 
 def arm_tips(geom: Geometry, alphas: np.ndarray) -> np.ndarray:
@@ -110,10 +135,13 @@ def arm_tips(geom: Geometry, alphas: np.ndarray) -> np.ndarray:
     -------
     tips : ndarray, shape (3, 6)
     """
-    raise NotImplementedError
+    alphas = np.asarray(alphas, dtype=float).reshape(-1)
+    if alphas.shape != (6,):
+        raise ValueError(f"alphas must have 6 entries; got shape {alphas.shape}")
+    return geom.b + geom.a * (np.cos(alphas) * geom.u + np.sin(alphas) * _v(geom))
 
 
-def ik(geom: Geometry, R: np.ndarray, T: np.ndarray, *, elbow: str = "up") -> np.ndarray:
+def ik(geom: Geometry, R: np.ndarray, T: np.ndarray) -> np.ndarray:
     """Inverse kinematics: platform pose -> six servo angles.
 
     For leg ``i``::
@@ -124,16 +152,39 @@ def ik(geom: Geometry, R: np.ndarray, T: np.ndarray, *, elbow: str = "up") -> np
         tip_i(a) = b_i + a (cos a * u_i + sin a * v_i)        a = servo angle
 
     The rod constraint ``|q_i - tip_i(alpha_i)| = d`` reduces to
+    ``M_i cos(alpha_i) + N_i sin(alpha_i) = P_i`` (derivation sec.5.2) with
 
-        A_i cos(alpha_i) + B_i sin(alpha_i) = P_i
+        M_i = L_i . u_i
+        N_i = L_i . v_i
+        P_i = (|L_i|^2 + a^2 - d^2) / (2 a)
+        C_i = hypot(M_i, N_i)
 
-        A_i = 2 a (L_i . u_i)
-        B_i = 2 a (L_i . v_i)
-        P_i = |L_i|^2 + a^2 - d^2
-        C_i = hypot(A_i, B_i)
+    inverted (sec.5.3) as
 
-    solved as ``alpha_i = atan2(B_i, A_i) +/- acos(P_i / C_i)``, the sign
-    chosen by ``elbow``.
+        alpha_i = phi_i - arccos(P_i / C_i),    phi_i = atan2(N_i, M_i)
+
+    ``atan2``, never ``arctan``: ``arctan(N/M)`` spans only half a turn and
+    the division destroys the sign that separates ``(M, N)`` from
+    ``(-M, -N)``, which puts half the servos 180 degrees out.
+
+    Branch
+    ------
+    The **minus** branch is fixed, not a parameter.  Under horizontal shafts
+    ``v_i = z`` exactly (sec.8), so
+
+        N_i = L_i . z = q_i . z = anchor height above the base plate > 0
+
+    for every leg at every pose the platform can physically hold.  A positive
+    ``N_i`` puts ``phi_i = atan2(N_i, M_i)`` in the upper half-plane
+    ``(0, pi)`` whatever the sign of ``M_i``, and the minus branch is then the
+    root continuously connected to the assembly datum ``alpha_i = 0``, for all
+    six legs at once.  Measured 2026-09-03: at the datum every leg returns
+    ``alpha_i = 0`` on the minus branch to ``9e-16``, and across a 4365-pose
+    envelope the branch never became undefined except where *both* roots
+    vanish at the workspace boundary.
+
+    **This rests entirely on horizontal shafts.**  Cant them and ``v_i`` is no
+    longer ``z``, ``N_i`` may change sign, and the branch choice reopens.
 
     Reachability
     ------------
@@ -160,21 +211,39 @@ def ik(geom: Geometry, R: np.ndarray, T: np.ndarray, *, elbow: str = "up") -> np
         Platform orientation, world-from-platform.  Applied as ``R @ p``.
     T : ndarray, shape (3,)
         Platform origin in the world frame, mm.
-    elbow : {"up", "down"}
-        Which ``acos`` branch / servo-arm configuration to take.
 
     Returns
     -------
     alphas : ndarray, shape (6,)
-        Servo angles, **radians**, measured from ``u_i`` toward ``v_i``.
+        Servo angles in **radians**, measured from ``u_i`` toward
+        ``v_i = n_i x u_i``, positive sense right-handed about ``n_i``.
+        ``alpha_i = 0`` lays the arm along ``u_i``, flat in the base plane.
+        Returned as the raw ``phi_i - arccos(P_i / C_i)``, not wrapped; with
+        ``N_i > 0`` this already lies in ``(-pi, pi)``.
 
     Raises
     ------
     Unreachable
         If ``|P_i| > C_i`` for any leg.  Carries the 1-indexed leg and the
         direction (``"far"`` if ``P_i > C_i``, ``"near"`` if ``P_i < -C_i``).
+        The lowest-numbered failing leg is reported.
     """
-    raise NotImplementedError
+    L = legs(geom, R, T)
+    M = np.einsum("ij,ij->j", L, geom.u)
+    N = np.einsum("ij,ij->j", L, _v(geom))
+    P = (np.einsum("ij,ij->j", L, L) + geom.a ** 2 - geom.d ** 2) / (2.0 * geom.a)
+    C = np.hypot(M, N)
+
+    # Reachability BEFORE arccos.  Clipping P/C would map every unreachable
+    # leg onto +/-1 and hand back a boundary angle that is not a solution.
+    bad = np.abs(P) > C
+    if bad.any():
+        i = int(np.flatnonzero(bad)[0])
+        ratio = float(P[i] / C[i]) if C[i] != 0.0 else None
+        raise Unreachable(i + 1, "far" if P[i] > 0.0 else "near", ratio)
+
+    # |P| <= C, so P/C lands in [-1, 1] under IEEE rounding; no clip needed.
+    return np.arctan2(N, M) - np.arccos(P / C)
 
 
 def fk(
