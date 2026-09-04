@@ -143,12 +143,13 @@ Not part of the mechanism. Used for tuning `delta` and for scoring.
 
 | Symbol | Meaning | Units | Provenance |
 |---|---|---|---|
-| `z_home` | platform height above the base plane at the home pose | mm | new |
+| `z_home` | platform height above the base plane at the home pose. **Status: swept, range undecided** — an outer sweep axis, restored 2026-09-04 when the `z_home = z_flat` datum was dropped. *(This supersedes the same-day entry that made it determined and removed it from the sweep.)* Range: §12. | mm | new |
+| `z_flat` | plate height at which the arms lie flat (`alpha_i = 0`) with the rods attached, at `R = I` and no horizontal translation. Closed form and residuals: derivation §8.1. **An assembly datum only** — the 2026-09-04 identification `z_home = z_flat` was made and dropped the same day. | mm | new |
 | `A_i`, `B_i` | coefficients in `w_i(delta) = A_i cos delta + B_i sin delta`; both independent of `delta`, which is what makes the `delta` scan cheap | mm | new |
 | *(amplitude)* | `sqrt(A_i^2 + B_i^2)`, so `w_i(delta) = amplitude * cos(delta - phase)` | mm | **unnamed** — collides with `R` |
 | *(phase)* | `atan2(B_i, A_i)` | deg | **unnamed** |
-| `J(delta)` | worst `\|w\|` over the envelope and all six legs. **Superseded** by the reach margin below; retained only for reasoning about `delta` before `a` and `d` exist. | mm | new |
-| *(reach margin)* | `C_i - \|P_i\|`. Positive means leg `i` solves; this is the quantity to maximise. Negative means the candidate is infeasible, which `J` cannot detect. | mm | **unnamed** |
+| `J(delta)` | worst `\|w\|` over the envelope and all six legs. **Superseded** by the normalised reach margin below. Reason corrected 2026-09-04: not that `J` misses infeasibility, but that the two differ in **aggregation**. `delta` is absent from `L_i`, so `P_i` is `delta`-free and only `C_i` moves; at a fixed leg and pose the margin is strictly decreasing in `\|w_i\|`, so maximising it *is* minimising `\|w_i\|` exactly. But `J` is a minimax over `\|w_i\|` while the margin is a maximin over `(C_i-\|P_i\|)/C_i`, and since `\|L_i\|` varies across legs and poses the largest-`\|w_i\|` leg is generally not the smallest-margin leg. Different worst cases, different minimisers. Retained for reasoning about `delta` before `a` and `d` exist. | mm | new |
+| *(normalised reach margin)* | `(C_i - \|P_i\|) / C_i`, maximin over legs and envelope poses. Positive means leg `i` solves; negative means the candidate is infeasible. **The division by `C_i` is required**: `C` and `P` both carry length, so the raw difference `C_i - \|P_i\|` scales with `k` and breaks the normalised sweep, where candidates differing only in `r_b` must score identically. This is the form the branch check reports, and where `-5.7e-3` came from. *(Was `C_i - \|P_i\|` here; normalised 2026-09-04.)* | — | **unnamed** |
 | `tau_i` | transmission ratio, `\|rod . tangent\| / d`. Zero at a loss-of-authority configuration. | — | new |
 | `k` | uniform length scale factor. `alpha_i` is exactly invariant under scaling every length by `k`, envelope included. | — | new |
 
@@ -225,6 +226,12 @@ Listed so nothing in this file is mistaken for a settled value.
   the *symbol*, §11.
 - The rotation convention behind roll/pitch/yaw (§6).
 - `a` and `d`.
+- **`z_home`'s range** *(reopened 2026-09-04)*. `z_home` is a swept axis again — the
+  same-day `z_home = z_flat` datum that had determined it was dropped — and
+  **nothing currently supplies a range**. The lower end comes from `N_i > 0`; the
+  upper end from reach, `|P_i| <= C_i`. `z_flat(delta)` (§8, derivation §8.1)
+  remains the natural reference for setting the bracket even though home no longer
+  sits on it.
 - `beta_p`'s range, which needs a **ball-joint housing diameter** — two housings
   cannot occupy one hole.
 - `beta`'s usable range, which needs a **servo body diameter** — two servo bodies

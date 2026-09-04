@@ -558,6 +558,151 @@ than by a per-leg construction.
 
 ---
 
+## 4 September
+
+> **Skeleton only — not written up.** The entries below are the factual record of
+> what was established, what was withdrawn, and the residuals. Every point marked
+> `TODO(him): reasoning` is where this log's other entries carry an explanation of
+> *why*, and that explanation is not written yet. Nothing here is in his voice, and
+> nothing here should be read as his account of the session until he replaces it.
+>
+> Sources: `docs/session-handoff-2026-09-04.md`, `stewart-ik-derivation.md` §8/§8.1/§8.2,
+> `stewart/diagnostics/zhome_datum.py`, `stewart/diagnostics/branch_check.py`.
+>
+> **Note on ordering.** Several results below reverse other results from the *same
+> day*. Where that happens it is stated, with what was replaced. The reversals are
+> not tidied away.
+
+### Implemented
+
+- `stage1`, `legs`, `arm_tips`, `w`, `ik`, `Unreachable` in `stewart/kinematics.py`.
+  `h_p` threaded through `platform_ring` and `make_geometry`.
+- §7 verification table re-established in `test_kinematics.py`, exit 0. Residuals:
+  `stage1(R=I,T=0) == p` → 0; `Rz(90)` on `(10,0,0)` → 6.1e-16;
+  `|arm_tips(0) - b| == a` → 5.6e-17; `arm_tips(0) == b + a·u` → 0; control row
+  `b + a·n` also passes the distance check → 5.6e-17.
+- `w()` repointed from an inlined `L_i` to `legs()`; regression over 4000 random
+  poses bitwise identical.
+- `TODO(him): reasoning` — why the control row was added, and what it shows that the
+  distance check alone cannot.
+
+### Established
+
+- **Branch fixed as `-`** for all six legs, resting on `N_i > 0` under horizontal
+  shafts. Closest approach to the branch-merge boundary over the provisional
+  envelope: **−5.7e-3 of `C`**. Both supporting diagnostics — the 4365-pose sweep and
+  the 720-step precession loop — ran at a **single** `z_home`, and that basis is now
+  narrower than it was when the branch was fixed (see *Reopened*).
+  `TODO(him): reasoning`
+- **`z_flat` closed form** (derivation §8.1), with `g_i = q_i^{xy} - b_i`,
+  `A = beta_p - beta`, `G = r_p e^{iA} - r_b`, `delta_G = arg G`:
+  `|g|² = r_p² + r_b² - 2 r_p r_b cos A`,
+  `g·u = r_b cos delta - r_p cos(A - delta)`,
+  `(z_flat - h_p)² = d² - |g|² - a² - 2 a |g| cos(delta - delta_G)`, positive root.
+  **Leg-independence is algebraic** — neither `|g|²` nor `g·u` contains `s_i` — and
+  needs no D₃ argument. Verified against `make_geometry`, not a rebuilt ring, over
+  540 grid points: leg-independence `max_i - min_i` ≤ **9.948e-14** (1.501e-15
+  relative); closed form vs library geometry ≤ **1.637e-11** (2.103e-15 relative);
+  `max|u_i·z| = 0` exactly. Round-trip confirmation at the derived height with
+  `alpha = 0`, `|q_i - arm_tips(0)_i|` against `d`: worst residual **2.220e-16**.
+  `TODO(him): reasoning` — including why the D₃ route was not taken.
+- **`alpha` at home is one scalar shared by all six legs** (derivation §8.2). Follows
+  from the two residuals above, not a new measurement. Two consequences recorded: all
+  six servos read the same angle at home, a by-eye build check; and a non-zero home
+  angle is absorbable by horn mounting angle. `TODO(him): reasoning`
+- **Inner `delta` objective is the normalised reach margin** `(C_i - |P_i|)/C_i`,
+  maximin over legs and envelope poses, superseding `J(delta) = max|w_i|`. The
+  division by `C_i` is required for scale invariance. `delta` is absent from `L_i`,
+  so `P_i` is `delta`-free and only `C_i` moves; at fixed leg and pose the margin is
+  strictly decreasing in `|w_i|`. The two objectives differ **only in aggregation** —
+  minimax over `|w_i|` against maximin over the margin. `TODO(him): reasoning`
+- **Precompute feasibility bracket**, available because `P_i` is `delta`-free:
+  `C_i ∈ [sqrt(|L_i|² - amp_i²), |L_i|]` with `amp_i = sqrt(A_i² + B_i²)`, giving two
+  exact delta-free tests. Only the undecided middle pays 180 `delta` steps.
+  `TODO(him): reasoning`
+- **Compute is a wash, not a win** — correcting an overstatement made in session. The
+  datum path was 273M full evaluations; this path is ~7.6M full plus ~1.4e9 cheap
+  scan evaluations. Both near 10¹⁰ flops. 1.4e9 floats is ~11 GB, so the scan must
+  chunk over candidates. `TODO(him): reasoning`
+- **Symmetry structure of the six `w_i`** as the D₃ stabiliser of the pose, verified
+  signed with a negative control. **Closed form for `delta*`**,
+  `atan2(-r_p sin A, r_b - r_p cos A) mod 180`. `TODO(him): reasoning`
+- **`beta_p = beta` is not a rank hole.** True rod lines `q_i - h_i` give full rank 6,
+  `sigma_min` monotonic through `e = 0`, scaling linearly in `a` (log-log slope
+  0.992). The rank-3 result was a concurrency artifact of the `q_i - b_i` proxy.
+  `TODO(him): reasoning`
+- **Tilt target does not scale with the kinematics** — `1/k` against translations'
+  `k`, so absolute scale re-enters upstream of the sweep. `TODO(him): reasoning`
+
+### Decided, reversing an earlier decision the same day
+
+- **`z_home = z_flat` is dropped.** `z_flat` remains an **assembly datum only** and is
+  no longer identified with the home pose; **`z_home` returns as an outer sweep
+  axis**. This replaces the earlier 2026-09-04 decision that `z_home` was determined
+  by the flat-arm datum. Propagated: the sweep is **six** normalised axes, not five —
+  `beta`, `r_p/r_b`, `beta_p`, `a/r_b`, `d/r_b`, `z_home/r_b`; **15625** candidates at
+  5 points per axis, not 3125; `delta ∈ [0°, 180°)` **restored as sufficient**;
+  `z_home`'s range **undecided, with nothing currently supplying one**.
+  `TODO(him): reasoning` — this is the entry that most needs it: what the datum bought,
+  what it cost, and why the cost was judged the larger.
+
+### Withdrawn
+
+- **"8 of 432 grid combinations produce no valid `z_home`, all at `d/r_b = 0.8`, so
+  the harness needs a feasibility guard."** An artifact of holding `delta = 40`. All
+  8 are feasible on `[180°, 360°)`; **no geometry among them is infeasible**. The
+  feasibility-guard requirement it created is struck in both places it appeared.
+  `TODO(him): reasoning`
+- **"`z_home` is determined, not free, and the sweep is five axes not six."** Per the
+  reversal above. `TODO(him): reasoning`
+- **`delta*` as an "exact seed … in the right basin."** Correct statement: `delta*`
+  zeroes `w_i` at home — the pointwise quantity both candidate objectives are
+  monotone in — **at one pose**. It is not the maximiser of the margin aggregate and
+  not the minimiser of `J`. **A seed with no basin claim.** The open test is whether
+  the margin's maximiser stays within a bracket of it: a question about aggregation,
+  not about the function. `TODO(him): reasoning`
+
+### Recorded so it is not reintroduced
+
+- **The flat-arm datum lifts the gauge that makes `delta ∈ [0°, 180°)` sufficient.**
+  §8 justifies the half-open range by `n → -n` giving the same planes, which it does
+  — but `u = z × n` flips with it, so `alpha = 0` puts the arm on the opposite side.
+  Same machine under a relabelling of `alpha`; **different assemblies under a
+  flat-arm datum**. Measured with `z_home = z_flat` imposed: **3 of 432** combinations
+  are feasible only on `[180°, 360°)`, all three at a simultaneous four-axis grid
+  corner (`beta` min, `beta_p` max, `r_p/r_b` max, `d/r_b` min), **so the boundary
+  lies outside the sampled region and its extent is unknown**.
+- Also: **`delta*` reduced mod 180 returns to `delta_G`**, which is where
+  `(z_flat - h_p)²` is **minimised** — under the datum the closed-form seed pointed at
+  the tightest-feasibility `delta`.
+- `TODO(him): reasoning` — why this is written down at all: the datum is
+  algebraically tempting and will be proposed again.
+
+### Reopened by the reversal
+
+- The `-` branch evidence — the 4365-pose diagnostic and the 720-step precession loop
+  — was gathered at **one** `z_home` and must be re-run across the restored axis. The
+  branch conclusion is not withdrawn; its evidence base is narrower than it read.
+- `N_i > 0` now sets the **lower bracket of the `z_home` axis**, not merely a
+  docstring-to-test upgrade. `N_i` at home is `z_home - h_p`; tilt drops the low
+  anchors by roughly `r_p sin(tilt)`.
+- `z_home`'s range: lower from `N_i > 0`, upper from reach `|P| ≤ C`. `z_flat(delta)`
+  remains the natural reference for setting the bracket even though home no longer
+  sits on it. **Undecided.**
+- Hardware pull gains **servo horn spline tooth count / mounting-angle resolution** —
+  it decides whether a non-zero home angle costs anything.
+- `TODO(him): reasoning`
+
+### Provenance
+
+- `branch_check.py` — the script behind "8 of 432" and the −5.7e-3 boundary margin —
+  was **recovered from a session scratchpad, not from the repo**, and committed as
+  `stewart/diagnostics/branch_check.py`. It had never been in git history. This is
+  the **third** recorded instance of a documented result with no code behind it.
+  **Recovered is not the same as never lost.** `TODO(him): reasoning`
+
+---
+
 ## Where Phase 0 stands
 
 The inverse kinematics is derived and verified. The frame conversion, the leg

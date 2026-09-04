@@ -234,7 +234,7 @@ downstream reproduces. Choose badly and the platform visibly snaps mid-move.
 
 | Item | Why it isn't here |
 |---|---|
-| Branch rule for the `±` | §5.5. The only thing between the closed form and a working `ik()` |
+| ~~Branch rule for the `±`~~ | **Struck 2026-09-04.** Fixed as `-` for all six legs; see §5.5 and the handoff. Reopens if the shafts are ever canted. |
 | `R` composed from three angles | The rotation convention is a choice — pick it, state it, stick to it |
 | Parameterisation of `p_i` | Radius, angular pattern, and rotation relative to the base ring. `b_i` and `n_i` are done — see §8 |
 | Numerical forward kinematics | Needed for the round-trip check. No closed form exists — that's the interesting part |
@@ -277,7 +277,9 @@ n_i      = (cos psi_i, sin psi_i, 0)
 u_i      = z × n_i          v_i = n_i × u_i = z
 ```
 
-Parameters: `r_b`, `beta ∈ (0°, 60°)` (30° = regular hexagon), `delta ∈ [0°, 180°)`.
+Parameters: `r_b`, `beta ∈ (0°, 60°)` (30° = regular hexagon), `delta ∈ [0°, 180°)`
+— sufficient, but only under a gauge that an assembly datum would lift; see the
+note after the `c = 270` paragraph below.
 
 **Why the `beta` interval is open — and why it is not what it looks like.** The
 excluded endpoints are a **hardware** limit, not a rank one. `beta → 0` merges the
@@ -304,9 +306,53 @@ The `90` is forced by the mirror condition within each pair, not chosen. `c = 27
 is the same planes with normals flipped and is absorbed by the half-open `delta`
 range. The alternating `s_i` is what makes the family mirror-symmetric.
 
-`delta` is tuned, not fixed: minimise `J(delta) = max over envelope and legs of
-|L_i·n_i|` — the out-of-plane component, which inflates `P` while contributing
-nothing to `C`. 1-D search. Note `J` depends on `p_i`, so `delta` is an inner
+> **Recorded so it is not reintroduced — a flat-arm *datum* lifts the gauge that
+> makes `delta ∈ [0°, 180°)` sufficient** *(measured 2026-09-04)*. The
+> justification above is sound as stated: `n → -n` gives the same set of planes.
+> But `u = z × n` flips with the normal, so `alpha = 0` puts the arm on the
+> **opposite side** of the shaft. Under a relabelling of `alpha` that is the same
+> machine — which is why the half-open range is fine as things stand. Under a
+> **flat-arm datum**, which fixes what `alpha = 0` means physically, the two are
+> **different assemblies** and the range is no longer sufficient.
+>
+> Measured, with `z_home = z_flat` imposed: **3 of 432** grid combinations are
+> feasible only on `[180°, 360°)`. All three sit at a *simultaneous four-axis grid
+> corner* — `beta` min, `beta_p` max, `r_p/r_b` max, `d/r_b` min — so the boundary
+> lies **outside the sampled region and its extent is unknown**.
+>
+> Also worth recording: `delta*` reduced mod 180 returns to `delta_G = arg G` of
+> §8.1, which is exactly where `(z_flat - h_p)²` is **minimised**. Under the datum
+> the closed-form seed therefore pointed at the *tightest-feasibility* `delta`.
+>
+> None of this is live: the `z_home = z_flat` datum was **dropped 2026-09-04** and
+> `delta ∈ [0°, 180°)` is restored as sufficient. It is written down because the
+> datum is algebraically tempting and will be proposed again.
+> Grid and run: `stewart/diagnostics/zhome_datum.py`, check B.
+
+`delta` is tuned, not fixed. **Objective revised 2026-09-04 — this supersedes the
+`J(delta) = max over envelope and legs of |L_i·n_i|` stated here previously.**
+Maximise instead the **normalised reach margin**
+
+```
+margin_i  =  ( C_i - |P_i| ) / C_i          maximin over legs and envelope poses
+```
+
+The division by `C_i` is **required**, not cosmetic: `C` and `P` both carry length,
+so the raw difference `C_i - |P_i|` scales with the uniform length factor `k` and
+breaks the normalised sweep, in which candidates differing only in `r_b` must score
+identically. This is the same form the branch check already reports, which is where
+the `-5.7e-3` boundary figure came from.
+
+**How the two objectives relate, precisely.** `delta` does not appear in `L_i`, so
+`P_i` is `delta`-free and only `C_i = sqrt(|L_i|² - w_i²)` moves with it. At a fixed
+leg and a fixed pose the margin is therefore **strictly decreasing in `|w_i|`**:
+maximising the margin *is* minimising `|w_i|`, exactly. The divergence between the
+two is entirely in the **aggregation** — `J` is a minimax over `|w_i|`, the margin
+is a maximin over `(C_i - |P_i|)/C_i` — and because `|L_i|` varies across legs and
+poses, the leg with the largest `|w_i|` is generally **not** the leg with the
+smallest margin. Different worst cases, different minimisers, related quantities.
+
+1-D search either way. Note the objective depends on `p_i`, so `delta` is an inner
 optimisation inside the sweep, not a frozen constant.
 
 **Consequence worth keeping.** `n_i·z = 0`, so `z` lies in every servo plane and
@@ -322,7 +368,76 @@ horizontal shafts.** Cant them and the argument goes, and the degeneracy questio
 reopens.
 
 At `alpha = 0` the arm lies flat at base-plate level — servo mid-travel, and an
-assembly datum checkable by eye.
+assembly datum checkable by eye. **This is a build-time configuration, not the home
+pose.** *(Clarified 2026-09-04, superseding any reading of the earlier wording that
+put home on this configuration: the identification `z_home = z_flat` was tried on
+2026-09-04 and* **dropped** *the same day. `z_flat` — §8.1 — is an assembly datum
+only, and `z_home` is a swept axis. See the handoff.)*
+
+### 8.1 `z_flat`, the flat-arm assembly height *(derived and verified 2026-09-04)*
+
+`z_flat` is the plate height at which the arms lie flat — `alpha_i = 0` — with the
+rods attached, at `R = I` and no horizontal translation. **It is an assembly datum.
+It is not the home pose**; the attempt to identify the two was dropped the same day
+it was made.
+
+Write `g_i` for the horizontal offset `q_i^{xy} - b_i`, and
+
+```
+A        =  beta_p - beta
+G        =  r_p e^{iA}  -  r_b
+delta_G  =  arg G
+```
+
+Then
+
+```
+|g|²             =  r_p²  +  r_b²  -  2 r_p r_b cos A
+g · u            =  r_b cos delta  -  r_p cos(A - delta)
+
+(z_flat - h_p)²  =  d²  -  |g|²  -  a²  -  2 a |g| cos(delta - delta_G)
+```
+
+**Positive root**, because `z_flat - h_p` is `N_i` at that configuration and
+`N_i > 0`.
+
+**Why it is leg-independent, and why no group argument is needed.** Both `|g|²` and
+`g · u` above are free of `s_i`. The leg index simply does not appear, so
+leg-independence falls out of the **algebra**. This is worth stating explicitly
+because the tempting route is a D₃ argument, and that route needs `n_i` to flip
+under a mirror *and* `u_i = z × n_i` to flip again — a double sign change that in
+practice passes by assertion rather than by being checked.
+
+**Verified against `make_geometry`** — taking `b_i`, `u_i`, `n_i` and `p_i` from the
+library, not from a ring rebuilt out of the formulas above, so the derivation is not
+being tested against itself. Over 540 grid points:
+
+| Check | Residual |
+|---|---|
+| leg-independence, `max_i - min_i` | ≤ 9.948e-14 (1.501e-15 relative) |
+| closed form vs library geometry | ≤ 1.637e-11 (2.103e-15 relative) |
+| `max\|u_i · z\|` | 0 exactly |
+
+Round-trip confirmation of the formula, independent of the algebra: build the
+geometry at the derived height, set `alpha = 0`, and check `|q_i - arm_tips(0)_i|`
+against `d`. **Worst residual 2.220e-16.**
+
+Run: `stewart/diagnostics/zhome_datum.py`, check A.
+
+### 8.2 `alpha` at home is one scalar, shared by all six legs *(2026-09-04)*
+
+Not a new measurement — it follows from §8.1's two residuals. At home `M_i = g_i·u_i`
+and `|g_i|²` are leg-independent, and `N_i = z_home - h_p` is common to all six. So
+`C_i`, `P_i` and `phi_i` are common, and hence so is the home angle.
+
+Two uses:
+
+- **All six servos read the same angle at home.** That is a by-eye build check, and
+  it recovers at home exactly what the flat-arm datum was going to provide — without
+  costing a sweep axis.
+- **A non-zero home angle is absorbable by horn mounting angle.** Servo mid-travel
+  can be bought with the spline instead of with the datum. What it costs depends on
+  the horn's spline tooth count, which is on the hardware pull.
 
 ---
 
