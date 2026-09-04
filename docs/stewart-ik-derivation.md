@@ -256,6 +256,27 @@ u_i      = z × n_i          v_i = n_i × u_i = z
 
 Parameters: `r_b`, `beta ∈ (0°, 60°)` (30° = regular hexagon), `delta ∈ [0°, 180°)`.
 
+**Why the `beta` interval is open — and why it is not what it looks like.** The
+excluded endpoints are a **hardware** limit, not a rank one. `beta → 0` merges the
+six shafts onto three points, and two servo bodies cannot occupy one mounting arc;
+the same argument on the platform ring, with ball-joint housing diameter in place
+of servo body diameter, is what bounds `beta_p`. Neither endpoint is degenerate as
+*geometry*: `beta_p → 0` is the **3-6 Stewart platform**, a real architecture, and
+`sigma_min` was measured O(1) all the way down on 2026-09-03 — the shafts stay
+split, so the six leg lines remain distinct. The true bounds are therefore set by a
+servo body dimension and a ball-joint housing diameter, **neither of which is known
+yet**; `(0°, 60°)` is a placeholder standing in for them.
+
+**`beta_p = beta` is not a rank hole either** *(verified 2026-09-04)*. With the
+platform anchors an affine image of the shafts it was believed the six legs spanned
+only three wrench dimensions. Recomputed with the **true rod lines** `q_i - h_i`
+rather than the `q_i - b_i` proxy: full rank 6, and `sigma_min` runs *monotonically*
+through `e = beta_p - beta = 0` without so much as a local minimum. The rank-3
+result was an artifact — the six proxy lines are concurrent on the `z`-axis by
+construction, and the servo arm breaks that concurrency. The recovered `sigma_min`
+scales linearly with `a` (log-log slope 0.992), vanishing only as `a → 0`, which is
+precisely the limit in which the proxy becomes exact.
+
 The `90` is forced by the mirror condition within each pair, not chosen. `c = 270`
 is the same planes with normals flipped and is absorbed by the half-open `delta`
 range. The alternating `s_i` is what makes the family mirror-symmetric.

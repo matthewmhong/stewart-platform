@@ -55,8 +55,27 @@ code written before it is settled is provisional.
 | `beta_p` | pair half-split | deg | swept; range set by ball-joint housing diameter, **not yet known** | new |
 | `phi_i` | anchor azimuth, `120*floor(i/2) + s_i*beta_p` — same skeleton as `theta_i`, which is what makes leg `i` pair with leg `i` | deg | derived | new |
 | `p_i` | platform anchor position | mm, `{P}` | design constant | key |
-| *(plate offset)* | the common `z` component of `p_i` in `{P}` | mm | **open** — needs a name and a decision, see §11 | new |
+| `h_p` | plate offset: the common `z` component of `p_i` in `{P}`, so `p_i = (r_p cos phi_i, r_p sin phi_i, -h_p)` | mm | **quantity settled 2026-09-03**; *symbol* still open, see §11 | new |
 | `mu` | a rotation of the whole platform ring inside `{P}` | deg | **not a parameter.** Gauge under `q_i = T + R p_i`, and leg-set D3 pins it. Recorded so it is not reintroduced. | new |
+
+**Plate offset — settled 2026-09-03.** The origin of `{P}` sits on the **plate
+top**, or one ball radius above it if what is being commanded is the ball-centre
+plane. The six anchors are **coplanar**, so all six share one `z` in `{P}` and the
+offset is a single scalar rather than six. That scalar is plate thickness plus the
+joint stack down to the ball-joint centres: a **hardware number that belongs in the
+model, not a sweep axis** — it is measured off the built plate, not searched over.
+
+It **cannot be absorbed into `T`**. Writing `p_i = p_i^flat - h_p * z_hat`,
+
+```
+q_i  =  T  +  R p_i^flat  -  h_p (R z_hat)
+```
+
+and `R z_hat = z_hat` only when `R` fixes the vertical — i.e. under pure yaw. Under
+any tilt the offset term swings with the plate, so folding `h_p` into `T` is exact
+at yaw and wrong everywhere else.
+
+Only the *quantity* is settled. The *symbol* `h_p` is still contested — see §11.
 
 ## 5. Link lengths
 
@@ -157,19 +176,46 @@ Every one of these is live. None should be resolved silently.
 | `w` | out-of-plane component. Must **not** be reused for the rod vector, which it was in scratch code. | reserved for `L_i . n_i` |
 | indexing | 0-based in code, 1-based in prose and error messages | record which, per document |
 
+**On `h` / `h_p`.** The clash above is **still open** — 2026-09-03 settled the
+*quantity* (§4), not the symbol. The quantity is now in code as `h_p`, so a rename
+is a pending decision with real call sites, not a free edit:
+`stewart/geometry.py` — `platform_ring` (parameter, docstring, body, assert) and
+`make_geometry` (parameter, docstring, pass-through) — and `test_kinematics.py`
+(fixture key). `stewart/kinematics.py` has **no** `h_p` call site; it reads the
+offset only through `geom.p`, so it is unaffected by a rename.
+
 ## 12. Not yet decided
 
 Listed so nothing in this file is mistaken for a settled value.
 
-- The `z` component of `p_i` in `{P}`, and where `{P}`'s origin sits — anchor
-  plane, plate top, or ball centre. This changes what a commanded `T` means and,
-  because `R` acts on `p`, is not absorbable into `T` under tilt.
+- ~~The `z` component of `p_i` in `{P}`, and where `{P}`'s origin sits.~~
+  **Settled 2026-09-03 — see §4.** Plate top (or one ball radius above for the
+  ball-centre plane), coplanar anchors, one shared `z`. What remains open is only
+  the *symbol*, §11.
 - The rotation convention behind roll/pitch/yaw (§6).
 - `a` and `d`.
-- `beta_p`'s range, which needs a ball-joint housing diameter.
-- `beta`'s usable range, which needs a servo body dimension. Both endpoints of
-  `(0, 60)` are the octahedral 3-3 architecture, rank 6 — the exclusion is
-  hardware, not degeneracy, on both rings.
+- `beta_p`'s range, which needs a **ball-joint housing diameter** — two housings
+  cannot occupy one hole.
+- `beta`'s usable range, which needs a **servo body diameter** — two servo bodies
+  cannot occupy one mounting arc.
+
+**What does *not* constrain those two ranges.** The exclusions above are
+**hardware**, not rank degeneracy, on both rings. Recorded because the opposite was
+believed earlier and acted on:
+
+- `beta_p -> 0` merges the six anchors onto three points and is the **3-6 Stewart
+  platform** — a real architecture, not a degenerate one. Measured 2026-09-03:
+  `sigma_min` stays O(1) all the way down, because the shafts stay split and the
+  six leg lines remain distinct. (The earlier note here called both endpoints the
+  "octahedral 3-3 architecture"; that is wrong unless *both* rings collapse at
+  once, and `beta` and `beta_p` are independent.)
+- `beta_p = beta` is **not** a rank hole. Verified 2026-09-04 with the true rod
+  lines `q_i - h_i`: full rank 6, and `sigma_min` is *monotonic* through
+  `e = beta_p - beta = 0` — not even a local minimum. The earlier rank-3 result
+  came from the `q_i - b_i` proxy, whose six lines are concurrent on the `z`-axis
+  by construction; the arm breaks that concurrency. Recovered `sigma_min` scales
+  linearly with `a` (log-log slope 0.992), so it vanishes only as `a -> 0`, which
+  is exactly where the proxy becomes exact.
 - The working envelope.
 - The scoring function, including the characteristic length used to normalise
   the moment rows of any conditioning measure. That choice changes the ranking
