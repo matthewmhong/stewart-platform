@@ -241,6 +241,29 @@ downstream reproduces. Choose badly and the platform visibly snaps mid-move.
 
 ---
 
+## 7. Verification, before trusting any of it
+
+1. **Units.** Every line. Degrees plus millimetres is never valid.
+2. **Known cases.** `R = I`. `T = 0`. 90° about z. Answers you can check by hand.
+3. **Round trip.** Pose → IK → six angles → numerical FK → recover the pose. If
+   it doesn't close, the derivation is wrong and you found out for free.
+
+### Done so far
+
+| Check | Result |
+|---|---|
+| `stage1(R=I, T=0) == p` | passes |
+| 90° about z sends `(10,0,0)` → `(0,10,0)` | passes — `R` not transposed |
+| `arm_tips(0)` is exactly `a` from every shaft | passes |
+| `arm_tips(0) == b + a·u` | passes — `u`/`n` not swapped |
+| Stage 2 closed form recovers known angles | passes, §5.5 |
+| Full round trip | **blocked** — needs `ik` and `fk` |
+
+The distance check alone cannot catch a `u`/`n` swap: `n` is also unit length, so
+a tip placed along it is also exactly `a` out. Hence the second check.
+
+---
+
 ## 8. Base ring and servo planes *(derived 2026-09-01)*
 
 ```
@@ -300,29 +323,6 @@ reopens.
 
 At `alpha = 0` the arm lies flat at base-plate level — servo mid-travel, and an
 assembly datum checkable by eye.
-
----
-
-## 7. Verification, before trusting any of it
-
-1. **Units.** Every line. Degrees plus millimetres is never valid.
-2. **Known cases.** `R = I`. `T = 0`. 90° about z. Answers you can check by hand.
-3. **Round trip.** Pose → IK → six angles → numerical FK → recover the pose. If
-   it doesn't close, the derivation is wrong and you found out for free.
-
-### Done so far
-
-| Check | Result |
-|---|---|
-| `stage1(R=I, T=0) == p` | passes |
-| 90° about z sends `(10,0,0)` → `(0,10,0)` | passes — `R` not transposed |
-| `arm_tips(0)` is exactly `a` from every shaft | passes |
-| `arm_tips(0) == b + a·u` | passes — `u`/`n` not swapped |
-| Stage 2 closed form recovers known angles | passes, §5.5 |
-| Full round trip | **blocked** — needs `ik` and `fk` |
-
-The distance check alone cannot catch a `u`/`n` swap: `n` is also unit length, so
-a tip placed along it is also exactly `a` out. Hence the second check.
 
 ---
 
