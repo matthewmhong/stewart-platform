@@ -200,17 +200,17 @@ def base_ring(r_b: float, beta: float, delta: float):
 # --------------------------------------------------------------------------- #
 # platform ring
 # --------------------------------------------------------------------------- #
-def platform_ring(r_p: float, beta_p: float):
+def platform_ring(r_p: float, beta_p: float, h_p: float = 0.0):
     """The six platform-frame anchor points.
- 
+
     Same generating skeleton as :func:`base_ring`, with its own radius and pair
     half-split and no servo frames (the platform carries ball joints, not
     actuators)::
- 
+
         s       = (-1, +1, -1, +1, -1, +1)
         phi_i   = 120 * floor(i / 2) + s_i * beta_p        # degrees, i = 0..5
-        p_i     = r_p (cos phi_i, sin phi_i, 0)
- 
+        p_i     = (r_p cos phi_i, r_p sin phi_i, -h_p)
+
     Parameters
     ----------
     r_p : float
@@ -218,11 +218,15 @@ def platform_ring(r_p: float, beta_p: float):
     beta_p : float
         Pair half-split, **degrees**, in the open interval ``(0, 60)``.
         ``beta_p == 30`` reproduces a regular hexagon.
- 
+    h_p : float, default 0.0
+        Distance the anchor plane sits **below** ``{P}``'s origin, mm; every
+        anchor gets ``z = -h_p``.  ``h_p = 0`` puts the origin in the anchor
+        plane.  Not range-checked.
+
     Returns
     -------
     p : ndarray, shape (3, 6)
- 
+
     Raises
     ------
     ValueError
@@ -249,23 +253,34 @@ def platform_ring(r_p: float, beta_p: float):
     """
     r_p = float(r_p)
     beta_p = float(beta_p)
+    h_p = float(h_p)
     if not r_p > 0.0:
         raise ValueError(f"r_p must be > 0; got {r_p}")
+    # The open interval is a HARDWARE exclusion, not a degeneracy one.  Both
+    # endpoints are real architectures: beta_p -> 0 (and -> 60) merge the
+    # anchors into three pairs, which is the 3-6 Stewart platform.  What rules
+    # them out is the ball-joint housing diameter - two housings cannot occupy
+    # one hole - so the true lower bound is set by that diameter and is not
+    # known yet (notation.md sec.12).  The rank collapse once claimed here was
+    # DISPROVED on 2026-09-03: sigma_min stays O(1) as beta_p -> 0 because the
+    # shafts stay split, so the six leg lines remain distinct.
     if not 0.0 < beta_p < 60.0:
         raise ValueError(f"beta_p must be in (0, 60) degrees; got {beta_p}")
- 
+
     i = np.arange(6)
     s = np.array([-1.0, 1.0, -1.0, 1.0, -1.0, 1.0])
- 
+
     phi_deg = 120.0 * np.floor(i / 2.0) + s * beta_p
     phi = np.deg2rad(phi_deg)
- 
-    # z = 0: the anchors are coplanar and {P}'s origin lies in their plane.
-    # Both halves of that are design decisions - see make_geometry's Notes.
-    p = np.vstack((r_p * np.cos(phi), r_p * np.sin(phi), np.zeros(6)))
- 
+
+    # z = -h_p: the anchors are coplanar, a distance h_p below {P}'s origin
+    # (h_p = 0 puts the origin in the anchor plane).  Both are design
+    # decisions - see make_geometry's Notes.
+    p = np.vstack((r_p * np.cos(phi), r_p * np.sin(phi), np.full(6, -h_p)))
+
     assert p.shape == (3, 6)
-    assert np.allclose(np.linalg.norm(p, axis=0), r_p), "p columns are off the ring"
+    assert np.allclose(np.hypot(p[0], p[1]), r_p), "p columns are off the ring"
+    assert np.allclose(p[2], -h_p), "p columns are off the anchor plane"
  
     if abs(beta_p - 30.0) < 1e-9:
         ang = np.sort(np.mod(phi_deg, 360.0))
@@ -283,13 +298,13 @@ def platform_ring(r_p: float, beta_p: float):
 # --------------------------------------------------------------------------- #
 def make_geometry(r_b: float, beta: float, delta: float,
                   r_p: float, beta_p: float,
-                  a: float, d: float) -> "Geometry":
+                  a: float, d: float, h_p: float = 0.0) -> "Geometry":
     """Compose a base ring and a platform ring with given ``a`` and ``d``.
- 
+
     Plumbing only: calls :func:`base_ring` and :func:`platform_ring`, passes
     the servo frames straight through, and hands everything to
     :class:`Geometry`, which validates it.
- 
+
     Parameters
     ----------
     r_b, beta, delta : float
@@ -298,6 +313,9 @@ def make_geometry(r_b: float, beta: float, delta: float,
         Passed to :func:`platform_ring`, which validates them.
     a, d : float
         Servo-arm and push-rod lengths, mm.  **Required.**  See Notes.
+    h_p : float, default 0.0
+        Anchor-plane drop below ``{P}``'s origin, mm; passed to
+        :func:`platform_ring`.  ``0.0`` keeps the origin in the anchor plane.
  
     Returns
     -------
@@ -313,14 +331,16 @@ def make_geometry(r_b: float, beta: float, delta: float,
     -----
     **Two assumptions are baked in and neither is derived.**
  
-    First, ``p`` has ``z = 0`` throughout, which bundles two decisions: the six
-    anchors are coplanar (a flat plate rather than a dished or stepped one),
-    and ``{P}``'s origin lies *in* that plane.  The second is the one with
-    teeth, because the commanded ``T`` is the position of ``{P}``'s origin.
-    If the ball rolls on a surface above the anchor plane, ``T`` is not the
-    position of the rolling surface and every commanded height is offset by
-    the plate thickness.  Anchor plane, plate top and ball centre are three
-    different origins and this code silently picks the first.
+    First, ``p`` has ``z = -h_p`` throughout, which bundles two decisions: the
+    six anchors are coplanar (a flat plate rather than a dished or stepped
+    one), and ``{P}``'s origin sits a fixed ``h_p`` above that plane (``h_p``
+    is a parameter now, but a single scalar - the plate is still flat).  The
+    offset is the one with teeth, because the commanded ``T`` is the position
+    of ``{P}``'s origin.  If the ball rolls on a surface above the anchor
+    plane, ``T`` is not the position of the rolling surface and every
+    commanded height is offset by the remaining gap.  Anchor plane, plate top
+    and ball centre are three different origins and ``h_p`` only reconciles the
+    first with ``{P}``.
  
     Second, nothing enforces ``d > a``.  An earlier version raised on it with
     the justification that the rod could not otherwise clear the arm circle,
@@ -343,7 +363,7 @@ def make_geometry(r_b: float, beta: float, delta: float,
     clean result but it does **not** make the home pose reachable.  Writing
     ``a = k |L|``, the condition ``|P| <= C`` becomes::
  
-        a <= C = sqrt((L . u)^2 + z_home^2)     i.e.   |lambda| <= |L| sqrt(1 - k^2)
+        a <= C = sqrt((L . u)^2 + z_home^2)     i.e.   |w| <= |L| sqrt(1 - k^2)
  
     which is a statement about how far the leg lies out of its servo plane, so
     it depends on ``delta`` and can fail.  The two-sphere bound
@@ -367,7 +387,7 @@ def make_geometry(r_b: float, beta: float, delta: float,
     decision in any case.
     """
     b, n, u = base_ring(r_b, beta, delta)
-    p = platform_ring(r_p, beta_p)
+    p = platform_ring(r_p, beta_p, h_p)
     return Geometry(p=p, b=b, n=n, u=u, a=a, d=d)
 
 # --------------------------------------------------------------------------- #
