@@ -246,25 +246,426 @@ def ik(geom: Geometry, R: np.ndarray, T: np.ndarray) -> np.ndarray:
     return np.arctan2(N, M) - np.arccos(P / C)
 
 
+# --------------------------------------------------------------------------- #
+# forward kinematics
+# --------------------------------------------------------------------------- #
+class FKNotConverged(RuntimeError):
+    """:func:`fk` hit the iteration cap without meeting the tolerance.
+
+    Raised rather than returning a best effort.  A pose that did not converge
+    is not a pose; handing one back silently is how a round-trip gate comes to
+    pass while wrong.
+
+    Attributes
+    ----------
+    residual_mm : float
+        ``max_i |f_i|`` at the last iterate, mm.  ``f_i = |q_i - h_i| - d``.
+    iterations : int
+        Iterations actually taken (equals the cap unless the solve broke down).
+    tol_mm : float
+        The tolerance that was not met, mm.
+    reason : str
+        ``"cap"`` - ran out of iterations; ``"stalled"`` - neither the Newton
+        step nor the Levenberg-Marquardt fallback could reduce the residual;
+        ``"singular"`` - the step could not be formed at all.
+    """
+
+    def __init__(self, residual_mm: float, iterations: int, tol_mm: float,
+                 reason: str = "cap") -> None:
+        self.residual_mm = float(residual_mm)
+        self.iterations = int(iterations)
+        self.tol_mm = float(tol_mm)
+        self.reason = str(reason)
+        super().__init__(
+            f"fk did not converge ({self.reason}): residual "
+            f"{self.residual_mm:.3e} mm > tol {self.tol_mm:.3e} mm after "
+            f"{self.iterations} iterations"
+        )
+
+
+#: Convergence tolerance for :func:`fk`, **millimetres**.  The residual is
+#: unsquared by choice - ``f_i = |q_i - h_i| - d`` is literally the amount by
+#: which rod ``i`` fails to close - so the tolerance is a physical length and
+#: needs no conversion factor.
+#:
+#: **It is an ACCEPTANCE threshold, not a stopping rule**, and that distinction
+#: is the whole reason the value below is defensible.  The iteration stops when
+#: a step can no longer reduce ``max_i |f_i|`` - at the arithmetic floor - and
+#: the tolerance is then applied once, to decide whether the converged residual
+#: is small enough to return.  Stopping AT the tolerance instead was tried and
+#: is wrong for a gate: with the tolerance as the stopping rule, roughly 40% of
+#: poses halt on the first iterate that crosses it, so the worst residual over
+#: any pose grid sits just under the tolerance whatever the tolerance is, and
+#: the worst pose error tracks it linearly - measured, ``9.7e-10 mm`` at
+#: ``1e-9`` down to ``1.3e-13 mm`` at ``1e-13``, a straight line.  A gate built
+#: that way reports its own stopping rule back to itself and can never show the
+#: tolerance is not what limits accuracy, because it always is.
+#:
+#: With stagnation as the stopping rule, the value has to clear a floor and a
+#: ceiling, both lengths:
+#:
+#: * FLOOR.  At the gate's working scale (``r_b = 100 mm``, rods ~120 mm) a
+#:   double resolves a length to ``eps * 120 ~ 2.7e-14 mm``, and forming
+#:   ``|q - h| - d`` cancels two same-sized quantities.  The measured floor is
+#:   ``1.4e-14`` to ``7.1e-14 mm``.  ``1e-9 mm`` sits between four and five
+#:   decades above it, so acceptance never fails for a numerical reason.
+#: * CEILING.  Any tolerance the hardware can mean is micrometres at best
+#:   (``1e-3 mm``).  ``1e-9 mm`` is six decades below that, so it cannot be
+#:   mistaken for a manufacturing or control tolerance, and a solve that
+#:   genuinely failed to converge lands orders above it, not just outside it.
+#:
+#: The claim that the tolerance is not what limits accuracy is still MEASURED,
+#: not argued from those two bounds: ``stewart/diagnostics/roundtrip.py``
+#: tightens it tenfold and checks the round-trip pose error does not move.  It
+#: is free to be, because the answer no longer depends on the tolerance at all
+#: over the range where acceptance succeeds - which is the point.
+FK_TOL_MM = 1e-9
+
+#: Iteration cap for :func:`fk`.  Newton from the home seed converges in single
+#: digits everywhere the gate samples; the cap exists to turn a non-converging
+#: pose into a raised exception rather than a hang.
+FK_MAX_ITER = 100
+
+
+def _skew(v: np.ndarray) -> np.ndarray:
+    """``[v]_x``, the matrix with ``[v]_x w == v x w``."""
+    x, y, z = np.asarray(v, dtype=float).reshape(3)
+    return np.array([[0.0, -z, y], [z, 0.0, -x], [-y, x, 0.0]])
+
+
+def exp_so3(omega: np.ndarray) -> np.ndarray:
+    """Rotation vector -> ``SO(3)`` (Rodrigues).  ``|omega|`` is the angle, rad.
+
+    The rotation vector is the solver's parameterisation of ``R`` and is
+    **not** a rotation convention: it names an axis and an angle, with no
+    ordered sequence of elementary rotations and nothing to fix the order of.
+    Derivation sec.6 stays open and is not touched by anything here.
+    """
+    omega = np.asarray(omega, dtype=float).reshape(3)
+    th = float(np.linalg.norm(omega))
+    K = _skew(omega)
+    if th < 1e-12:
+        # Below 1e-12 rad the series is exact in double to the terms kept, and
+        # sin(th)/th would be 0/0.
+        return np.eye(3) + K + 0.5 * (K @ K)
+    return (np.eye(3)
+            + (np.sin(th) / th) * K
+            + ((1.0 - np.cos(th)) / (th * th)) * (K @ K))
+
+
+def fk_residual(geom: Geometry, tips: np.ndarray, R: np.ndarray,
+                T: np.ndarray):
+    """The six rod-closure residuals, **millimetres**, and their ingredients.
+
+        f_i = |q_i - h_i| - d,       q_i = T + R p_i,  h_i = arm tip i
+
+    UNSQUARED.  ``f_i`` is a length - the gap rod ``i`` cannot close - so the
+    convergence tolerance is a length too, with no conversion factor.
+
+    Returns
+    -------
+    f : ndarray, shape (6,)
+    rvec : ndarray, shape (3, 6)
+        ``q_i - h_i``, tip to anchor.
+    norm : ndarray, shape (6,)
+        ``|q_i - h_i|``.
+    """
+    q = R @ geom.p + np.asarray(T, dtype=float).reshape(3, 1)
+    rvec = q - tips
+    norm = np.linalg.norm(rvec, axis=0)
+    return norm - geom.d, rvec, norm
+
+
+def fk_jacobian(geom: Geometry, R: np.ndarray, rvec: np.ndarray,
+                norm: np.ndarray):
+    """Analytic ``6 x 6`` Jacobian of :func:`fk_residual` in ``(T, omega)``.
+
+    With ``e_i = (q_i - h_i) / |q_i - h_i|`` the unit vector from tip to
+    anchor, and the rotation perturbed on the **LEFT**,
+    ``R -> exp([omega]_x) R``::
+
+        df_i/dT      =  e_i^T
+        df_i/domega  = -e_i^T [R p_i]_x  =  (R p_i x e_i)^T
+
+    The second identity is why the code forms a cross product rather than a
+    skew matrix: ``-e^T [v]_x w = -e . (v x w) = -(e x v) . w = (v x e) . w``.
+
+    Sign, and which side.  Left perturbation gives
+    ``dq_i = [omega]_x (R p_i) = -[R p_i]_x omega``, hence the minus.  Under a
+    RIGHT perturbation ``R -> R exp([omega]_x)`` the same derivation gives
+    ``+e_i^T R [p_i]_x``, which differs from the above by more than a sign, so
+    the two cannot be reconciled by flipping one.  This form is
+    finite-differenced against the left perturbation it claims to describe in
+    ``stewart/diagnostics/roundtrip.py``; do not change the sign without
+    re-running it.
+
+    ``e_i`` is built from the ACTUAL ``|q_i - h_i|``, not from ``d``.  The two
+    agree at a solution, but away from one only the actual norm is the true
+    derivative, and the seed is deliberately not a solution.
+
+    UNITS.  Columns 0-2 are dimensionless (mm of residual per mm of
+    translation); columns 3-5 are mm per radian.  Any singular value or
+    condition number taken from this matrix therefore depends on a
+    characteristic length - see :func:`fk_solve`.
+
+    Returns
+    -------
+    J : ndarray, shape (6, 6)
+        Row ``i`` is leg ``i``; columns are ``(T_x, T_y, T_z, w_x, w_y, w_z)``.
+    e : ndarray, shape (3, 6)
+    """
+    e = rvec / norm
+    Rp = R @ geom.p
+    J = np.empty((6, 6), dtype=float)
+    J[:, :3] = e.T
+    J[:, 3:] = np.cross(Rp, e, axis=0).T
+    return J, e
+
+
+def _cond_and_sigma(J: np.ndarray, char_len: float | None):
+    """``(cond, sigma_min, sigma_max)`` of ``J`` with the rotation columns scaled.
+
+    ``J``'s rotation columns are mm/rad and its translation columns are
+    dimensionless, so its singular values are not comparable as they stand.
+    Scaling the rotation columns by ``1 / char_len`` measures the rotation
+    increment as an arc length ``char_len * omega`` in mm and makes the whole
+    matrix dimensionless.
+
+    ``char_len`` is **not defaulted**.  It is the same undecided choice
+    ``notation.md`` sec.12 records for the scoring conditioning measure, and
+    picking one here silently would settle it by accident.  Passing ``None``
+    returns ``(None, None, None)``.
+    """
+    if char_len is None:
+        return None, None, None
+    scale = np.array([1.0, 1.0, 1.0,
+                      1.0 / char_len, 1.0 / char_len, 1.0 / char_len])
+    sv = np.linalg.svd(J * scale, compute_uv=False)
+    smin, smax = float(sv[-1]), float(sv[0])
+    return (float(smax / smin) if smin > 0.0 else np.inf), smin, smax
+
+
+def fk_solve(
+    geom: Geometry,
+    alphas: np.ndarray,
+    R0: np.ndarray,
+    T0: np.ndarray,
+    *,
+    tol: float = FK_TOL_MM,
+    max_iter: int = FK_MAX_ITER,
+    char_len: float | None = None,
+):
+    """:func:`fk` with the whole solve record returned instead of just the pose.
+
+    Same solver; ``fk`` is a two-line wrapper.  This is the entry point for the
+    gate, which needs the residual, the iteration count, the condition number
+    and whether the Levenberg-Marquardt fallback fired.
+
+    Method.  The arm tips are closed form from ``alphas``
+    (:func:`arm_tips`), so they are six fixed world points and the problem is
+    square: six rod-closure equations ``f_i = 0`` in the six unknowns
+    ``(T, omega)``.  Newton, with the analytic Jacobian of
+    :func:`fk_jacobian`, a backtracking line search on ``max_i |f_i|``, and
+    Levenberg-Marquardt only where Newton fails to reduce that norm.
+
+    ``R`` is carried as a matrix and updated on the **left**,
+    ``R <- exp([omega]_x) R``; ``omega`` is a local increment, re-zeroed each
+    iteration, never accumulated.  So the iterate never leaves ``SO(3)`` and no
+    rotation convention is involved.
+
+    STOPPING is stagnation: iterate until no step - Newton, backtracked
+    Newton, or Levenberg-Marquardt - can reduce ``max_i |f_i|`` any further.
+    ``tol`` is then applied ONCE, to the converged residual, as an
+    **acceptance** test.  It is deliberately not the stopping rule; see
+    :data:`FK_TOL_MM` for the measurement that settled that, and note the
+    consequence: within the range where acceptance succeeds, the returned pose
+    does not depend on ``tol`` at all.
+
+    The LM fallback is **reported, never silent** (``lm_steps`` in the record).
+    Newton failing on a square system is a conditioning statement about the
+    mechanism at that pose, and hiding it behind a fallback that quietly
+    succeeds throws that information away.  Its damping is Marquardt's scaled
+    form, ``(J^T J + lam * diag(J^T J)) dx = -J^T f``, rather than
+    ``lam * I``: ``I`` would add a millimetre to a radian, which needs exactly
+    the characteristic length this module refuses to pick.
+
+    Parameters
+    ----------
+    geom : Geometry
+    alphas : ndarray, shape (6,)
+        Servo angles, **radians**.
+    R0, T0 : ndarray
+        Seed pose, ``(3, 3)`` and ``(3,)``.  The gate seeds HOME - ``R0 = I``,
+        ``T0 = (0, 0, z_home)`` - fixed and neutral, never the commanded pose.
+        A solver seeded at the answer starts with a zero residual and returns
+        immediately, which would let the round trip pass for any ``ik`` at all.
+    tol : float
+        Residual tolerance, **mm**; see :data:`FK_TOL_MM` for why the value is
+        what it is.  Convergence is ``max_i |f_i| <= tol``.
+    max_iter : int
+        Iteration cap.  Exceeding it raises.
+    char_len : float or None
+        Characteristic length, mm, used ONLY to make ``cond(J)`` meaningful.
+        No default - see :func:`_cond_and_sigma`.
+
+    Returns
+    -------
+    dict
+        ``R``, ``T``, ``residual_mm``, ``iterations``, ``lm_steps``,
+        ``cond``, ``sigma_min``, ``sigma_max``, ``char_len``,
+        ``so3_drift`` (``max |R^T R - I|`` before the final polar projection),
+        ``residual_history``.
+
+    Raises
+    ------
+    FKNotConverged
+        Iteration cap reached, or the step broke down, without meeting ``tol``.
+    """
+    tips = arm_tips(geom, alphas)
+    R = np.array(R0, dtype=float).reshape(3, 3).copy()
+    T = np.array(T0, dtype=float).reshape(3).copy()
+
+    lm_steps = 0
+    history = []
+    reason = "cap"
+    res = np.inf
+
+    it = 0
+    for it in range(1, int(max_iter) + 1):
+        f, rvec, norm = fk_residual(geom, tips, R, T)
+        res = float(np.max(np.abs(f)))
+        history.append(res)
+
+        if res == 0.0:
+            break
+
+        if np.any(norm <= 0.0) or not np.all(np.isfinite(f)):
+            raise FKNotConverged(res, it, tol, "singular")
+
+        J, _ = fk_jacobian(geom, R, rvec, norm)
+
+        # ---- Newton, then backtrack on max|f| ---------------------------- #
+        step = None
+        try:
+            step = np.linalg.solve(J, -f)
+            if not np.all(np.isfinite(step)):
+                step = None
+        except np.linalg.LinAlgError:
+            step = None
+
+        accepted = None
+        if step is not None:
+            t = 1.0
+            for _ in range(30):                    # 2^-30 ~ 1e-9 of the step
+                cand = _apply(R, T, t * step)
+                fc, _, _ = fk_residual(geom, tips, *cand)
+                if np.max(np.abs(fc)) < res:
+                    accepted = cand
+                    break
+                t *= 0.5
+
+        # ---- Levenberg-Marquardt fallback, counted ----------------------- #
+        # Counted only when a step is ACCEPTED.  Every converged solve ends
+        # with one iteration where nothing reduces the residual - that is the
+        # stagnation stopping rule firing at the arithmetic floor, and Newton
+        # "failing" there is not a conditioning event.  Counting the attempt
+        # instead of the acceptance reported LM on 96% of solves and would
+        # have buried a real conditioning problem in the noise.
+        if accepted is None:
+            JtJ = J.T @ J
+            Jtf = J.T @ f
+            diag = np.diag(JtJ).copy()
+            diag[diag <= 0.0] = 1.0
+            lam = 1e-3
+            for _ in range(40):
+                try:
+                    dx = np.linalg.solve(JtJ + lam * np.diag(diag), -Jtf)
+                except np.linalg.LinAlgError:
+                    lam *= 10.0
+                    continue
+                cand = _apply(R, T, dx)
+                fc, _, _ = fk_residual(geom, tips, *cand)
+                if np.max(np.abs(fc)) < res:
+                    accepted = cand
+                    lm_steps += 1
+                    break
+                lam *= 10.0
+            if accepted is None:
+                # Nothing can reduce the residual any further.  That is the
+                # STOPPING rule - the arithmetic floor, or a genuine stall.
+                # Which of the two it is, is decided by the acceptance test
+                # below, not here.
+                reason = "stalled"
+                break
+
+        R, T = accepted
+    else:
+        reason = "cap"
+
+    # ---- acceptance, applied ONCE, to the converged residual ------------- #
+    f, rvec, norm = fk_residual(geom, tips, R, T)
+    res = float(np.max(np.abs(f)))
+    if res > tol:
+        raise FKNotConverged(res, it, tol, reason)
+
+    # Final Jacobian, and how far the accumulated exp updates drifted off SO(3)
+    # before the projection below.
+    J, _ = fk_jacobian(geom, R, rvec, norm)
+    cond, smin, smax = _cond_and_sigma(J, char_len)
+    drift = float(np.max(np.abs(R.T @ R - np.eye(3))))
+    U, _, Vt = np.linalg.svd(R)
+    R = U @ Vt
+
+    return {
+        "R": R,
+        "T": T,
+        "residual_mm": float(np.max(np.abs(f))),
+        "iterations": it,
+        "lm_steps": lm_steps,
+        "cond": cond,
+        "sigma_min": smin,
+        "sigma_max": smax,
+        "char_len": char_len,
+        "so3_drift": drift,
+        "residual_history": history,
+    }
+
+
+def _apply(R: np.ndarray, T: np.ndarray, dx: np.ndarray):
+    """Apply an increment ``dx = (dT, omega)``: ``T + dT`` and ``exp([w]_x) R``."""
+    return exp_so3(dx[3:]) @ R, T + dx[:3]
+
+
 def fk(
     geom: Geometry,
     alphas: np.ndarray,
     R0: np.ndarray,
     T0: np.ndarray,
     *,
-    tol: float = 1e-9,
-    max_iter: int = 100,
+    tol: float = FK_TOL_MM,
+    max_iter: int = FK_MAX_ITER,
 ):
     """Forward kinematics: six servo angles -> platform pose, numerically.
 
-    With the arm tips fixed by ``alphas``, solve for ``(R, T)`` such that
-    every rod length equals ``d``.  Iterative; needs a seed pose
-    ``(R0, T0)``.
+    With the arm tips fixed by ``alphas``, solve for ``(R, T)`` such that every
+    rod length equals ``d``.  Newton on the six unsquared rod-closure residuals
+    in the six unknowns ``(T, omega)``; see :func:`fk_solve`, which this wraps
+    and which returns the residual, the iteration count and the conditioning.
 
     The seed must **not** be the true pose.  Seeded at the truth the residual
     is already zero, the solver returns immediately, and the round-trip test
-    then passes for *any* ``ik`` - including one that returns zeros.  See
-    :func:`stewart.roundtrip.round_trip`, which offsets the seed on purpose.
+    then passes for *any* ``ik`` - including one that returns zeros.
+    :func:`stewart.roundtrip.round_trip` offsets the seed for that reason;
+    ``stewart/diagnostics/roundtrip.py`` goes further and seeds HOME, a fixed
+    neutral pose that knows nothing about the commanded one.
+
+    **A 6-RSS forward kinematics has several real solutions.**  The platform
+    can assemble in genuinely different poses from the same six angles.  This
+    function returns the root its seed leads to, and a small residual is
+    therefore evidence that the legs close - not that the pose is the one that
+    was commanded.  Anything comparing an ``fk`` output against a commanded
+    pose has to distinguish "wrong" from "a different assembly mode", and the
+    residual alone cannot do it.
 
     Parameters
     ----------
@@ -275,7 +676,8 @@ def fk(
     T0 : ndarray, shape (3,)
         Seed pose.
     tol : float
-        Convergence tolerance on the rod-length residual, mm.
+        Convergence tolerance on the rod-length residual, mm.  See
+        :data:`FK_TOL_MM`.
     max_iter : int
         Iteration cap.
 
@@ -286,7 +688,18 @@ def fk(
 
     Raises
     ------
-    Unreachable
-        If the pose search leaves a rod unable to close.
+    FKNotConverged
+        Cap reached, or the step broke down, without meeting ``tol``.  Raised
+        rather than returning a best effort.
+
+    Notes
+    -----
+    The stub docstring listed :class:`Unreachable` here.  It does not apply.
+    ``Unreachable`` is a statement about one leg's servo circle failing to
+    reach a COMMANDED anchor, which is an inverse-kinematics condition; in
+    forward kinematics the anchors are what is being solved for and no such
+    per-leg test exists.  The forward failure mode is non-convergence, which
+    is what :class:`FKNotConverged` reports.
     """
-    raise NotImplementedError
+    out = fk_solve(geom, alphas, R0, T0, tol=tol, max_iter=max_iter)
+    return out["R"], out["T"]
