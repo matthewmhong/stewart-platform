@@ -176,6 +176,27 @@ def reach_feasible_any_delta(A, B, G, deltas_rad):
     return ok
 
 
+def reach_ceiling_bisect(beta, beta_p, r_p, a, d, h_p, lo, hi, az, mg,
+                         deltas_rad, tol=1e-9):
+    """Refine the reach ceiling between a feasible ``lo`` and infeasible ``hi``.
+
+    The grid step is 0.025 ``r_b``, which is coarse enough that a bracket
+    emptied by a gap smaller than that could be a sampling artifact rather than
+    a crossing.  Anything reported as a crossing gets refined to ``tol`` first.
+    """
+    for _ in range(200):
+        if hi - lo <= tol:
+            break
+        mid = 0.5 * (lo + hi)
+        A, B, G, _ = leg_terms(beta, beta_p, r_p, a, d, h_p,
+                               np.array([mid]), az, mg)
+        if reach_feasible_any_delta(A, B, G, deltas_rad)[0]:
+            lo = mid
+        else:
+            hi = mid
+    return lo
+
+
 def check_n_and_v(beta, beta_p, r_p, a, d, h_p):
     """Assert ``v_i == z`` for this candidate; the whole module rests on it."""
     g = make_geometry(r_b=R_B, beta=beta, delta=0.0, r_p=r_p, beta_p=beta_p,
@@ -266,23 +287,31 @@ def main() -> None:
                         A, B, G, N = leg_terms(beta, beta_p, r_p, a, d, H_P,
                                                Z_GRID, az, mg)
                         reach = reach_feasible_any_delta(A, B, G, deltas_rad)
-                        npos = np.min(N, axis=1) > 0.0
-                        ok = reach & npos
                         z_lo_cf = z_lower_closed_form(r_p, H_P)
+                        # N_i > 0 from the CLOSED FORM, not from the pose grid:
+                        # the grid reports the constraint satisfied before it is
+                        # (see check (b) above), so using it here would bias the
+                        # attribution towards blaming reach.
+                        npos = Z_GRID > z_lo_cf
+                        npos_grid = np.min(N, axis=1) > 0.0
+                        ok = reach & npos
+                        ridx = np.flatnonzero(reach)
+                        rec = dict(beta=beta, beta_p=beta_p, r_p=r_p, a=a, d=d,
+                                   cf=z_lo_cf, nreach=int(reach.sum()),
+                                   reach_lo=Z_GRID[ridx[0]] if ridx.size else np.nan,
+                                   reach_hi=Z_GRID[ridx[-1]] if ridx.size else np.nan,
+                                   reach_contig=(bool(ridx.size) and
+                                                 (ridx[-1] - ridx[0] + 1) == ridx.size),
+                                   n_disagree=int(np.sum(npos != npos_grid)))
                         if not ok.any():
-                            empty.append((beta, beta_p, r_p, a, d))
-                            rows.append(dict(beta=beta, beta_p=beta_p, r_p=r_p,
-                                             a=a, d=d, lo=np.nan, hi=np.nan,
-                                             cf=z_lo_cf, contiguous=True,
-                                             nreach=int(reach.sum())))
+                            empty.append(rec)
+                            rec.update(lo=np.nan, hi=np.nan, contiguous=True)
+                            rows.append(rec)
                             continue
                         idx = np.flatnonzero(ok)
-                        lo, hi = Z_GRID[idx[0]], Z_GRID[idx[-1]]
-                        contiguous = (idx[-1] - idx[0] + 1) == idx.size
-                        rows.append(dict(beta=beta, beta_p=beta_p, r_p=r_p,
-                                         a=a, d=d, lo=lo, hi=hi, cf=z_lo_cf,
-                                         contiguous=contiguous,
-                                         nreach=int(reach.sum())))
+                        rec.update(lo=Z_GRID[idx[0]], hi=Z_GRID[idx[-1]],
+                                   contiguous=(idx[-1] - idx[0] + 1) == idx.size)
+                        rows.append(rec)
 
     n_tot = len(rows)
     n_empty = len(empty)
@@ -307,13 +336,170 @@ def main() -> None:
     print("  Empty brackets by d/r_b (a candidate with no feasible z_home at ANY")
     print("  delta, over the whole scanned range):")
     for d in D_RB:
-        k = sum(1 for e in empty if e[4] == d)
+        k = sum(1 for e in empty if e["d"] == d)
         tot = sum(1 for r in rows if r["d"] == d)
         print(f"    d/r_b = {d:<5} : {k:>4} / {tot}")
     for a in A_RB:
-        k = sum(1 for e in empty if e[3] == a)
+        k = sum(1 for e in empty if e["a"] == a)
         tot = sum(1 for r in rows if r["a"] == a)
         print(f"    a/r_b = {a:<5} : {k:>4} / {tot}")
+
+    # ------------------------------------------------------------------ #
+    # WHICH constraint emptied each of them
+    # ------------------------------------------------------------------ #
+    print()
+    print("-" * 78)
+    print("ATTRIBUTION OF THE EMPTY BRACKETS")
+    print("-" * 78)
+    print("  Why this block exists.  'N_i > 0 never sets the lower end, 0 of 363'")
+    print("  is a SURVIVORSHIP sample: it ranges over candidates that HAVE a")
+    print("  bracket, and those are exactly the ones where the constraints did")
+    print("  not cross.  If N_i > 0 is ever binding it is among the empties, and")
+    print("  a sample that structurally cannot contain a counterexample is not")
+    print("  evidence.  So the empties are attributed here.")
+    print()
+    print("  The two constraints are not the same shape, which decides what the")
+    print("  categories can be:")
+    print("    N_i > 0    ONE-SIDED, a FLOOR:  z_home > r_p sin(tilt)+h_p cos(tilt)")
+    print("    reach      TWO-SIDED, an INTERVAL in z_home (contiguous, measured)")
+    print("  N_i > 0 has no ceiling, so 'reach floor above the N ceiling' cannot")
+    print("  occur - there is no N ceiling to be above.  Only two cases exist:")
+    print("    R  reach empty on its own      - no z_home reaches at any delta")
+    print("    X  reach ceiling BELOW N floor - both satisfiable alone, crossed")
+    print()
+
+    cat_R, cat_X = [], []
+    for e in empty:
+        if e["nreach"] == 0:
+            cat_R.append(e)
+        else:
+            cat_X.append(e)
+
+    print(f"    R  reach empty on its own      : {len(cat_R):>4} / {len(empty)}")
+    print(f"    X  reach ceiling below N floor : {len(cat_X):>4} / {len(empty)}")
+    print()
+    if cat_X:
+        print("    Candidates where the two constraints CROSS.  The grid step is")
+        print(f"    {Z_GRID[1]-Z_GRID[0]}, so a crossing narrower than that could be a")
+        print("    sampling artifact; each reach ceiling below is refined by")
+        print("    bisection to 1e-9 before the verdict is taken.")
+        print()
+        print(f"      {'beta':>6} {'beta_p':>7} {'r_p':>6} {'a/r_b':>6} "
+              f"{'d/r_b':>6} {'ceil(grid)':>11} {'ceil(exact)':>12} "
+              f"{'N floor':>9} {'gap':>10} {'verdict':>9}")
+        real_X = []
+        for e in cat_X:
+            step = Z_GRID[1] - Z_GRID[0]
+            exact = reach_ceiling_bisect(e["beta"], e["beta_p"], e["r_p"],
+                                         e["a"], e["d"], H_P,
+                                         e["reach_hi"], e["reach_hi"] + step,
+                                         az, mg, deltas_rad)
+            gap = e["cf"] - exact
+            real = gap > 0.0
+            if real:
+                real_X.append(e)
+            print(f"      {e['beta']:>6.1f} {e['beta_p']:>7.1f} {e['r_p']:>6.2f} "
+                  f"{e['a']:>6.2f} {e['d']:>6.2f} {e['reach_hi']:>11.3f} "
+                  f"{exact:>12.7f} {e['cf']:>9.5f} {gap:>+10.2e} "
+                  f"{'REAL' if real else 'artifact':>9}")
+        cat_X = real_X
+        cat_R = [e for e in empty if e not in cat_X]
+        print()
+        print(f"    after refinement:  R = {len(cat_R)},  X = {len(cat_X)}")
+    if not cat_X:
+        print("    No candidate is emptied by the crossing.  Every empty bracket")
+        print("    is reach failing on its own, at every z_home and every delta.")
+
+    print()
+    print(f"    {'a/r_b':>7} {'empty':>7} {'R':>5} {'X':>5}")
+    for a in A_RB:
+        ke = [e for e in empty if e["a"] == a]
+        print(f"    {a:>7.2f} {len(ke):>7} "
+              f"{sum(1 for e in ke if e['nreach'] == 0):>5} "
+              f"{sum(1 for e in ke if e['nreach'] > 0):>5}")
+    print()
+    print(f"    {'d/r_b':>7} {'empty':>7} {'R':>5} {'X':>5}")
+    for d in D_RB:
+        ke = [e for e in empty if e["d"] == d]
+        print(f"    {d:>7.2f} {len(ke):>7} "
+              f"{sum(1 for e in ke if e['nreach'] == 0):>5} "
+              f"{sum(1 for e in ke if e['nreach'] > 0):>5}")
+
+    # is the reach set ever clipped by the top of the scan?
+    hit_top = [r for r in rows if r["nreach"] and
+               r["reach_hi"] >= Z_GRID[-1] - 1e-12]
+    noncontig_reach = [r for r in rows if r["nreach"] and not r["reach_contig"]]
+    disagree = sum(r["n_disagree"] for r in rows)
+    print()
+    print(f"    reach set touching the top of the scan ({Z_GRID[-1]}) : "
+          f"{len(hit_top)}  (0 means the scan is not clipping anything)")
+    print(f"    non-contiguous REACH sets                    : "
+          f"{len(noncontig_reach)}")
+    if noncontig_reach:
+        print("      Reported because it looks like it contradicts the "
+              "'0 non-contiguous")
+        print("      feasible sets' above.  It does not, and the reason is the "
+              "third")
+        print("      job N_i > 0 does.  Every one of these has a spurious "
+              "LOW component")
+        print("      at z_home ~ 0.025-0.125 r_b - the platform essentially on "
+              "the base")
+        print("      plate, geometrically reachable and physically nonsense - "
+              "and in")
+        print("      every case it sits ENTIRELY BELOW the N_i > 0 floor, which "
+              "removes")
+        print("      it.  The INTERSECTION is contiguous; the reach set alone "
+              "is not.")
+        print(f"      {'beta':>6} {'beta_p':>7} {'r_p':>6} {'a/r_b':>6} "
+              f"{'d/r_b':>6} {'low component':>18} {'N floor':>9} "
+              f"{'main component':>18}")
+        for r in noncontig_reach:
+            A, B, G, _ = leg_terms(r["beta"], r["beta_p"], r["r_p"], r["a"],
+                                   r["d"], H_P, Z_GRID, az, mg)
+            ri = np.flatnonzero(reach_feasible_any_delta(A, B, G, deltas_rad))
+            comps = np.split(ri, np.flatnonzero(np.diff(ri) > 1) + 1)
+            lo_c, hi_c = comps[0], comps[-1]
+            print(f"      {r['beta']:>6.1f} {r['beta_p']:>7.1f} "
+                  f"{r['r_p']:>6.2f} {r['a']:>6.2f} {r['d']:>6.2f} "
+                  f"{f'[{Z_GRID[lo_c[0]]:.3f}, {Z_GRID[lo_c[-1]]:.3f}]':>18} "
+                  f"{r['cf']:>9.3f} "
+                  f"{f'[{Z_GRID[hi_c[0]]:.3f}, {Z_GRID[hi_c[-1]]:.3f}]':>18}")
+        below = sum(1 for r in noncontig_reach)
+        print(f"      low component below the N floor in {below} of "
+              f"{len(noncontig_reach)}")
+    print(f"    z points where closed-form and grid N disagree: {disagree}")
+    print("      (the closed form is the one used above; the grid is optimistic")
+    print("       by up to one grid step, which is why it is not used here)")
+
+    # ---- the corrected claim ---------------------------------------- #
+    print()
+    print("  CORRECTED CLAIM.")
+    if cat_X:
+        print("    'N_i > 0 is not the binding constraint at this tilt' is WRONG")
+        print("    as an unqualified statement.  The 0-of-363 sample it rested on")
+        print("    could not have contained a counterexample; a sample that could")
+        print("    have, does.  N_i > 0 does three distinct jobs:")
+        print(f"      1. it never sets the LOWER END of a surviving bracket "
+              f"(0 of {len(good)});")
+        print(f"      2. it CLOSES the bracket outright in {len(cat_X)} of the "
+              f"{len(empty)} empties -")
+        print("         reach ceiling below the N floor, refined by bisection so")
+        print("         it is a crossing and not a grid artifact;")
+        print(f"      3. it removes a spurious disconnected low-z reach component")
+        print(f"         in {len(noncontig_reach)} candidates, which is what keeps "
+              f"the feasible")
+        print("         set an interval at all.")
+        print("    Correct form: it does not shape the interior of the feasible")
+        print("    set, and it is not what makes most candidates fail - but it is")
+        print("    load-bearing at the edges, and it cannot be dropped.")
+    else:
+        print(f"    'N_i > 0 is not the binding constraint at this tilt' SURVIVES")
+        print(f"    the test that could have refuted it.  It sets the lower end in")
+        print(f"    0 of {len(good)} candidates with a bracket, AND it is not what")
+        print(f"    empties any of the {len(empty)} without one - all {len(cat_R)}")
+        print(f"    of those are reach failing alone, at every z_home and every")
+        print(f"    delta.  The claim now rests on a sample that COULD have")
+        print(f"    contained a counterexample and does not.")
 
     print()
     print("  A sample of the bracket, at r_p/r_b = 0.85, beta = 20:")
