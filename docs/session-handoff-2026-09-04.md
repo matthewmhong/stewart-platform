@@ -87,19 +87,32 @@ Recomputed on the settled envelope, same geometry, same height:
 **`+1.550398e-01`**. Tuning `z_home` alone, still at fixture A's untuned
 `delta = 40°`: **`+2.276643e-01`** at `z_home/r_b = 1.2375`.
 
-Attributed rather than reported as one number, since the two envelopes are not
-nested — all against `tilt 6°, yaw 0, T = 0` = `+5.1489e-01`:
+Individual costs, each a difference of two measurements on **one** pose set:
+yaw ±10° costs `1.8033e-01`, translation ±0.05·r_b costs `3.6486e-01`, tilt
+6° → 10.529° costs `3.6147e-01`. Translation and the tilt increase cost
+comparable amounts; yaw about half.
 
-| removed / added | cost in margin |
-|---|---|
-| yaw ±10° | `1.80e-1` |
-| translation ±0.05·r_b | `3.65e-1` |
-| tilt 6° → 10.529° | `3.61e-1` |
+**The `−5.7e-3` was not driven by tilt** — it was yaw and translation together,
+and the settled envelope commands neither. That conclusion stands: it rests on
+gaps of order `1e-1`.
 
-Translation and the tilt increase cost comparable amounts; yaw about half. The
-`−5.7e-3` was **not** driven by tilt — it was yaw and translation together, and
-the settled envelope has neither. **Quote the new number with its envelope
-attached, or neither.** `stewart/diagnostics/branch_envelope.py`.
+> **WITHDRAWN 2026-09-05 — the four-row attribution table.** A table stood here
+> presenting those costs as a decomposition against a baseline
+> `tilt 6°, yaw 0, T = 0` = `+5.1489e-01`, with a fourth row calling
+> yaw + translation near-additive. **The decomposition does not close.** Baseline
+> minus the tilt cost gives `+1.534192e-01` against a settled figure of
+> `+1.550398e-01` — a **`1.62e-3`** discrepancy, ~1% of the quantity the table
+> existed to explain and three orders above every other residual in the package.
+>
+> Cause, confirmed rather than guessed: the rows and the settled figure are
+> **maximins over different pose sets**. The magnitude grids are identical; only
+> the azimuth sampling differs (15° for the rows, 10° for the settled figure), so
+> subtracting one from the other was never a valid operation. Withdrawn, not
+> repaired — the conclusion above never depended on it.
+
+**Quote the new number with its envelope attached, or neither** — and see open
+item 12 before quoting `+1.550398e-01` itself.
+`stewart/diagnostics/branch_envelope.py`.
 
 **`z_home = z_flat` is DROPPED.** *(Decision 2026-09-04, later the same day. This
 **supersedes** the earlier 2026-09-04 paragraph in this section which read "`z_home`
@@ -430,10 +443,37 @@ Two findings that were not in the item.
    drops the `cos(tilt)` and overstates the requirement by `h_p(1 - cos tilt)` —
    `1.68e-3 r_b` at `h_p = 0.1 r_b`. Conservative, so it errs safe; still not the
    bound, and the closed form is free.
-2. **`N_i > 0` is not the binding constraint.** In **0 of 363** candidates with a
-   non-empty `z_home` bracket did it set the lower end — reach binds first,
-   everywhere on the grid. The test must stay, because the `-` branch rests on it,
-   but it is not what shapes the axis at this tilt.
+2. **`N_i > 0` is load-bearing at the edges, though it never shapes the interior.**
+   *(Corrected 2026-09-05. The claim first written here — "`N_i > 0` is not the
+   binding constraint at this tilt", on the strength of **0 of 363** candidates
+   with a non-empty bracket — rested on a **survivorship sample**: it ranged only
+   over candidates where the constraints did **not** cross, so it structurally
+   could not have contained a counterexample. A sample that could, does.)*
+
+   The `0 of 363` is still true and still means it never sets the lower end of a
+   surviving bracket. Attributing the **177 empties** as well:
+
+   - **176 of 177** are reach failing on its own, at every `z_home` and every
+     `delta`.
+   - **1 of 177** is the two constraints crossing — reach ceiling **below** the
+     `N_i` floor: `beta = 10°, beta_p = 55°, r_p/r_b = 1.10, a/r_b = 0.10,
+     d/r_b = 0.80`. The grid gap was `0.024` on a `0.025` step, inside one step, so
+     it was refined by bisection to `1e-9`: ceiling `0.2920624`, floor `0.29932`,
+     gap **`+7.26e-03`**. **Real, not a sampling artifact.**
+   - **6 candidates** have a *non-contiguous reach set* — a spurious low component
+     at `z_home ≈ 0.025–0.125 r_b`, the platform essentially on the base plate,
+     geometrically reachable and physically nonsense. In **6 of 6** it lies
+     entirely below the `N_i` floor, so `N_i > 0` removes it. That is what keeps
+     the feasible set an interval, and it is why "0 non-contiguous feasible sets"
+     and "6 non-contiguous reach sets" are both true — they measure different sets.
+
+   Correct form: `N_i > 0` does not shape the interior of the feasible set and is
+   not why most candidates fail, but it **closes the bracket outright in 1 of 177
+   and keeps the set connected in 6**. It cannot be dropped.
+
+   Note the categories are fixed by the constraints' shapes: `N_i > 0` is
+   **one-sided**, a floor; reach is a **two-sided interval**. There is no `N_i`
+   ceiling, so "reach floor above the `N_i` ceiling" is not a case that can occur.
 
 And a trap for the harness: this is a **continuum** bound. A discrete pose grid
 reports it satisfied slightly *before* it truly is (`+5.9e-4` on the 29-pose grid
@@ -510,6 +550,29 @@ not 0 + 60k, because a reflection maps a tilt axis at `psi` to one at
 what it touches and **misses the orbit `{75°, 105°}` entirely**. The window is
 **`[30°, 90°]`**. `notation.md` §9 and §10 carry the correction.
 
+**12. The 29-pose harness grid overstates worst-case margins** *(found 2026-09-05
+while withdrawing the attribution table; not a task item)*. Same fixture, same
+height, varying **only** the azimuth sampling:
+
+| azimuth sampling | `min (C-\|P\|)/C` |
+|---|---|
+| 15° over `[0°, 360°)` | `+1.534192e-01` |
+| 15° over `[30°, 90°]` | `+1.534192e-01` |
+| **10° over `[30°, 90°]` — the harness grid, and the settled figure** | **`+1.550398e-01`** |
+| 0.25° over `[30°, 90°]` — reference | `+1.531859e-01` |
+
+7 azimuths at 10° miss the worst azimuth by more than 24 at 15° happen to, so the
+harness grid is **optimistic by ~1.9e-3** and so is the `+1.550398e-01` quoted
+above. **`+1.53e-1` is the defensible number.**
+
+This is the **same failure mode** as the `N_i > 0` bound in open item 5 — a
+discrete pose grid flattering a worst case — and it is now two for two. Neither
+is large, and both run in the unsafe direction. Open question, not settled here:
+whether the scoring grid needs refining, or whether a scoring grid is allowed to
+be optimistic as long as **feasibility** is decided by closed forms and the
+ranking is what the grid produces. That is a decision about the score function,
+so it belongs with it. `stewart/diagnostics/branch_envelope.py`.
+
 ---
 
 ## Plan, in order
@@ -539,6 +602,28 @@ Tags: **[Y]** his, **[CC]** Claude Code, **[bg]** background.
   tolerance for a rod cut long, and is now also the inner objective;
   servo travel used; tilt resolution. The last two are meaningless until the
   hardware pull returns.
+
+  **Translation sensitivity — added 2026-09-05.** Margin lost per unit normalised
+  displacement, `Δmargin / (dxy/r_b)`, evaluated **once at the tuned `delta`**, per
+  candidate.
+
+  - It is a **ranking discriminator, NOT a feasibility test.** The platform is
+    displaced from where the model thinks it is by build error; candidates that
+    tolerate that are better, but **none are excluded for it**.
+  - Probe magnitude to be fixed with the rest of the score function. It must be
+    small enough to stay linear. Calibration from the (e) attribution: order **7
+    units of margin per unit normalised displacement** at fixture A
+    (`3.6486e-01` of margin for `0.05 r_b`), suggesting a probe of
+    **0.005–0.01 `r_b`**.
+
+  **Recorded so it is not re-derived as a control requirement.** `dxy = 0` is
+  correct, and it is a statement about what the control law **commands**. Build
+  error is a **perturbation about every commanded pose** — a different object, and
+  it belongs in scoring, not in the envelope. A non-zero `dxy` was discussed and
+  reversed before dispatch; verified 2026-09-05 that nothing was committed against
+  it. The envelope stays two axes, tilt magnitude and tilt azimuth over
+  `[30°, 90°]`; 174 `w` evaluations per objective evaluation and the ~3.9 GB
+  chunking figure stand.
 - **Sweep harness [CC].** *(Rewritten 2026-09-04, superseding the same-day line
   "Five normalised axes … feasibility guard for the missing-`z_home` region".)*
   **Six** normalised axes including `z_home/r_b`. *(Updated 2026-09-05: the bracket
@@ -598,4 +683,4 @@ Session log row, engagement not yet given:
 | Date | Phase | Engagement | Notes |
 |---|---|---|---|
 | 2026-09-04 | 0 | — | `stage1`, `legs`, `arm_tips`, `ik` implemented; §7 table re-established with a control row proving the distance check alone is insufficient. Branch fixed as `-`, justified by `N > 0` under horizontal shafts — evidence gathered at one `z_home`, so it needs re-running (open item 11). **`z_home = z_flat` tried and dropped the same day**: `z_flat` stays an assembly datum with a verified closed form (leg-independence 9.948e-14, closed form vs library 1.637e-11, round trip 2.220e-16), `z_home` returns as the sixth sweep axis with **no range yet**, and the "8 of 432 no valid `z_home`" claim is withdrawn as an artifact of holding `delta = 40`. Inner `delta` objective moved from `J = max\|w\|` to the normalised margin `(C-\|P\|)/C`; `delta*`'s basin claim withdrawn. **Pose envelope** reduced to four axes — unchanged by the reversal, and not to be confused with the six-axis geometry sweep. Symmetry of the six `w_i` derived as a D₃ stabiliser argument and verified with a negative control; closed form for `delta*` at home. Open item 3 closed: `beta_p = beta` is not a rank hole — the rank-3 result was a proxy concurrency artifact, disproved with true rod lines. Tilt target shown not to be scale invariant, moving absolute scale upstream of the sweep. Three provenance failures found where documented results had no code behind them; `branch_check.py` recovered from scratchpad and committed. |
-| 2026-09-05 | 0 | — | Working envelope specified and open item 1 closed: `dxy = dz = 0`, `yaw = 0`, tilt limit **10.529°** from a bang-bang recovery model (`acc = 4x0/tau²`, `sin tilt = 7acc/5g`, `x0 = 50 mm + 30 mm latency drift`, `tau = 0.5 s`), bare requirement **6.558°** recorded alongside; `tau_L = 150 ms` flagged provisional and pushed to the hardware pull, sensitivity `1/tau²` recorded with it. The `1/k` tilt-scaling result **inverted**: under the recovery framing required tilt grows as `k`, not `1/k` — conclusion unchanged, mechanism opposite. Envelope is **two** axes, not four, and being purely angular does not scale with `k` at all. Four diagnostics committed. Azimuth: a 60° window is sufficient but it is **`[30°, 90°]`, not `[0°, 60°]`** — period-120 holds to 1.0e-13, the `180-psi` mirror to 5.6e-14, the `-psi` mirror fails at 2.3e-1; `[0°,60°]` misses the orbit `{75°,105°}`. `z_home` lower bracket in closed form `> r_p sin(tilt) + h_p cos(tilt)`, verified to 5.6e-17, and it is **never the binding constraint** (0 of 363 candidates); upper bracket per candidate, 363 of 540 non-empty. `-` branch re-run across the restored axis at 10.529°: stands, 0 flips, closure 1.8e-15, `ik()` agrees to 8.9e-16. The **−5.7e-3** boundary margin is superseded — it was bought by yaw and translation, not tilt; on the settled envelope the same geometry gives **+1.55e-1**. Open items 1, 5, 8 and 11 closed. |
+| 2026-09-05 | 0 | — | Working envelope specified and open item 1 closed: `dxy = dz = 0`, `yaw = 0`, tilt limit **10.529°** from a bang-bang recovery model (`acc = 4x0/tau²`, `sin tilt = 7acc/5g`, `x0 = 50 mm + 30 mm latency drift`, `tau = 0.5 s`), bare requirement **6.558°** recorded alongside; `tau_L = 150 ms` flagged provisional and pushed to the hardware pull, sensitivity `1/tau²` recorded with it. The `1/k` tilt-scaling result **inverted**: under the recovery framing required tilt grows as `k`, not `1/k` — conclusion unchanged, mechanism opposite. Envelope is **two** axes, not four, and being purely angular does not scale with `k` at all. Four diagnostics committed. Azimuth: a 60° window is sufficient but it is **`[30°, 90°]`, not `[0°, 60°]`** — period-120 holds to 1.0e-13, the `180-psi` mirror to 5.6e-14, the `-psi` mirror fails at 2.3e-1; `[0°,60°]` misses the orbit `{75°,105°}`. `z_home` lower bracket in closed form `> r_p sin(tilt) + h_p cos(tilt)`, verified to 5.6e-17; upper bracket per candidate, 363 of 540 non-empty. `N_i > 0` never sets the lower end of a surviving bracket (0 of 363) but **is load-bearing at the edges** — it closes the bracket outright in 1 of the 177 empties (gap +7.26e-03, bisected) and removes a spurious low-`z` reach component in 6, which is what keeps the feasible set an interval. *(The unqualified "never the binding constraint" first written here is corrected: it rested on a survivorship sample.)* The 29-pose scoring grid is **optimistic by ~1.9e-3** on worst-case margin, so the settled figure below is too; +1.53e-1 is the defensible value. The four-row attribution table behind the −5.7e-3 comparison is **withdrawn** — the decomposition does not close (1.62e-3), because its rows are maximins over different azimuth samples; the conclusion it supported stands on the magnitudes. Translation sensitivity added to the score function as a ranking discriminator, not a feasibility test. `-` branch re-run across the restored axis at 10.529°: stands, 0 flips, closure 1.8e-15, `ik()` agrees to 8.9e-16. The **−5.7e-3** boundary margin is superseded — it was bought by yaw and translation, not tilt; on the settled envelope the same geometry gives **+1.55e-1**. Open items 1, 5, 8 and 11 closed; open item 12 raised. |

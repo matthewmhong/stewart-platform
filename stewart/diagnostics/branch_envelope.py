@@ -349,22 +349,65 @@ def main() -> None:
     cost_trans = base - old_style(6.0, 0.0, 0.05)
     cost_tilt = base - old_style(TILT_LIMIT_DEG, 0.0, 0.0)
     print()
-    print("    Attribution, each measured against 'tilt 6, yaw 0, T = 0' "
-          f"= {base:+.4e}:")
+    print("    Individual costs, each a difference of two measurements taken on")
+    print("    the SAME pose set (the 15-degree full-circle grid built above):")
     print(f"      cost of yaw +/-10 deg      : {cost_yaw:.4e}")
     print(f"      cost of T +/-0.05 r_b      : {cost_trans:.4e}")
     print(f"      cost of tilt 6 -> {TILT_LIMIT_DEG:.3f}  : {cost_tilt:.4e}")
-    print(f"      yaw + translation together : {cost_yaw + cost_trans:.4e}  "
-          f"(vs {base - variants[0][1]:.4e} measured jointly - near-additive)")
+
+    # ---- the withdrawn part, and why -------------------------------- #
     print()
-    print("    Reading: translation and the tilt increase cost COMPARABLE")
-    print("    amounts of margin; yaw costs about half as much.  The -5.7e-3")
-    print("    was not driven by tilt, and it was not driven by any one term -")
-    print("    it was yaw and translation together, and the settled envelope")
-    print("    removes both.  Raising tilt from 6 to 10.5 does spend most of")
-    print("    what that buys back.  The envelope is much larger in the one")
-    print("    axis the control law uses and empty in the two it does not, and")
-    print("    the net is a positive margin where there was a negative one.")
+    print("    *** WITHDRAWN 2026-09-05: the four-row ATTRIBUTION TABLE ***")
+    print("    A fourth row used to stand here, giving yaw + translation jointly")
+    print("    against their sum and calling the decomposition near-additive.")
+    print("    The decomposition DOES NOT CLOSE and it is withdrawn, not fixed:")
+    print(f"      baseline {base:+.6e}  minus tilt cost {cost_tilt:.6e}")
+    print(f"        = {base - cost_tilt:+.6e}")
+    print(f"      settled figure reported above  = {new_at_datum:+.6e}")
+    print(f"      discrepancy                    = "
+          f"{abs(new_at_datum - (base - cost_tilt)):.2e}")
+    print("    That is ~1% of the quantity the table existed to explain and")
+    print("    three orders above every other residual in this package.")
+    print()
+    print("    CAUSE, confirmed rather than guessed - it is a difference of pose")
+    print("    sets, so the rows are maximins over different samples and are not")
+    print("    comparable.  The magnitude grids are IDENTICAL; only the azimuth")
+    print("    sampling differs, and measured at fixture A:")
+
+    def margin_on(azis, mags_):
+        A_, M_ = np.meshgrid(azis, mags_, indexing="ij")
+        azz = np.concatenate([[0.0], A_.ravel()])
+        mgg = np.concatenate([[0.0], M_.ravel()])
+        Tz = np.stack([np.zeros_like(azz), np.zeros_like(azz),
+                       np.full_like(azz, Z_DATUM_A)], axis=1)
+        return float(margin_general(g, tilt_R(azz, mgg), Tz).min())
+
+    mags4 = np.linspace(TILT_LIMIT_DEG / 4.0, TILT_LIMIT_DEG, 4)
+    print(f"      {'azimuth sampling':<34} {'min (C-|P|)/C':>16}")
+    print(f"      {'15 deg over [0,360)  (rows above)':<34} "
+          f"{margin_on(np.arange(0.0, 360.0, 15.0), mags4):>+16.6e}")
+    print(f"      {'15 deg over [30,90]':<34} "
+          f"{margin_on(np.arange(30.0, 90.1, 15.0), mags4):>+16.6e}")
+    print(f"      {'10 deg over [30,90]  (settled)':<34} "
+          f"{new_at_datum:>+16.6e}")
+    print(f"      {'0.25 deg over [30,90] (reference)':<34} "
+          f"{margin_on(np.arange(30.0, 90.001, 0.25), mags4):>+16.6e}")
+    print()
+    print("    Two things follow.  The rows above and the settled figure are")
+    print("    maximins over different azimuth samples, so subtracting one from")
+    print("    the other was never valid.  And the 29-pose HARNESS grid is the")
+    print("    outlier: 7 azimuths at 10 degrees miss the worst azimuth by more")
+    print("    than 24 at 15 degrees happen to, so the settled figure is itself")
+    print("    grid-OPTIMISTIC by ~1.9e-3.  Same failure mode as the N_i > 0")
+    print("    bound in zhome_bracket.py - a discrete pose grid flatters a worst")
+    print("    case.  Quote +1.53e-1 if a defensible number is wanted.")
+    print()
+    print("    KEPT, because it rests on the magnitudes and not on the")
+    print("    arithmetic: translation and the tilt increase cost COMPARABLE")
+    print("    amounts of margin, yaw about half as much, and the -5.7e-3 was")
+    print("    driven by yaw and translation, not by tilt.  The settled envelope")
+    print("    commands neither.  Those gaps are 1e-1 and unambiguous; the")
+    print("    discrepancy that sank the decomposition is 1.6e-3.")
 
     print()
     print("  VERDICT on the -5.7e-3 figure:")

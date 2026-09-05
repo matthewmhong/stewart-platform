@@ -20,11 +20,11 @@ session; `test_kinematics.py` and all six diagnostics exit 0.
 | 5 | Harness pose grid **5 magnitudes × 7 azimuths = 29 poses**, magnitude 0 counted once | 7 azimuths gives a sample every 10° across the 60° window, beating the superseded sweep's 15°. Magnitude 0 is azimuth-independent, so counting it 7 times would be 6 duplicate poses. 5 magnitudes because nothing has shown the worst case monotonic in tilt magnitude. |
 | 6 | Bracket study uses a **finer** envelope than the harness (6 × 61 = 306 poses) | A bracket is a worst case, and a worst case sampled coarsely is not a bracket. |
 | 7 | Geometry grid 5 `beta` × 4 `beta_p` × 3 `r_p/r_b` × 3 `a/r_b` × 3 `d/r_b` = 540; `h_p/r_b = 0.1` fixed | `h_p` is a hardware number measured off the plate, not a sweep axis (`notation.md` §4). 540 runs in 20 s, which keeps the diagnostic re-runnable. |
-| 8 | `z_home/r_b` scanned 0.025→3.0 at 0.025, **no bisection refinement** | These brackets decide whether a candidate survives; they do not set a dimension. A feasible island narrower than 0.025 `r_b` is not a design. Reported endpoints are grid values and say so. |
+| 8 | `z_home/r_b` scanned 0.025→3.0 at 0.025, **no bisection refinement** *(amended: crossings ARE now bisected — decision 19)* | These brackets decide whether a candidate survives; they do not set a dimension. A feasible island narrower than 0.025 `r_b` is not a design. Reported endpoints are grid values and say so. |
 | 9 | Float noise threshold **1e-12 relative** to each quantity's own scale | The measured invariances land at 1e-13…1e-16 and the negative control at 1e-1. The threshold is nowhere near either, so it is not doing any work. |
 | 10 | Negative control in (a) = one platform anchor displaced 0.03 `r_b` in `x` | Breaks D₃ without touching anything else, so a surviving pass cannot be passing for another reason. It fails at 6.6e-1 / 3.7e-1. |
 | 11 | (e) recomputed on `branch_check.py`'s **fixture A verbatim**, and the old envelope reproduced first | Recomputing on a different geometry would not be a recomputation. The old figure reproduces to `−5.713988e-03`, which validates the comparison harness before it is used. |
-| 12 | (e) reports an **attribution table**, not one replacement number | The two envelopes are not nested — more tilt, no yaw, no translation — so a single before/after would be uninterpretable. |
+| 12 | (e) reports an **attribution table**, not one replacement number *(**withdrawn** — Amendments (2))* | The two envelopes are not nested — more tilt, no yaw, no translation — so a single before/after would be uninterpretable. |
 | 13 | Continuity in (d) checked over the **full circle**, not the 60° window | The 60° window is a scoring shortcut. Continuity is a claim about the trajectory the machine actually follows. |
 | 14 | Reach test implemented as `w_i(delta)² ≤ |L_i|² − P_i²` | Exactly equivalent to `|P| ≤ C` after squaring, and all three terms are `delta`-free, which turns a nested search into one pass. |
 | 15 | The 1.635° appendix entry **kept and relabelled**, not struck | It is correct for what it measures, and the two framings scale oppositely in `k` — worth not re-deriving. Only the 45 mm / 300 mm/s bullet was struck, as instructed. |
@@ -62,7 +62,7 @@ meets it nowhere. Sweeping it would silently omit part of the envelope.
 **The pose count is unchanged** (a 60° window either way), so Part 1's grid row
 did not move on this account. Only the window's position changed.
 
-### (b) `z_home` lower bracket — closed form, and never binding
+### (b) `z_home` lower bracket — closed form ~~and never binding~~ *(see Amendments (3))*
 
 ```
 z_home  >  r_p sin(tilt) + h_p cos(tilt)   =  0.182733 r_p + 0.983163 h_p
@@ -90,7 +90,9 @@ Three findings beyond what was asked:
 3. **`N_i > 0` is not the binding constraint.** In **0 of 363** candidates with a
    non-empty bracket did it set the lower end. Reach binds first, everywhere on
    the grid. The test must stay — the `-` branch rests on it — but it is not what
-   shapes the axis at this tilt.
+   shapes the axis at this tilt. — **CORRECTED, see Amendments (3).** The sample
+   was survivorship; it binds in 1 of the 177 empties and keeps the feasible set
+   connected in 6 more.
 
 ### (c) `z_home` upper bracket — per candidate, no closed form
 
@@ -133,14 +135,9 @@ Old envelope reproduced exactly at the datum `z_home = 1.223343`:
 **`+1.550398e-01`**. Tuning `z_home` alone at fixture A's untuned `delta = 40°`:
 **`+2.276643e-01`** at `z_home/r_b = 1.2375`.
 
-Attribution, each against `tilt 6°, yaw 0, T = 0` = `+5.1489e-01`:
-
-| term | cost in margin |
-|---|---|
-| yaw ±10° | `1.8033e-01` |
-| translation ±0.05 `r_b` | `3.6486e-01` |
-| tilt 6° → 10.529° | `3.6147e-01` |
-| yaw + translation jointly | `5.2060e-01` (vs `5.4519e-01` summed — near-additive) |
+**The four-row attribution table that stood here is WITHDRAWN — see
+Amendments (2).** The individual costs survive: yaw ±10° `1.8033e-01`,
+translation ±0.05 `r_b` `3.6486e-01`, tilt 6° → 10.529° `3.6147e-01`.
 
 **The `−5.7e-3` was not driven by tilt.** Translation and the tilt increase cost
 comparable amounts; yaw about half. It was yaw and translation together, and the
@@ -238,3 +235,115 @@ first-person prose in his voice, so I have not touched it.
 | `docs/stewart-ik-derivation.md` | appendix only: 1.635° relabelled, 45 mm bullet struck |
 | `docs/phase-0-design-log.md` | `### 5 September` skeleton under the 4 September heading |
 | `stewart/kinematics.py`, `stewart/geometry.py`, `test_kinematics.py` | **untouched** |
+
+---
+
+# Amendments — 2026-09-05, correction pass
+
+Four corrections. Two commits: `1b98973` (diagnostic), and the documents commit
+that carries this section.
+
+## Decisions under latitude
+
+| # | Decision | Reason |
+|---|---|---|
+| 18 | Attribution uses the **closed-form** `N_i` floor, not the pose grid | The grid reports `N_i > 0` satisfied before it is, which would bias every attribution towards blaming reach. On this grid the two agree at 0 of 64800 `z` points, so it changes no count here — made so it cannot change one later. |
+| 19 | Every crossing is **bisected to `1e-9`** before it is called a crossing | The one candidate found had a grid gap of `0.024` on a `0.025` step — inside one step, so reporting it unrefined would have been reporting a possible sampling artifact as a finding. |
+| 20 | The `1.62e-3` discrepancy was **diagnosed but not chased** | You said not to chase it; the cause was readable off my own code in one run, so it is stated as confirmed rather than left as "likeliest". No further work. |
+| 21 | Individual costs kept as three standalone measurements, not as a decomposition | Each is a difference of two measurements on **one** pose set, so each is valid on its own. Only the arithmetic that spanned pose sets was withdrawn. |
+
+## Findings
+
+**(1) `dxy` — no leak.** Every `dxy` in the repo is `0` (`DXY = 0.0`, or
+`dxy = dz = yaw = 0`). `notation.md` §9's deleted note is still deleted — the only
+line matching it is the record *of* the deletion. Envelope stays two axes, azimuth
+`[30°, 90°]`, 174 `w` evaluations, ~3.9 GB chunking. **No revert needed.**
+
+**(2) Attribution table withdrawn; cause confirmed, and it is worse than a
+bookkeeping error.** The rows and the settled figure are maximins over **different
+azimuth samples** — magnitude grids identical, azimuth 15° vs 10°. Confirmed by
+measuring the same fixture at four samplings:
+
+| azimuth sampling | `min (C−\|P\|)/C` |
+|---|---|
+| 15° over `[0°, 360°)` (the table's rows) | `+1.534192e-01` |
+| 15° over `[30°, 90°]` | `+1.534192e-01` |
+| **10° over `[30°, 90°]` — the harness grid, and the settled figure** | **`+1.550398e-01`** |
+| 0.25° over `[30°, 90°]` — reference | `+1.531859e-01` |
+
+Your diagnosis was right in kind. The detail differs: the rows were sampled on the
+**full circle at 15°**, not on `[0°, 60°]`. And the sting is in the third row —
+**the 10° harness grid is the outlier, not the 15° one.** `+1.550398e-01` is itself
+grid-optimistic by ~`1.9e-3`; `+1.53e-1` is the defensible number. Withdrawn in the
+2026-09-04 convention (quoted, reasoned, not deleted) in `branch_envelope.py`, the
+handoff, the design log and above. Kept: `−5.713988e-03`, `+1.550398e-01`, the three
+individual costs, and the conclusion — which rests on gaps of `1e-1`, not on
+arithmetic that failed at `1.6e-3`.
+
+**(3) The 177 empties attributed — and `N_i > 0` does bind.** You were right that
+the sample was survivorship. The categories are fixed by the constraints' shapes:
+`N_i > 0` is **one-sided** (a floor), reach is a **two-sided interval**, so there is
+no `N_i` ceiling and "reach floor above the `N_i` ceiling" cannot occur. Two cases
+exist:
+
+| | count |
+|---|---|
+| reach empty on its own | **176 / 177** |
+| reach ceiling below the `N_i` floor | **1 / 177** |
+
+The one: `beta = 10°, beta_p = 55°, r_p/r_b = 1.10, a/r_b = 0.10, d/r_b = 0.80`.
+Grid gap `0.024` on a `0.025` step — inside one step, so bisected to `1e-9`: ceiling
+`0.2920624`, floor `0.29932`, gap **`+7.26e-03`**. **Real, not an artifact.** By
+`a/r_b`: 144 empties at `0.10` (143 R, 1 X), 33 at `0.20` (all R), 0 at `0.35`. By
+`d/r_b`: all three grid values produce empties (42 / 61 / 74), but the single
+crossing is at `d/r_b = 0.80`.
+
+**A third role for `N_i > 0`, not asked for and not anticipated.** Six candidates
+have a **non-contiguous reach set** — a spurious low component at
+`z_home ≈ 0.025–0.125 r_b`, the platform essentially on the base plate,
+geometrically reachable and physically nonsense. In **6 of 6** it lies entirely
+below the `N_i` floor, so `N_i > 0` removes it. That resolves what looked like a
+contradiction with the "0 non-contiguous feasible sets" already reported: both are
+true, they measure different sets. It also means `N_i > 0` is what keeps the
+feasible set an **interval** at all — a bracket-based harness would be wrong without
+it.
+
+**Corrected claim, propagated to `notation.md` §12, the handoff open item 5 and its
+session-log row, and the design log:** `N_i > 0` does not shape the interior of the
+feasible set and is not why most candidates fail, but it **closes the bracket
+outright in 1 of 177 and keeps the set connected in 6**. It is load-bearing at the
+edges and cannot be dropped.
+
+**(4) Design-log heading promoted** to a top-level `## 5 September`, with the
+nesting apology removed from the note.
+
+**(1, cont.) Translation sensitivity recorded** in the handoff's score-function plan
+line: `Δmargin / (dxy/r_b)` at the tuned `delta`, per candidate, a **ranking
+discriminator and not a feasibility test**, probe `0.005–0.01 r_b` from your
+calibration, with `dxy = 0` recorded explicitly as a statement about what the
+control law **commands** and build error as a perturbation belonging in scoring.
+
+## Stale or wrong, not in this prompt
+
+**A. The settled figure `+1.550398e-01` is itself grid-optimistic.** Fell out of
+(2). It is quoted in the handoff, the design log and this summary. All three now
+carry the caveat and point at `+1.53e-1`. This was not part of the correction you
+asked for — the table was the target; the figure it was being compared against
+turned out to have the same disease.
+
+**B. The scoring grid flatters worst cases in the unsafe direction, twice now.**
+`N_i > 0` on the pose grid (`+5.9e-4` early) and the margin on the azimuth grid
+(`+1.9e-3` high). Neither is large; both run the same way. Raised as **handoff open
+item 12**, framed as a decision rather than a fix: refine the scoring grid, or
+accept that a scoring grid may be optimistic provided **feasibility** is decided by
+closed forms and only the **ranking** comes from the grid. That is a score-function
+decision, so I have not taken it.
+
+**C. `notation.md` §8's `k` row still reads "envelope included."** Written when the
+envelope had translations in it. Now vacuous rather than false — an angular envelope
+is trivially invariant — so I left it. Flagging it as a wording tidy for whenever §8
+is next open.
+
+**D. Still open from the last pass, unchanged:** the `ik()` docstring names the
+dropped flat-arm datum (untouched, as instructed), and the design log's undated
+"Where Phase 0 stands" still says the branch rule is his immediate open question.

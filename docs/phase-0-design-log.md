@@ -701,13 +701,12 @@ than by a per-leg construction.
   the **third** recorded instance of a documented result with no code behind it.
   **Recovered is not the same as never lost.** `TODO(him): reasoning`
 
-### 5 September
+---
+
+## 5 September
 
 > Skeleton only, same terms as the 4 September entries above: facts and
-> residuals, no prose, nothing in his voice. Placed under this heading rather
-> than a new one, but **dated 5 September** - the work is a day later than the
-> entries above it and misdating it to tidy the structure would be worse than
-> the odd nesting.
+> residuals, no prose, nothing in his voice.
 >
 > Sources: `docs/notation.md` sec.9/10/12, `docs/session-handoff-2026-09-04.md`,
 > and the four modules in `stewart/diagnostics/` named below.
@@ -780,7 +779,16 @@ because `v_i = z` exactly and `b_i . z = 0` give `N_i = q_i . z`. Verified again
 - **363 of 540** have a non-empty bracket; 177 empty; **0 non-contiguous**.
 - lower ends `[0.225, 1.650]`, upper ends `[0.425, 1.875]`, widest 0.825.
 - empty by `a/r_b`: **144 of 180** at `a/r_b = 0.10`, 33 of 180 at 0.20, 0 at 0.35.
-- **`N_i > 0` set the lower end in 0 of 363.** Reach binds first, everywhere.
+- **`N_i > 0` set the lower end in 0 of 363** - but that is a survivorship sample.
+  Attributing the 177 empties (2026-09-05): **176 reach-empty alone, 1 where the
+  reach ceiling falls below the `N_i` floor** (`beta=10, beta_p=55, r_p/r_b=1.10,
+  a/r_b=0.10, d/r_b=0.80`; ceiling `0.2920624` refined by bisection against a floor
+  of `0.29932`, gap **`+7.26e-03`**, real and not a grid artifact). And **6**
+  candidates have a non-contiguous *reach* set whose spurious low component
+  (`z_home ~ 0.025-0.125 r_b`, platform on the base plate) sits entirely below the
+  `N_i` floor in 6 of 6 - so `N_i > 0` is what keeps the feasible set an interval.
+  Corrected claim: it does not shape the interior and is not why most candidates
+  fail, but it is **load-bearing at the edges** and cannot be dropped.
 `TODO(him): reasoning`
 
 **`-` branch re-run across the restored `z_home` axis at 10.529 deg.** Fixture A,
@@ -802,10 +810,25 @@ because `v_i = z` exactly and `b_i . z = 0` give `N_i = q_i . z`. Verified again
 (`-5.713988e-03`) on the old envelope at the datum `z_home = 1.223343`. On the
 settled envelope, same geometry, same height: **`+1.550398e-01`**. Tuning `z_home`
 alone at fixture A's untuned `delta = 40`: **`+2.276643e-01`** at
-`z_home/r_b = 1.2375`. Attribution, against `tilt 6, yaw 0, T = 0` = `+5.1489e-01`:
-yaw `+/-10` costs **1.8033e-01**, translation `+/-0.05 r_b` costs **3.6486e-01**,
-tilt 6 -> 10.529 costs **3.6147e-01**. The negative figure was bought by yaw and
+`z_home/r_b = 1.2375`. Individual costs, each a difference of two measurements on
+one pose set: yaw `+/-10` **1.8033e-01**, translation `+/-0.05 r_b` **3.6486e-01**,
+tilt 6 -> 10.529 **3.6147e-01**. The negative figure was bought by yaw and
 translation, not by tilt. `TODO(him): reasoning`
+
+- **WITHDRAWN 2026-09-05: the four-row attribution table.** The decomposition does
+  not close - baseline `+5.148872e-01` minus tilt cost `3.614680e-01` gives
+  `+1.534192e-01` against a settled figure of `+1.550398e-01`, a **1.62e-3**
+  discrepancy, ~1% of the quantity the table existed to explain and three orders
+  above every other residual recorded here. Cause confirmed: the rows and the
+  settled figure are maximins over **different azimuth samples** (magnitude grids
+  identical; 15 deg vs 10 deg), so subtracting one from the other was never valid.
+  The conclusion is kept - it rests on gaps of `1e-1`, not on the arithmetic.
+  `TODO(him): reasoning`
+- **The 29-pose harness grid is grid-optimistic.** Same fixture, same height, by
+  azimuth sampling: 15 deg `+1.534192e-01`, **10 deg (the settled figure)
+  `+1.550398e-01`**, 0.25 deg reference `+1.531859e-01`. The harness grid
+  **overstates the margin by ~1.9e-3**. Same failure mode as the `N_i > 0` bound.
+  `TODO(him): reasoning`
 
 **Closed:** handoff open items 1, 5, 8 and 11. `TODO(him): reasoning`
 

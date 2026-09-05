@@ -229,6 +229,16 @@ the same pose: `1 + 4 x 7 = 29` poses, `174` `w` evaluations per objective
 evaluation. The full-circle equivalent at the same resolution would be 169 poses
 and 1014 evaluations.
 
+**This grid is optimistic on worst-case margin, by about `1.9e-3`.** Measured at
+one fixture, varying only the azimuth sampling: 15° gives `+1.534192e-01`, this
+grid's 10° gives `+1.550398e-01`, and a 0.25° reference gives `+1.531859e-01` —
+7 samples at 10° miss the worst azimuth by more than 24 at 15° happen to. It is
+the same failure mode as the `z_home` lower bound in §12: a discrete pose grid
+flatters a worst case, in the unsafe direction. Fine for **ranking**, which is
+what a scoring grid is for; **not** a source for a quoted worst-case number, and
+not a source for a **feasibility** decision — those come from the closed forms.
+See handoff open item 12.
+
 *(This replaces the stale row "samples per axis, currently 3, giving `3^6 = 729`
 poses and `4374` `w` evaluations". That row counted six envelope axes; there are
 two. The real numbers are 29 and 174.)*
@@ -338,10 +348,30 @@ Listed so nothing in this file is mistaken for a settled value.
   at the high end, all contiguous, widest `0.825 r_b` and narrowest below the
   `0.025 r_b` scan resolution.
 
-  **The lower bound was never the binding one.** In 0 of the 363 candidates with a
-  non-empty bracket did `N_i > 0` set the lower end — reach binds first, everywhere
-  on that grid. `N_i > 0` still has to be tested, because the fixed `-` branch
-  rests on it, but at this tilt it is not what shapes the axis.
+  **`N_i > 0` never shapes the interior, and is load-bearing at the edges.**
+  *(Corrected 2026-09-05. The sentence first written here — "the lower bound was
+  never the binding one … at this tilt it is not what shapes the axis", from
+  `0 of 363` — rested on a **survivorship sample**: the 363 are the candidates
+  where the constraints did **not** cross, so a counterexample could not have
+  appeared among them.)*
+
+  In 0 of the 363 candidates with a non-empty bracket does `N_i > 0` set the lower
+  end — that part stands. Attributing the **177 empties** as well:
+
+  - **176 of 177** — reach fails on its own, at every `z_home` and every `delta`.
+  - **1 of 177** — the constraints cross: reach ceiling **below** the `N_i` floor,
+    at `beta = 10°, beta_p = 55°, r_p/r_b = 1.10, a/r_b = 0.10, d/r_b = 0.80`.
+    Ceiling `0.2920624` (bisected to `1e-9`, because the grid gap of `0.024` sat
+    inside one `0.025` step), floor `0.29932`, gap **`+7.26e-03`**. Real.
+  - **6 candidates** have a non-contiguous *reach* set — a spurious low component at
+    `z_home ≈ 0.025–0.125 r_b`, the platform on the base plate — and in **6 of 6**
+    it lies entirely below the `N_i` floor. `N_i > 0` is what removes it and keeps
+    the feasible set an interval. (This is why "0 non-contiguous feasible sets" and
+    "6 non-contiguous reach sets" are both true: different sets.)
+
+  The categories are fixed by the constraints' shapes — `N_i > 0` is **one-sided**,
+  a floor; reach is a **two-sided interval**. There is no `N_i` ceiling, so a reach
+  floor cannot sit above one.
 
   `z_flat(delta)` (§8, derivation §8.1) remains a useful reference point inside the
   bracket even though home no longer sits on it.
