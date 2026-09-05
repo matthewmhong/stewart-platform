@@ -832,6 +832,154 @@ translation, not by tilt. `TODO(him): reasoning`
 
 **Closed:** handoff open items 1, 5, 8 and 11. `TODO(him): reasoning`
 
+### `fk()` and the round-trip gate — the gate passes
+
+> Same terms as above: facts and residuals, no prose, nothing in his voice.
+> Source: `docs/cc-fk-gate.md`, `stewart/kinematics.py`,
+> `stewart/diagnostics/roundtrip.py`.
+
+**Gate result.** `pose -> ik -> six angles -> fk -> pose`, seeded **HOME**
+(`R = I`, `T = (0,0,z_home)`) at every pose. **14 436 poses, 4 geometries, 3
+grid levels.** Worst `|T_fk - T_cmd|` **1.853e-13 mm**; worst
+`arccos((tr(R_cmd^T R_fk) - 1)/2)` **2.091e-06 deg**. **0** non-convergences,
+**0** different-mode returns, **0** `ik` unreachable. `TODO(him): reasoning`
+
+**Jacobian verified; the handed-over form was correct and was not changed.**
+`df_i/dT = e_i^T`, `df_i/domega = -e_i^T [R p_i]_x`, left perturbation
+`R -> exp([omega]_x) R`. Central differences, 348 samples, 5 step sizes:
+
+| h (mm) | worst entrywise rel. | worst Frobenius |
+|---|---|---|
+| 5e-2 | 1.609e-05 | 1.076e-05 |
+| 5e-3 | 1.609e-07 | 1.076e-07 |
+| **5e-4** | **9.552e-08** | 1.078e-09 |
+| 5e-5 | 1.568e-06 | 3.916e-11 |
+| 5e-6 | 1.142e-05 | 3.869e-10 |
+
+Bottom of the U at `h = 5e-4 mm`, an order above the textbook
+`(eps*scale)^(1/3)`, because `|q-h|-d` cancels two ~120 mm quantities.
+Negative control, one pose: sign-flipped left **2.000**, right perturbation
+**4.307e-01**, right sign-flipped **1.974**, against **9.781e-10** for the
+endorsed form — nine orders, so the test discriminates. `[R p]_x = R [p]_x R^T`,
+so the right form differs by an `R^T` as well as a sign. `TODO(him): reasoning`
+
+**The tolerance is an acceptance test, not a stopping rule.** First version got
+this wrong. With `tol` as the stopping rule the required demonstration is
+structurally impossible: ~40% of poses halt on the first iterate that crosses it
+(48 of 117, fixture A at `1e-9`), so a max over a grid is taken over exactly
+those, and worst `|dT|` tracks `tol` linearly — **9.7e-10, 1.3e-10, 1.7e-11,
+1.8e-12, 1.3e-13 mm** at `tol = 1e-9 .. 1e-13`. `fk` now stops on **stagnation**
+and applies `FK_TOL_MM = 1e-9 mm` **once**, to the converged residual. Worst
+`|dT|` then **1.2681e-13 mm at every tolerance from `1e-8` to `1e-13`** — zero
+movement across six decades. Acceptance fails at `1e-14` (234 poses), which is
+below the measured arithmetic floor of **1.4e-14 to 7.1e-14 mm**.
+`TODO(him): reasoning`
+
+**Characteristic length not picked; sec.12 stays open.** All `cond` and
+`sigma_min` quoted at `r_b` and flagged PROVISIONAL. Worst `cond` over the
+coarse grid, by candidate length:
+
+| fixture | `r_b` | `r_p` | `d` | `a` |
+|---|---|---|---|---|
+| A | 4.183 | 4.175 | 4.20 | 12.81 |
+| C | 3.712 | 3.075 | 4.05 | 3.737 |
+| E | 7.397 | 6.285 | 6.695 | 7.185 |
+| F | 6.317 | 6.365 | 6.54 | 19.51 |
+
+Spread a factor of 3 on F. LM damping is `lam*diag(J^T J)`, not `lam*I`, which
+would add a millimetre to a radian and so need exactly that length.
+`TODO(him): reasoning`
+
+- Residual-to-pose-error conversion **checked per pose, not asserted**:
+  `||dx|| <= sqrt(6)(max_i|f_i| + eta)/sigma_min`, worst measured/bound
+  **0.074**. Three corrections were needed: maxima from different poses do not
+  multiply into a bound; the bound is on `||f||_2` so `max_i|f_i|` needs
+  `sqrt(6)`; and `eta = 8 eps (d + |T|)`, the round-off in *evaluating* a
+  residual, must be added — at the floor it is the same size as the residual.
+  Without `eta` the check reads **1.535**, i.e. violated. `TODO(him): reasoning`
+
+**Assembly modes are real.** 0 different-mode returns from the home seed. Because
+that is equally consistent with "the classifier never fires", the same six angles
+were re-solved from **400 random seeds per fixture**: **8 distinct roots each,
+32 in all**, every one at the same arithmetic floor (`1.42e-14 mm`) as the
+commanded root — **the residual cannot separate them**, which is why the gate
+classifies on pose distance. Of 28 non-commanded roots: **1** has all anchors
+above the plate, **0** are inside the tilt envelope. The other 27 have
+`min q_z < 0`, violating `N_i > 0`. `TODO(him): reasoning`
+
+- A genuine nearby-mode case exists on `smoke_geometry` (`demo.py`'s "yaw +90"
+  row): `|dT|` **0.3163 mm**, ang **0.7296 deg**, residual **1.421e-14**, and
+  `ik` at the recovered pose returns the **same six angles to 2.0e-13 deg**. It
+  sits at `cond` **9045**, `sigma_min` **1.94e-4** (at `r_b = 90`) against `cond`
+  4–10 on the real fixtures. Near-singular geometry is where modes coalesce and
+  a pose-distance classifier would call a second root a failure.
+  `TODO(him): reasoning`
+
+**Grids, and the refinement question.** Coarse/medium/fine at `(5,7,3)`,
+`(9,13,5)`, `(17,25,9)` magnitudes x azimuths x `z_home`; coarse is
+`envelope.py`'s own 29-pose harness grid. `z_home` sampled in the bracket
+**interior**. Worst case **does move** under refinement — 1.47x, 1.14x, 1.29x,
+1.46x, monotonic on 3 of 4 fixtures — so a coarse grid flattered it in the unsafe
+direction a fourth time. But 40x the poses buying 1.5x in the max is sampling a
+fixed round-off distribution at `1e-13 mm`, not finding a worst case. **Open item
+12 is unaffected**: this gate has no dynamic range to bear on it.
+`TODO(him): reasoning`
+
+**Iteration counts, home seed.** Median **5** on all four fixtures, max **8**,
+min 4; cap 100. **Home seed failed to converge at 0 poses** — no basin finding.
+LM steps *accepted* 36 / 60 / 246 / 289 of 3600. Counting LM *attempts* instead
+reported it on 96% of solves, because every converged solve ends with one
+iteration where nothing reduces the residual — that is stagnation firing at the
+floor, not a conditioning event, and it would have buried a real conditioning
+problem. The home pose is excluded from the statistics and named: at tilt 0 the
+seed **is** the commanded pose, so it is the "seeded at the truth proves nothing"
+case, unavoidable because home is both the seed and a member of the envelope.
+`TODO(him): reasoning`
+
+**Fixtures.** A = `branch_check.py`'s fixture A verbatim, x100. Geometries run at
+`r_b = 100 mm` so the tolerance can be a length in mm; the kinematics is
+homogeneous of degree one and the envelope is purely angular, so this is a change
+of units and `100 mm` remains the 2026-09-03 placeholder, not a decision.
+
+| | β | β_p | δ | r_p | a | d | h_p | bracket (mm) |
+|---|---|---|---|---|---|---|---|---|
+| A | 20 | 40 | 40 | 85 | 20 | 120 | 10 | `[120.000, 129.000]` |
+| C | 10 | 55 | 137 | 60 | 35 | 110 | 20 | `[57.500, 134.750]` |
+| E | 50 | 25 | 30 | 60 | 35 | 80 | 10 | `[21.000, 101.500]` |
+| F | 45 | 15 | 20 | 110 | 25 | 140 | 5 | `[128.750, 138.750]` |
+
+`TODO(him): reasoning`
+
+**Found on the way, not asked for.** `TODO(him): reasoning`
+
+- **`azimuth_symmetry.py`'s fixtures B and D have empty `z_home` brackets at
+  every `delta`** and cannot carry a round trip; E and F replace them in the
+  gate, picked for the corners (E at `a/d = 0.44` against A's 0.17; F with
+  `r_p > r_b` and the narrowest non-empty bracket found). Its `z_home` column is
+  infeasible on **3 rows of 4** — A lists `0.95` against a bracket of
+  `[1.2000, 1.2900] r_b`; only C's `0.90` is inside. Does not invalidate that
+  module, which tests a symmetry of `w_i` and never calls `ik`.
+- **The `arccos` geodesic metric has a `~8.5e-7 deg` floor** — `arccos(1 - eps)`
+  is `~sqrt(2 eps)`, so a trace correct to machine precision still returns that.
+  The gate's `1.7e-06 deg` **is** that floor. Cross-checked via `atan2(sin, cos)`,
+  the true worst rotation error is **7.82e-14 deg**, `~3e7` times lower.
+  `stewart/roundtrip.py`'s `_geodesic_deg` is the same formula and inherits it.
+- **`fk`'s stub docstring listed `Unreachable`**, which is an inverse condition —
+  in forward kinematics the anchors are what is being solved for and no per-leg
+  reach test exists. Replaced by `FKNotConverged(RuntimeError)`. `Unreachable` and
+  `ik` are unchanged.
+- `fk` returns **`(R, T)`, not `(T, R)`** as specified, because
+  `stewart/roundtrip.py` is marked DONE and unpacks `R, T`. Flagged for reversal.
+- **`README.md`, `CLAUDE.md` and `demo.py` are stale**: the stub list is fully
+  discharged, `CLAUDE.md`'s layout table still calls all five kinematics
+  functions STUB, and `demo.py` prints "ik/fk stubbed -> every row reports 'not
+  implemented'" when nothing is.
+- **"Where Phase 0 stands" below is now stale on two points**: the branch rule it
+  names as the immediate open question was fixed on 2026-09-04 and re-run on the
+  settled envelope above, and the "numerical forward kinematics, a passing
+  round-trip test" it lists as remaining are done. Left unedited — it is in his
+  voice. `TODO(him): rewrite`
+
 ---
 
 ## Where Phase 0 stands
