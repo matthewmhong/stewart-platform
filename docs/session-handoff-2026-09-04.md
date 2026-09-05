@@ -68,13 +68,38 @@ loop showed no flip. §5.5's round trip recovers every angle to 6e-15; legs 4 an
 land on `+` there because that test places six independent anchors, so `N_i` is
 free — a rigid plate cannot produce it.
 
-*Both diagnostics ran at a **single** `z_home`, the one the flat-arm datum supplied.
-That datum is dropped, `z_home` is a swept axis again, and the evidence has to be
-re-run across it — open item 11. The branch conclusion is not withdrawn; its
-evidence base is narrower than it looked.*
+*Both diagnostics ran at a **single** `z_home`, the one the flat-arm datum supplied,
+and on a provisional 6° envelope. **Re-run 2026-09-05** across the restored `z_home`
+axis at the settled 10.529°: the branch **stands** — `-` at every feasible `z_home`,
+**0** branch-flip step outliers over a full-circle 1440-step precession, loop
+closure `≤ 1.8e-15`, and `ik()` agreeing with the `-` root to `8.9e-16`. The
+justification's phrase "reaches `alpha = 0` at the datum" should now be read as
+"reaches `alpha ≈ 0` at home", since the flat-arm datum it named is dropped; the
+`N_i > 0` argument it rests on is untouched. Open item 11, discharged.*
 
-**Closest approach to the branch-merge boundary is −5.7e-3 of `C`.** The provisional
-6° envelope grazes its own limit. Not a margin. See open item 1.
+**~~Closest approach to the branch-merge boundary is −5.7e-3 of `C`.~~
+SUPERSEDED 2026-09-05.** The figure was measured on a **6°** envelope that also
+carried yaw ±10° and translation ±0.05·r_b, at a `z_home` the dropped flat-arm
+datum supplied. It reproduces exactly (`−5.713988e-03`) and it no longer
+describes anything the machine is being asked to do.
+
+Recomputed on the settled envelope, same geometry, same height:
+**`+1.550398e-01`**. Tuning `z_home` alone, still at fixture A's untuned
+`delta = 40°`: **`+2.276643e-01`** at `z_home/r_b = 1.2375`.
+
+Attributed rather than reported as one number, since the two envelopes are not
+nested — all against `tilt 6°, yaw 0, T = 0` = `+5.1489e-01`:
+
+| removed / added | cost in margin |
+|---|---|
+| yaw ±10° | `1.80e-1` |
+| translation ±0.05·r_b | `3.65e-1` |
+| tilt 6° → 10.529° | `3.61e-1` |
+
+Translation and the tilt increase cost comparable amounts; yaw about half. The
+`−5.7e-3` was **not** driven by tilt — it was yaw and translation together, and
+the settled envelope has neither. **Quote the new number with its envelope
+attached, or neither.** `stewart/diagnostics/branch_envelope.py`.
 
 **`z_home = z_flat` is DROPPED.** *(Decision 2026-09-04, later the same day. This
 **supersedes** the earlier 2026-09-04 paragraph in this section which read "`z_home`
@@ -180,20 +205,54 @@ diameter and servo body — not degeneracy, and the two range arguments collapse
 one as anticipated. `beta_p`'s admissible set is a plain interval; only the outer
 bound is unknown, and the hardware pull fetches it.
 
-**The envelope is four axes, not six.** Yaw and vertical translation dropped: a
-circular plate is axisymmetric so yaw does not move the ball, and the control law
-commands tilt, not height. `x, y, tilt magnitude, tilt azimuth` — and the last two
-are a disc, better swept as magnitude and azimuth than as a square grid. At 3
-points that is 81 poses, 486 `w` evaluations per `J`, against §9's unwritten 729
-and 4374. Factor of nine on the inner loop.
+**~~The envelope is four axes, not six.~~ TWO axes — superseded 2026-09-05.**
+The 2026-09-04 reduction dropped yaw and vertical translation and left
+`x, y, tilt magnitude, tilt azimuth`, 81 poses and 486 `w` evaluations at 3
+points. The envelope settled 2026-09-05 (`notation.md` §9) sets `dxy = 0` as
+well — the control law commands tilt only — so **`x` and `y` go too**. What
+remains is **tilt magnitude and tilt azimuth**, and nothing else.
 
-**The tilt target does not scale with the kinematics.** Arresting a rolling ball
-needs `(5/7) g sin(tilt) = v²/2L`, so with plate size scaled by `k` the required
-tilt goes as `1/k` while translations go as `k`. The 1.635° is welded to 100 mm of
-plate and 200 mm/s of ball. Absolute scale therefore re-enters *upstream* of the
-sweep through the envelope, not only downstream in scoring — this was missing from
-the 2026-09-03 list. Either `r_b` is fixed before the tilt target, or the sweep
-re-runs per `r_b`.
+Two consequences, both larger than the axis count:
+
+- **The envelope carries no length dimension.** It is purely angular, so it is
+  invariant under scaling every length by `k` and does not have to be scaled
+  alongside the geometry. `notation.md` §9's note about translations forcing the
+  envelope to scale is **deleted**, not softened.
+- **Azimuth needs a 60° window, not the full circle** — periodic in 120° by D₃
+  and mirror-symmetric. But the window is **`[30°, 90°]`**, not `[0°, 60°]`; see
+  the findings under open item 11. At 5 magnitudes × 7 azimuths that is
+  **29 poses, 174 `w` evaluations** per objective evaluation, against the 486 of
+  2026-09-04 and §9's superseded 4374.
+
+**The tilt target does not scale with the kinematics.** *(Conclusion unchanged;
+**mechanism corrected 2026-09-05**, and the sign is the opposite of what stood
+here. The superseded sentence read: "Arresting a rolling ball needs
+`(5/7) g sin(tilt) = v²/2L`, so with plate size scaled by `k` the required tilt
+goes as `1/k` while translations go as `k`." That is right **under an arrest
+framing** — fixed entry speed `v`, stopping distance `L` proportional to `k` —
+which is not the framing now adopted.)*
+
+Under the **recovery framing** settled 2026-09-05 (`notation.md` §9) the ball is
+returned from a displacement `x0` in a fixed time `tau`, and `x0` is a fraction of
+the plate, so `x0` scales with `k`. Then
+
+```
+acc = 4 x0 / tau²   ~  k          and   sin(tilt) = 7 acc / (5 g)  ~  k
+```
+
+**Required tilt GROWS with plate size.** Opposite sign to the arrest result. A
+bigger plate does not buy a gentler tilt; at fixed recovery time it costs a
+steeper one.
+
+The conclusion survives untouched: the tilt target is **not** scale-invariant, so
+absolute scale re-enters *upstream* of the sweep, and either `r_b` is fixed before
+the tilt target or the sweep re-runs per `r_b`. Only the direction of the
+dependence changes — and it changes the intuition, which is why the old sentence
+is quoted above rather than deleted.
+
+The 1.635° remains welded to 100 mm of plate and 200 mm/s of ball, and it is now
+an **arrest-framing minimum**, superseded as a design basis by the recovery
+numbers. Derivation appendix carries the same label.
 
 ### Sweep budget as it stands
 
@@ -228,14 +287,19 @@ Only the undecided middle pays the 180 steps. This is a **requirement** on the
 harness, not an optimisation to consider.
 
 **Compute ledger, correcting an overstatement made in session.** The datum path was
-273M *full* evaluations. This path is **~7.6M full** (15625 × 486) **plus ~1.4e9
-cheap scan evaluations** — `w = amp·cos(delta - phase)`, then `C`, then margin
-(15625 × 180 × 486). Both land near 10¹⁰ flops. **Compute is a wash, not a win.**
+273M *full* evaluations. *(Updated 2026-09-05: the per-pose count fell from 486
+to 174 when the envelope lost `x` and `y` and azimuth lost the full circle, so
+the figures below are smaller than the ones first written here — ~7.6M full and
+~1.4e9 cheap. The conclusion is unchanged.)* This path is **~2.7M full**
+(15625 × 174) **plus ~4.9e8 cheap scan evaluations** —
+`w = amp·cos(delta - phase)`, then `C`, then margin (15625 × 180 × 174). Both
+land near 10⁹–10¹⁰ flops. **Compute is a wash, not a win.**
 The decision to drop the datum rests on the gauge argument in derivation §8, not on
 speed, and should not be re-argued on speed.
 
-New constraint that comes with it: 1.4e9 floats is **~11 GB**, so the scan **must
-chunk over candidates**. Also a harness requirement.
+New constraint that comes with it: 4.9e8 floats is **~3.9 GB**, so the scan
+**must still chunk over candidates**. Also a harness requirement. *(Was ~11 GB at
+486 poses per candidate; the smaller envelope shrinks it but does not remove it.)*
 
 Coarse-first was about learning whether the feasible set is empty, not about compute.
 At 10 points per axis it is 64× and the picture changes.
@@ -279,12 +343,28 @@ recorded here rather than deleted, so the contradiction is legible:
 
 ## Open
 
-**1. Tilt target [Y].** One number, margin over 1.635° argued from latency and
-disturbance rather than picked. Note the 45 mm-at-150 ms figure leans on 300 mm/s,
-which was withdrawn 2026-09-03 as invented — it needs its own basis. This now gates
-the sweep harness for two reasons: the `1/k` scaling ties it to `r_b`, and the
-branch check came back grazing the boundary at a provisional 6°. Do not shrink the
-envelope to clear the boundary — that fits the specification to the geometry.
+**1. ~~Tilt target [Y].~~ CLOSED 2026-09-05 — see `notation.md` §9.** The whole
+envelope is specified there: `dxy = dz = 0`, `yaw = 0`, tilt limit **10.529°**
+from a bang-bang recovery model, with the **6.558°** bare requirement recorded
+alongside it and the difference named as the latency margin. It no longer gates
+the harness.
+
+Three things carried out of it rather than closed with it:
+
+- **`tau_L = 150 ms` is still provisional** and still leans on the withdrawn
+  300 mm/s figure. It needs sensor frame interval plus servo step response — on
+  the hardware pull. It carries 3.97 of the 10.53 degrees.
+- **Sensitivity travels with the number.** Tilt goes as `1/tau²`; a 10% error in
+  `tau` moves required `sin(tilt)` by ~20%. `tau` is the least-defended input and
+  the one the answer is most sensitive to.
+- **The boundary-grazing worry is resolved, and not by shrinking anything.**
+  Measured 2026-09-05 on fixture A: the `-5.7e-3` was bought by the **yaw and
+  translation** terms, not by tilt. Removing them (the control law commands
+  neither) clears the boundary outright; raising tilt 6° → 10.529° spends most of
+  what that buys back, and the net is `+1.55e-1`. The envelope got **larger** in
+  the one axis the control law uses and empty in two it does not. Nothing was
+  fitted to the geometry. See open item 11 and
+  `stewart/diagnostics/branch_envelope.py`.
 
 **2. `fk()` [Y for the criterion, CC for the wiring].** Four decisions, all his:
 
@@ -334,6 +414,32 @@ The test still stands on its own: sweep the envelope, assert `min(N_i) > 0`, rep
 the margin. Cheap, and it fails loudly if the envelope ever grows past where the
 fixed `-` branch argument holds.
 
+**DISCHARGED 2026-09-05**, both halves, in
+`stewart/diagnostics/zhome_bracket.py` and `branch_envelope.py`.
+
+- **As a bracket, in closed form:** `z_home > r_p sin(tilt) + h_p cos(tilt)`
+  = `0.182733 r_p + 0.983163 h_p` at 10.529°. `delta`-free, `a`-free, `d`-free,
+  because `v_i = z` exactly and `b_i·z = 0` make `N_i = q_i·z`. Verified against
+  `make_geometry`: `min N_i` at the bound is 0 to **5.6e-17**.
+- **As a test:** `min(N_i) > 0` passes at every `z_home` scanned, margin
+  `+0.896 r_b` at the bottom of the scan.
+
+Two findings that were not in the item.
+
+1. **The back-of-envelope bound is not the bound.** `z_home - h_p > r_p sin(tilt)`
+   drops the `cos(tilt)` and overstates the requirement by `h_p(1 - cos tilt)` —
+   `1.68e-3 r_b` at `h_p = 0.1 r_b`. Conservative, so it errs safe; still not the
+   bound, and the closed form is free.
+2. **`N_i > 0` is not the binding constraint.** In **0 of 363** candidates with a
+   non-empty `z_home` bracket did it set the lower end — reach binds first,
+   everywhere on the grid. The test must stay, because the `-` branch rests on it,
+   but it is not what shapes the axis at this tilt.
+
+And a trap for the harness: this is a **continuum** bound. A discrete pose grid
+reports it satisfied slightly *before* it truly is (`+5.9e-4` on the 29-pose grid
+at `beta_p = 25°`), so the harness must take the lower bracket from the **formula**,
+not from its own poses.
+
 **6. `h_p`'s symbol.** `notation.md` §11 flags the clash with `h_i`, the arm tip,
 and proposes `c_p`. The quantity is settled; the letter is not. Three call sites —
 `platform_ring`, `make_geometry`, `kinematics.py`. Cheapest to rename now.
@@ -357,9 +463,12 @@ its docstring). Its grid also sits in `stewart/diagnostics/zhome_datum.py`.
 control for a day, and had the scratchpad gone, the numbers in this handoff would
 have had nothing behind them. The process problem is unchanged.
 
-**8. `notation.md` §9's envelope slots.** Deliberately left untouched in the last
-documentation pass. Writing them is a decision about what the control law commands,
-worth doing as its own edit.
+**8. ~~`notation.md` §9's envelope slots.~~ CLOSED 2026-09-05.** Every slot is
+filled: `dxy = 0`, `dz = 0`, `yaw = 0`, tilt limit **10.529°** with the **6.558°**
+bare requirement recorded beside it, and a grid row carrying the real numbers
+(**29 poses, 174 `w` evaluations**) rather than the stale `3^6 = 729 / 4374`. The
+`k`-scaling note is deleted: with `dxy = dz = 0` the envelope is purely angular and
+carries no length dimension at all.
 
 **9. Unchanged from `stewart-ik-derivation.md` §6.** Rotation convention for `R`.
 Numerical FK. Round trip. The branch rule row can now be struck.
@@ -373,11 +482,33 @@ the identity pairing while the pairing result ranged over all 720; each froze wh
 the other varied. Only affects how the result is stated — the gauge argument kills
 `mu` either way.
 
-**11. The `-` branch evidence was gathered at one `z_home`** *(opened 2026-09-04 by
-the reversal)*. The 4365-pose diagnostic and the 720-step precession loop both ran
-at the single `z_home` the flat-arm datum supplied. That datum is dropped and
-`z_home` is a swept axis again, so **both must be re-run across the restored axis**.
-The `-` branch is not withdrawn — its evidence base is narrower than it read.
+**11. ~~The `-` branch evidence was gathered at one `z_home`.~~ RE-RUN, and the
+branch STANDS** *(opened 2026-09-04 by the reversal, discharged 2026-09-05)*.
+`stewart/diagnostics/branch_envelope.py`, fixture A, tilt 10.529°, `z_home` swept
+across and past its feasible bracket, precession checked over the **full** circle
+at 0.25° (1440 steps — the 60° window is a scoring shortcut, continuity is a claim
+about the real trajectory):
+
+| Check | Result |
+|---|---|
+| `min(N_i) > 0` over envelope, every `z_home` | passes, worst `+0.896 r_b` |
+| `z_home` values with the envelope fully reachable | 8 of 15, `[1.2000, 1.2875] r_b` |
+| branch reaching `alpha ≈ 0` at home | `-`, at every feasible `z_home` |
+| branch-flip step outliers in precession | **0** |
+| loop closure `max_i \|alpha_i(360°) - alpha_i(0°)\|` | `≤ 1.8e-15` |
+| `max \|ik() - alpha_minus\|` | `8.9e-16` |
+
+**A finding the item did not ask for, and the one to read first.** The claim that
+tilt azimuth need only be swept over `[0°, 60°]` is **right about the width and
+wrong about the position**. Measured over the full circle with a negative control
+(`stewart/diagnostics/azimuth_symmetry.py`): period-120 holds to `1.0e-13` and the
+`psi → 180 - psi` mirror to `5.6e-14`, but the `psi → -psi` mirror that `[0°, 60°]`
+would need **fails at `2.3e-1`**. The mirror lines in azimuth sit at **30 + 60k**,
+not 0 + 60k, because a reflection maps a tilt axis at `psi` to one at
+`2m + 180 - psi` — tilting about an axis *in* a mirror plane reflects to the
+*opposite* tilt. `[0°, 60°]` is symmetric about its own centre: it double-counts
+what it touches and **misses the orbit `{75°, 105°}` entirely**. The window is
+**`[30°, 90°]`**. `notation.md` §9 and §10 carry the correction.
 
 ---
 
@@ -395,7 +526,8 @@ Tags: **[Y]** his, **[CC]** Claude Code, **[bg]** background.
   return: the joints' angular misalignment range, which nothing in the derivation
   has looked at — at the envelope extremes the rod makes some angle with the plate
   normal, and past the joint's range it binds regardless of the kinematics.
-- **Tilt target [Y].** Open item 1. Gates the harness.
+- ~~**Tilt target [Y].** Open item 1. Gates the harness.~~ **Done 2026-09-05** —
+  `notation.md` §9. No longer gates anything. `tau_L` goes on the hardware pull.
 - **`fk()` [Y] then [CC].** Open item 2.
 - **Round-trip gate [Y]. Hard stop.**
 - **Score function — cap at 2 h [Y].** Weighted scalar, weights stated, plus a
@@ -409,8 +541,11 @@ Tags: **[Y]** his, **[CC]** Claude Code, **[bg]** background.
   hardware pull returns.
 - **Sweep harness [CC].** *(Rewritten 2026-09-04, superseding the same-day line
   "Five normalised axes … feasibility guard for the missing-`z_home` region".)*
-  **Six** normalised axes including `z_home/r_b` — whose bracket does not exist yet,
-  so this line is blocked on it as well as on the tilt target. Four-axis envelope.
+  **Six** normalised axes including `z_home/r_b`. *(Updated 2026-09-05: the bracket
+  now exists — lower in closed form, upper per candidate, `notation.md` §12 — and
+  the tilt target is settled, so neither blocks this line any more.)*
+  **Two-axis envelope**, 29 poses, azimuth over `[30°, 90°]` — **not** `[0°, 60°]`,
+  see open item 11.
   `delta` inner tune maximising the **normalised** margin `(C_i - |P_i|)/C_i`,
   maximin over legs and poses, seeded at `delta*` **with no basin assumption**.
   Coarse at 5 points → 15625 candidates. Two requirements, not options:
@@ -418,7 +553,10 @@ Tags: **[Y]** his, **[CC]** Claude Code, **[bg]** background.
     available because `P_i` is `delta`-free. Drop candidates with `|P_i| ≥ |L_i|` at
     any (pose, leg) before scanning; scan for score only when
     `|P_i| ≤ sqrt(|L_i|² - amp_i²)` everywhere; only the middle pays 180 steps.
-  - **Chunk the scan over candidates.** 1.4e9 floats is ~11 GB and will not be held.
+  - **Chunk the scan over candidates.** 4.9e8 floats is ~3.9 GB and will not be
+    held. *(~11 GB before the envelope shrank; still a requirement.)*
+  - **Take the `N_i > 0` lower bracket from the closed form, not from the pose
+    grid** — the grid reports it satisfied before it is. Open item 5.
 
   The old missing-`z_home` feasibility guard is **struck**: it answered an artifact
   of holding `delta = 40`.
@@ -440,6 +578,13 @@ recorded, §6's branch-rule row struck, `notation.md` §8 and §12 updated, and 
 design log's 4 September skeleton laid in for him to write up. The rest of this list
 still stands.*
 
+*Status after the 2026-09-05 pass: `notation.md` §9 filled (open item 8), §10 given
+the azimuth mirror lines, §12 given `z_home`'s brackets; the handoff's `1/k`
+paragraph corrected; the derivation appendix's 1.635° relabelled as the
+arrest-framing minimum and the 45 mm bullet struck. `stewart-ik-derivation.md`
+still needs its §9 for the platform ring, and §6's rows for the anchor
+parameterisation and the rotation convention.*
+
 `stewart-ik-derivation.md` needs a §9 for the platform ring, and §6's rows for the
 anchor parameterisation and the rotation convention updating; the branch-rule row
 can be struck. §8's `(0°,60°)` needs its reason corrected to hardware. §5.5 should
@@ -453,3 +598,4 @@ Session log row, engagement not yet given:
 | Date | Phase | Engagement | Notes |
 |---|---|---|---|
 | 2026-09-04 | 0 | — | `stage1`, `legs`, `arm_tips`, `ik` implemented; §7 table re-established with a control row proving the distance check alone is insufficient. Branch fixed as `-`, justified by `N > 0` under horizontal shafts — evidence gathered at one `z_home`, so it needs re-running (open item 11). **`z_home = z_flat` tried and dropped the same day**: `z_flat` stays an assembly datum with a verified closed form (leg-independence 9.948e-14, closed form vs library 1.637e-11, round trip 2.220e-16), `z_home` returns as the sixth sweep axis with **no range yet**, and the "8 of 432 no valid `z_home`" claim is withdrawn as an artifact of holding `delta = 40`. Inner `delta` objective moved from `J = max\|w\|` to the normalised margin `(C-\|P\|)/C`; `delta*`'s basin claim withdrawn. **Pose envelope** reduced to four axes — unchanged by the reversal, and not to be confused with the six-axis geometry sweep. Symmetry of the six `w_i` derived as a D₃ stabiliser argument and verified with a negative control; closed form for `delta*` at home. Open item 3 closed: `beta_p = beta` is not a rank hole — the rank-3 result was a proxy concurrency artifact, disproved with true rod lines. Tilt target shown not to be scale invariant, moving absolute scale upstream of the sweep. Three provenance failures found where documented results had no code behind them; `branch_check.py` recovered from scratchpad and committed. |
+| 2026-09-05 | 0 | — | Working envelope specified and open item 1 closed: `dxy = dz = 0`, `yaw = 0`, tilt limit **10.529°** from a bang-bang recovery model (`acc = 4x0/tau²`, `sin tilt = 7acc/5g`, `x0 = 50 mm + 30 mm latency drift`, `tau = 0.5 s`), bare requirement **6.558°** recorded alongside; `tau_L = 150 ms` flagged provisional and pushed to the hardware pull, sensitivity `1/tau²` recorded with it. The `1/k` tilt-scaling result **inverted**: under the recovery framing required tilt grows as `k`, not `1/k` — conclusion unchanged, mechanism opposite. Envelope is **two** axes, not four, and being purely angular does not scale with `k` at all. Four diagnostics committed. Azimuth: a 60° window is sufficient but it is **`[30°, 90°]`, not `[0°, 60°]`** — period-120 holds to 1.0e-13, the `180-psi` mirror to 5.6e-14, the `-psi` mirror fails at 2.3e-1; `[0°,60°]` misses the orbit `{75°,105°}`. `z_home` lower bracket in closed form `> r_p sin(tilt) + h_p cos(tilt)`, verified to 5.6e-17, and it is **never the binding constraint** (0 of 363 candidates); upper bracket per candidate, 363 of 540 non-empty. `-` branch re-run across the restored axis at 10.529°: stands, 0 flips, closure 1.8e-15, `ik()` agrees to 8.9e-16. The **−5.7e-3** boundary margin is superseded — it was bought by yaw and translation, not tilt; on the settled envelope the same geometry gives **+1.55e-1**. Open items 1, 5, 8 and 11 closed. |

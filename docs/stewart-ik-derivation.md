@@ -444,9 +444,27 @@ Two uses:
 ## Appendix — results from Phase 0 analysis
 
 - Minimum tilt to arrest a 200 mm/s ball over 100 mm: **1.635°**.
-  *This is a minimum, not a design target.* Latency, disturbance rejection and
-  friction variation all demand margin above it.
-- Ball travel during a 150 ms latency window at 300 mm/s: **45 mm**.
+  *This is a minimum, not a design target*, and it is specifically an
+  **arrest-framing** minimum — fixed entry speed, fixed stopping distance,
+  `(5/7) g sin(tilt) = v²/2L`. Latency, disturbance rejection and friction
+  variation all demand margin above it.
+
+  **Superseded as a design basis, 2026-09-05.** The envelope is now set by a
+  **recovery** framing — return the ball from a displacement `x0` in a time `tau`,
+  bang-bang, `acc = 4x0/tau²` and `sin(tilt) = 7acc/5g` — giving a **6.558°**
+  requirement and a **10.529°** envelope. See `notation.md` §9; the number above
+  is kept because it is correct for what it measures and because the two framings
+  scale **oppositely** in plate size (arrest: tilt as `1/k`; recovery: tilt as
+  `k`), which is worth not re-deriving from scratch. For the record the two agree
+  where they should: the recovery requirement at `tau = 1.0 s` is 1.636°, the same
+  0.2 m/s² of acceleration by a different route.
+
+- ~~Ball travel during a 150 ms latency window at 300 mm/s: **45 mm**.~~
+  **Struck 2026-09-05.** The 300 mm/s was withdrawn 2026-09-03 as invented, and
+  nothing depends on the bullet any more: the envelope's latency term is
+  `150 ms × 200 mm/s = 30 mm`, computed in `notation.md` §9 from the peak speed
+  that survived. The 150 ms itself is still **provisional** and still needs a
+  basis — sensor frame interval plus servo step response, on the hardware pull.
 - Distinguishable tilt steps = usable servo travel ÷ servo deadband. The geometry
   ratio cancels — **geometry does not set how many tilt steps you get, only how
   they are spent**: wide range with coarse steps, or narrow range with fine ones.

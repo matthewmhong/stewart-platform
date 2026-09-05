@@ -701,6 +701,114 @@ than by a per-leg construction.
   the **third** recorded instance of a documented result with no code behind it.
   **Recovered is not the same as never lost.** `TODO(him): reasoning`
 
+### 5 September
+
+> Skeleton only, same terms as the 4 September entries above: facts and
+> residuals, no prose, nothing in his voice. Placed under this heading rather
+> than a new one, but **dated 5 September** - the work is a day later than the
+> entries above it and misdating it to tidy the structure would be worse than
+> the odd nesting.
+>
+> Sources: `docs/notation.md` sec.9/10/12, `docs/session-handoff-2026-09-04.md`,
+> and the four modules in `stewart/diagnostics/` named below.
+
+**Envelope specified.** `dxy = 0`, `dz = 0`, `yaw = 0`, tilt limit **10.529 deg**.
+Bang-bang recovery: `acc = 4 x0 / tau^2`, `sin(tilt) = 7 acc / (5 g)`,
+`x0 = 50 mm` working `+ 30 mm` latency drift, `tau = 0.5 s`, `g = 9.80665`.
+Bare requirement **6.558 deg** at `x0 = 50 mm`; the 3.971 deg difference is the
+latency margin. Both recorded. `TODO(him): reasoning`
+
+- `tau_L = 150 ms` is **provisional**, inherited from the 300 mm/s figure
+  withdrawn 2026-09-03. It carries 30 of the 80 mm and 3.97 of the 10.53 deg.
+  Needs sensor frame interval plus servo step response. `TODO(him): reasoning`
+- Sensitivity: tilt goes as `1/tau^2`; a 10% error in `tau` moves required
+  `sin(tilt)` by ~20%. `tau = 0.45` gives 13.038 deg, `tau = 0.60` gives 7.290.
+  `TODO(him): reasoning`
+
+**The `1/k` tilt-scaling result is inverted.** Under the arrest framing (fixed
+`v`, `L` proportional to `k`) required tilt goes as `1/k`. Under the recovery
+framing now adopted, `x0` scales with `k` at fixed `tau`, so `acc` scales with `k`
+and **required tilt scales as `k`** - it *grows* with plate size. The conclusion
+survives unchanged (absolute scale enters upstream, `r_b` fixed before the sweep);
+the mechanism is the opposite sign. `TODO(him): reasoning`
+
+**Envelope is two axes, not four.** `dxy = 0` removes `x` and `y`; what remains is
+tilt magnitude and tilt azimuth. Being purely angular it carries no length
+dimension and does not scale with `k` at all. `notation.md` sec.9's note about
+translations forcing the envelope to scale is deleted. `TODO(him): reasoning`
+
+**Azimuth window - a claim tested and half-refuted.** Claim: a 60-degree azimuth
+window suffices by D3. Measured over the full circle at 0.25 deg, four geometries,
+two aggregates, with a negative control (one anchor displaced 0.03 `r_b`):
+
+| invariance | worst relative deviation | verdict |
+|---|---|---|
+| period 120 | 1.026e-13 | holds |
+| mirror `psi -> 180 - psi` | 5.648e-14 | holds |
+| mirror `psi -> -psi` | 2.303e-01 | **fails** |
+| negative control, period 120 | 6.588e-01 | fails as intended |
+| negative control, `180 - psi` | 3.736e-01 | fails as intended |
+
+Width right, position wrong: the window is **`[30, 90]`**, not `[0, 60]`. Mirror
+lines in azimuth sit at `30 + 60k`, because a reflection in the plane at azimuth
+`m` maps a tilt axis at `psi` to one at `2m + 180 - psi`. `[0, 60]` is symmetric
+about its own centre and misses the orbit `{75, 105}` entirely.
+`stewart/diagnostics/azimuth_symmetry.py`. `TODO(him): reasoning`
+
+**Pose grid.** 5 magnitudes x 7 azimuths, magnitude 0 counted once:
+**29 poses, 174 `w` evaluations** per objective evaluation. Supersedes
+`notation.md` sec.9's `3^6 = 729` / `4374` and 2026-09-04's 81 / 486.
+`TODO(him): reasoning`
+
+**`z_home` lower bracket, closed form.** `z_home > r_p sin(tilt) + h_p cos(tilt)`
+`= 0.182733 r_p + 0.983163 h_p` at 10.529 deg. `delta`-free, `a`-free, `d`-free,
+because `v_i = z` exactly and `b_i . z = 0` give `N_i = q_i . z`. Verified against
+`make_geometry`: `min N_i` at the bound is 0 to **5.551e-17**; `max |v_i - z|`
+**1.110e-16**. `TODO(him): reasoning`
+
+- The back-of-envelope `z_home - h_p > r_p sin(tilt)` drops the `cos(tilt)` and
+  overstates by `h_p(1 - cos tilt)` = **1.684e-3** at `h_p = 0.1 r_b`.
+  Conservative, so it errs safe; not the bound. `TODO(him): reasoning`
+- It is a **continuum** bound. A discrete pose grid reports it satisfied before it
+  is - **+5.911e-4** on the 29-pose grid at `beta_p = 25`. The harness must take it
+  from the formula. `TODO(him): reasoning`
+
+**`z_home` upper bracket, per candidate, from `|P| <= C`.** No closed form. Over
+540 candidates (5 `beta` x 4 `beta_p` x 3 `r_p/r_b` x 3 `a/r_b` x 3 `d/r_b`,
+`h_p/r_b = 0.1`), `z_home/r_b` scanned 0.025..3.0 at 0.025, `delta` at 1 deg:
+
+- **363 of 540** have a non-empty bracket; 177 empty; **0 non-contiguous**.
+- lower ends `[0.225, 1.650]`, upper ends `[0.425, 1.875]`, widest 0.825.
+- empty by `a/r_b`: **144 of 180** at `a/r_b = 0.10`, 33 of 180 at 0.20, 0 at 0.35.
+- **`N_i > 0` set the lower end in 0 of 363.** Reach binds first, everywhere.
+`TODO(him): reasoning`
+
+**`-` branch re-run across the restored `z_home` axis at 10.529 deg.** Fixture A,
+`z_home` swept past its bracket both ways, precession over the full circle at
+0.25 deg (1440 steps):
+
+| check | result |
+|---|---|
+| `min(N_i) > 0`, every `z_home` | passes, worst `+0.896361 r_b` |
+| envelope fully reachable | 8 of 15 `z_home`, `[1.2000, 1.2875] r_b` |
+| branch reaching `alpha ~ 0` at home | `-`, at every feasible `z_home` |
+| branch-flip step outliers | **0** |
+| loop closure | `<= 1.78e-15` |
+| `max abs(ik() - alpha_minus)` | **8.882e-16** |
+
+`TODO(him): reasoning`
+
+**The `-5.7e-3` boundary margin is superseded.** Reproduced exactly
+(`-5.713988e-03`) on the old envelope at the datum `z_home = 1.223343`. On the
+settled envelope, same geometry, same height: **`+1.550398e-01`**. Tuning `z_home`
+alone at fixture A's untuned `delta = 40`: **`+2.276643e-01`** at
+`z_home/r_b = 1.2375`. Attribution, against `tilt 6, yaw 0, T = 0` = `+5.1489e-01`:
+yaw `+/-10` costs **1.8033e-01**, translation `+/-0.05 r_b` costs **3.6486e-01**,
+tilt 6 -> 10.529 costs **3.6147e-01**. The negative figure was bought by yaw and
+translation, not by tilt. `TODO(him): reasoning`
+
+**Closed:** handoff open items 1, 5, 8 and 11. `TODO(him): reasoning`
+
 ---
 
 ## Where Phase 0 stands

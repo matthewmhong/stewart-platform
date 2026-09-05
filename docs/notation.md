@@ -143,7 +143,7 @@ Not part of the mechanism. Used for tuning `delta` and for scoring.
 
 | Symbol | Meaning | Units | Provenance |
 |---|---|---|---|
-| `z_home` | platform height above the base plane at the home pose. **Status: swept, range undecided** — an outer sweep axis, restored 2026-09-04 when the `z_home = z_flat` datum was dropped. *(This supersedes the same-day entry that made it determined and removed it from the sweep.)* Range: §12. | mm | new |
+| `z_home` | platform height above the base plane at the home pose. **Status: swept; lower bracket closed-form, upper per-candidate** — an outer sweep axis, restored 2026-09-04 when the `z_home = z_flat` datum was dropped. *(This supersedes the same-day entry that made it determined and removed it from the sweep.)* Bracketed 2026-09-05: §12. | mm | new |
 | `z_flat` | plate height at which the arms lie flat (`alpha_i = 0`) with the rods attached, at `R = I` and no horizontal translation. Closed form and residuals: derivation §8.1. **An assembly datum only** — the 2026-09-04 identification `z_home = z_flat` was made and dropped the same day. | mm | new |
 | `A_i`, `B_i` | coefficients in `w_i(delta) = A_i cos delta + B_i sin delta`; both independent of `delta`, which is what makes the `delta` scan cheap | mm | new |
 | *(amplitude)* | `sqrt(A_i^2 + B_i^2)`, so `w_i(delta) = amplitude * cos(delta - phase)` | mm | **unnamed** — collides with `R` |
@@ -155,20 +155,83 @@ Not part of the mechanism. Used for tuning `delta` and for scoring.
 
 ## 9. Working envelope
 
-Not yet specified. These are the slots.
+**Specified 2026-09-05.** This closes handoff open item 8 and open item 1. The
+slots below are filled, not proposed.
 
-| Symbol | Meaning | Units | Scales with `k`? |
+| Symbol | Value | Units | Basis |
 |---|---|---|---|
-| `dxy` | translation half-range in `x` and `y` | mm | **yes** |
-| `dz` | translation half-range in `z` | mm | **yes** |
-| *(tilt limit)* | roll and pitch half-range | deg | no |
-| *(yaw limit)* | yaw half-range | deg | no |
-| *(grid)* | samples per axis. Currently 3, giving `3^6 = 729` poses and `729 x 6 = 4374` `w` evaluations per `J(delta)`. | — | — |
+| `dxy` | **0** | mm | The control law commands **tilt only**. |
+| `dz` | **0** | mm | As above. |
+| *(tilt limit)* | **10.529** | deg | Recovery envelope; derived below. |
+| *(yaw limit)* | **0** | deg | A circular plate is axisymmetric, so yaw does not move the ball. |
+| *(grid)* | 5 magnitudes x 7 azimuths = **29 poses**, `29 x 6 = 174` `w` evaluations per objective evaluation | — | See *Grid* below. |
 
-Because translations carry length dimension and angles do not, the envelope must
-be scaled along with the geometry or scale invariance fails. If the task fixes
-the required travel in absolute mm, the natural unit for normalising the whole
-sweep is that task length, not `r_b`.
+**Where the tilt limit comes from.** Bang-bang recovery, not arrest. To return
+the ball from a displacement `x0` in a time `tau`, accelerate for `tau/2` and
+decelerate for `tau/2`; the distance covered is `acc * tau^2 / 4`, so
+
+```
+acc  =  4 x0 / tau^2
+sin(tilt)  =  7 acc / (5 g)          solid ball rolling without slip
+```
+
+With `tau = 0.5 s` and `g = 9.80665 m/s^2`:
+
+| | `x0` | `acc` | tilt |
+|---|---|---|---|
+| **bare requirement** | 50 mm working displacement | 0.800 m/s² | **6.558°** |
+| **envelope** | 50 mm + 30 mm latency drift = 80 mm | 1.280 m/s² | **10.529°** |
+
+Both are recorded on purpose. **6.6° is the requirement; 10.5° is the envelope;
+the difference is the latency margin.** Everything is evaluated on 10.529°.
+
+**`tau_L = 150 ms` is PROVISIONAL.** The 30 mm of latency drift is
+`tau_L * v_peak = 150 ms * 200 mm/s`, and `tau_L` is inherited from the 300 mm/s
+figure **withdrawn 2026-09-03 as invented**. It has no basis of its own and it
+needs one: **sensor frame interval plus servo step response**, both on the
+hardware pull. It carries 30 of the 80 mm and 3.97 of the 10.53 degrees. Do not
+promote it silently.
+
+**Sensitivity — this travels with the number wherever it is quoted.** Tilt goes
+as `1/tau^2`, so a 10% error in `tau` moves the required `sin(tilt)` by ~20%.
+Measured:
+
+| `tau` [s] | bare [deg] | envelope [deg] |
+|---|---|---|
+| 0.40 | 10.280 | 16.590 |
+| 0.45 | 8.106 | 13.038 |
+| **0.50** | **6.558** | **10.529** |
+| 0.60 | 4.549 | 7.290 |
+| 0.75 | 2.910 | 4.658 |
+
+`tau` is the least-defended number in the envelope and the envelope is most
+sensitive to it. Both facts belong together.
+
+**The envelope is two axes, and it does not scale with `k`.** With
+`dxy = dz = yaw = 0` the only free parameters are **tilt magnitude** and **tilt
+azimuth**. The four-axis envelope recorded on 2026-09-04 (`x`, `y`, magnitude,
+azimuth) is superseded: `x` and `y` are gone. Being purely angular, the envelope
+carries **no length dimension at all**, so it is invariant under scaling every
+length by `k` and needs no scaling alongside the geometry. *(The note that used
+to stand here — that translations carry length dimension so the envelope must be
+scaled with the geometry or scale invariance fails — is deleted, not softened.
+It described an envelope with translations in it. This one has none. Absolute
+scale still enters the sweep upstream, but through the tilt target's dependence
+on plate size, not through the envelope's units — see the handoff.)*
+
+**Grid.** Tilt azimuth is swept over a **60° window, `[30°, 90°]`**, not the full
+circle. The leg set has D₃ symmetry, so the leg aggregates are periodic in 120°
+and mirror-symmetric; **verified numerically**, not assumed — see
+`stewart/diagnostics/azimuth_symmetry.py` and §10 below for where the mirror
+lines actually sit. 5 magnitudes over `[0, 10.529°]` and 7 azimuths across the
+window, with magnitude 0 counted **once** because at zero tilt every azimuth is
+the same pose: `1 + 4 x 7 = 29` poses, `174` `w` evaluations per objective
+evaluation. The full-circle equivalent at the same resolution would be 169 poses
+and 1014 evaluations.
+
+*(This replaces the stale row "samples per axis, currently 3, giving `3^6 = 729`
+poses and `4374` `w` evaluations". That row counted six envelope axes; there are
+two. The real numbers are 29 and 174.)*
 
 ## 10. Symmetry objects
 
@@ -178,6 +241,25 @@ sweep is that task length, not `r_b`.
 | `m0`, `m60`, `m120` | the three mirror planes, at azimuths 0, 60, 120 **mod 180**. `m0` leg permutation `[1, 0, 5, 4, 3, 2]`. |
 | `D3` | the group they generate, order 6. The requirement is on the **legs** — one permutation carrying shafts to shafts *and* anchors to anchors — not on either point set alone. The two are not equivalent. |
 | `sigma` | the leg permutation induced by a group element. |
+
+**Where the mirrors land in tilt *azimuth* — measured 2026-09-05.** The mirror
+*planes* sit at azimuths 0, 60, 120. The azimuths of the *tilt axes* they fix do
+**not**: they sit at **30 + 60k**. A reflection `M` in the vertical plane at
+azimuth `m` has `det M = -1`, and `M R(n, th) M^T = R(det(M) M n, th)`, so an
+axis at azimuth `psi` maps to one at `2m + 180 - psi`. With `m = 0, 60, 120` the
+fixed azimuths are 90, 150 and 30. Physically: tilting about an axis lying **in**
+a mirror plane reflects to the **opposite** tilt; it is the axis **perpendicular**
+to the plane that is self-symmetric — which is what the `\|w\|` table below
+already says in its third row.
+
+**Consequence, and it is easy to get wrong.** The leg aggregates are periodic in
+120° and mirror-symmetric, so a **60° azimuth window suffices** — but it is
+`[30°, 90°]`, **not** `[0°, 60°]`. `[0°, 60°]` is symmetric about its own centre,
+so it covers the orbits it touches twice and misses others entirely: the orbit
+`{75°, 105°}` mod 120 meets it nowhere. Verified numerically over the full circle
+with a negative control: `stewart/diagnostics/azimuth_symmetry.py`. Period-120
+and the `psi -> 180 - psi` mirror hold to `1e-13` relative; the `psi -> -psi`
+mirror that `[0°, 60°]` would need **fails at `2.3e-1`**.
 
 Under a mirror, `w` picks up a sign: `w_sigma(i) = -w_i`, because `n` flips
 handedness while `L` does not. Under `C3` there is no flip. This gives a free
@@ -226,12 +308,43 @@ Listed so nothing in this file is mistaken for a settled value.
   the *symbol*, §11.
 - The rotation convention behind roll/pitch/yaw (§6).
 - `a` and `d`.
-- **`z_home`'s range** *(reopened 2026-09-04)*. `z_home` is a swept axis again — the
-  same-day `z_home = z_flat` datum that had determined it was dropped — and
-  **nothing currently supplies a range**. The lower end comes from `N_i > 0`; the
-  upper end from reach, `|P_i| <= C_i`. `z_flat(delta)` (§8, derivation §8.1)
-  remains the natural reference for setting the bracket even though home no longer
-  sits on it.
+- ~~**`z_home`'s range**~~ *(reopened 2026-09-04; bracketed 2026-09-05 — this
+  supersedes the entry that said nothing supplied a range)*. Both ends are now
+  computed, from `stewart/diagnostics/zhome_bracket.py`.
+
+  **Lower, closed form, from `N_i > 0`:**
+
+  ```
+  z_home  >  r_p sin(tilt) + h_p cos(tilt)      = 0.182733 r_p + 0.983163 h_p
+  ```
+
+  at `tilt = 10.529°`. It is **`delta`-free, `a`-free and `d`-free**: `v_i = z`
+  exactly under horizontal shafts and `b_i . z = 0`, so `N_i = q_i . z` and the
+  bound involves only `r_p`, `h_p` and the tilt limit. Verified against
+  `make_geometry`: `min N_i` at the bound is `0` to `5.6e-17`.
+
+  Two things about it. It is a **continuum** bound — a discrete pose grid reports
+  the constraint satisfied slightly *before* it truly is (measured `+5.9e-4` on the
+  29-pose harness grid at `beta_p = 25°`), so the harness must take this bound from
+  the formula, **not** from its own grid. And the back-of-envelope
+  `z_home - h_p > r_p sin(tilt)` is **not** this bound: it drops the `cos(tilt)`,
+  overstating the requirement by `h_p(1 - cos tilt) = 1.68e-3 r_b` at
+  `h_p = 0.1 r_b`. Conservative, so it errs safe, but it is not the bound.
+
+  **Upper, per candidate, from reach `|P_i| <= C_i`.** No closed form. It depends
+  on `a`, `d`, `r_p`, `beta`, `beta_p` and on `delta` being free to tune, so it is
+  **not a single number** and cannot be written as one. Over a 540-candidate grid
+  the feasible intervals ran `[0.225, 1.650]` at the low end and `[0.425, 1.875]`
+  at the high end, all contiguous, widest `0.825 r_b` and narrowest below the
+  `0.025 r_b` scan resolution.
+
+  **The lower bound was never the binding one.** In 0 of the 363 candidates with a
+  non-empty bracket did `N_i > 0` set the lower end — reach binds first, everywhere
+  on that grid. `N_i > 0` still has to be tested, because the fixed `-` branch
+  rests on it, but at this tilt it is not what shapes the axis.
+
+  `z_flat(delta)` (§8, derivation §8.1) remains a useful reference point inside the
+  bracket even though home no longer sits on it.
 - `beta_p`'s range, which needs a **ball-joint housing diameter** — two housings
   cannot occupy one hole.
 - `beta`'s usable range, which needs a **servo body diameter** — two servo bodies
