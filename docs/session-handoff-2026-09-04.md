@@ -610,11 +610,21 @@ Tags: **[Y]** his, **[CC]** Claude Code, **[bg]** background.
   - It is a **ranking discriminator, NOT a feasibility test.** The platform is
     displaced from where the model thinks it is by build error; candidates that
     tolerate that are better, but **none are excluded for it**.
-  - Probe magnitude to be fixed with the rest of the score function. It must be
-    small enough to stay linear. Calibration from the (e) attribution: order **7
-    units of margin per unit normalised displacement** at fixture A
-    (`3.6486e-01` of margin for `0.05 r_b`), suggesting a probe of
-    **0.005–0.01 `r_b`**.
+  - **Probe `0.005–0.01 r_b`, and it is measured, not estimated**
+    (`stewart/diagnostics/sweep_budget.py`). Across `0.0025–0.01 r_b` the
+    sensitivity holds to within **~1%** of linear; at `0.05 r_b` it is **16%**
+    off and is not a probe. The linearity requirement is met by that range.
+  - **The "order 7 units of margin per unit normalised displacement"
+    calibration is WITHDRAWN — measured `~1.4`.** *(Corrected 2026-09-05 when
+    the figure was given code. It came from dividing the (e) attribution's
+    `3.6486e-01` by `0.05`, and that row's `±0.05 r_b` box was `T_horiz` **and**
+    `T_vert` together. Decomposed at the same conditions: horizontal `7.99e-02`
+    (÷0.05 = **1.60**), vertical `2.81e-01` (÷0.05 = **5.62**). The number was
+    dominated by the **vertical** term — and vertical displacement is `z_home`,
+    already a swept axis, not build error of the kind this discriminator is
+    for.)* The horizontal sensitivity the score function actually wants is
+    **~1.4–1.6** at fixture A. The probe range survives; the magnitude behind it
+    did not.
 
   **Recorded so it is not re-derived as a control requirement.** `dxy = 0` is
   correct, and it is a statement about what the control law **commands**. Build

@@ -319,9 +319,11 @@ nesting apology removed from the note.
 
 **(1, cont.) Translation sensitivity recorded** in the handoff's score-function plan
 line: `Δmargin / (dxy/r_b)` at the tuned `delta`, per candidate, a **ranking
-discriminator and not a feasibility test**, probe `0.005–0.01 r_b` from your
-calibration, with `dxy = 0` recorded explicitly as a statement about what the
-control law **commands** and build error as a perturbation belonging in scoring.
+discriminator and not a feasibility test**, probe `0.005–0.01 r_b`, with
+`dxy = 0` recorded explicitly as a statement about what the control law
+**commands** and build error as a perturbation belonging in scoring. **The
+calibration behind the probe was subsequently measured and does not hold — see
+Provenance (E).**
 
 ## Stale or wrong, not in this prompt
 
@@ -347,3 +349,60 @@ is next open.
 **D. Still open from the last pass, unchanged:** the `ik()` docstring names the
 dropped flat-arm datum (untouched, as instructed), and the design log's undated
 "Where Phase 0 stands" still says the branch rule is his immediate open question.
+
+---
+
+# Provenance audit — 2026-09-05, end of session
+
+Asked to confirm state is in the repo rather than in the chat. Audit method: for
+every numeric literal added to `docs/` today (102 distinct), check whether some
+committed diagnostic prints it. 99 did. **Three did not**, and they are now
+backed by `stewart/diagnostics/sweep_budget.py`.
+
+**No remote is configured** (`git remote -v` is empty), so every commit is local
+only. Worth knowing before the machine is the single copy.
+
+| Gap | Was | Now |
+|---|---|---|
+| **Compute ledger** — 15625 candidates, ~2.7M full, ~4.9e8 cheap, **~3.9 GB** | hand arithmetic in prose; the GB figure carries a *harness requirement* (chunk over candidates) | computed from the committed envelope constants, with the superseded 81- and 729-pose ledgers alongside so the handoff's comparisons reproduce |
+| **Translation-sensitivity calibration** — "order 7", probe `0.005–0.01 r_b`, "small enough to stay linear" | a division done in prose; linearity never tested | measured across six probe magnitudes, full circle in both tilt azimuth and displacement direction |
+| **Arrest-framing 1.635°** and "the two framings agree at `tau = 1.0 s`" | never had code, on either side | `(5/7) g sin = v²/2L` computed, and the `1/k` vs `k` scaling tabulated |
+
+## What giving them code changed
+
+**(E) The "order 7" calibration is wrong, and wrong in kind.** Measured
+horizontal sensitivity at fixture A is **~1.4**, a factor of ~5 smaller. The 7
+came from dividing the (e) attribution's `3.6486e-01` by `0.05` — and that row's
+`±0.05 r_b` box was `T_horiz` **and** `T_vert` together. Decomposed at the same
+conditions:
+
+| perturbation | loss in margin | ÷ 0.05 |
+|---|---|---|
+| `T_horiz` **and** `T_vert` (the quoted row) | `3.648645e-01` | 7.30 |
+| `T_horiz` only | `7.990445e-02` | **1.60** |
+| `T_vert` only | `2.809069e-01` | 5.62 |
+
+**The figure was dominated by the vertical term, and vertical displacement is
+`z_home` — already a swept axis, not build error of the kind the discriminator is
+for.** Corrected in the handoff's score-function line and marked withdrawn there.
+
+**The probe range survives.** Across `0.0025–0.01 r_b` the sensitivity holds to
+within ~1% of linear; `0.05 r_b` is 16% off. `0.005–0.01 r_b` meets the linearity
+requirement — that half was right.
+
+**(F) The appendix's 1.635° and `envelope.py`'s 1.636° differ only in `g`.**
+`9.81` gives `1.6356`, `9.80665` gives `1.6361`. Not a disagreement between the
+framings — both need the same `0.2 m/s²`. The appendix figure predates the
+constant. `1e-3` degrees, no consequence, recorded so it does not read as a
+discrepancy next time someone checks.
+
+## Not in this category, but named because the question was asked
+
+- **`0.024`** (the pre-refinement grid gap in the one crossing) is the difference
+  of two numbers the diagnostic prints (`0.29932 − 0.275`), not an independent
+  claim.
+- **`729` / `4374` / `81` / `486` / `1.4e9` / `11 GB`** appear only inside quoted
+  *superseded* text. The ledger script now reproduces the 729 and 81 rows anyway.
+- **`1.635°`, `100 mm`, `200 mm/s`** in the appendix predate this session; the
+  arrest side now has code, the choice of 100 mm and 200 mm/s still does not —
+  they are inputs, not results.
