@@ -353,6 +353,69 @@ def exp_so3(omega: np.ndarray) -> np.ndarray:
             + ((1.0 - np.cos(th)) / (th * th)) * (K @ K))
 
 
+def log_so3(R: np.ndarray) -> np.ndarray:
+    """``SO(3)`` -> rotation vector.  Inverse of :func:`exp_so3`.
+
+    Returns the axis-angle vector ``omega`` with ``exp_so3(omega) == R`` and
+    ``|omega| <= pi``; ``|omega|`` is the rotation angle in radians.  Like
+    :func:`exp_so3` this is not a rotation convention - it names an axis and an
+    angle, with no ordered sequence of elementary rotations.
+
+    **Use this, not ``arccos((tr(R) - 1) / 2)``, to measure a small rotation.**
+    Both compute the same angle, but ``arccos`` is ill-conditioned exactly where
+    rotation errors are measured.  Near the identity ``tr(R) = 3 - theta^2 +
+    O(theta^4)``, so the trace carries ``theta`` only at second order: an
+    ``O(eps)`` error in the trace becomes an ``O(sqrt(eps))`` error in the
+    angle, and ``arccos`` of ``1 - eps`` returns ``~sqrt(2 eps) = 1.5e-8 rad =
+    8.5e-7 deg`` for a rotation that is exactly the identity to machine
+    precision.  That is a FLOOR: no rotation smaller than it can be resolved by
+    that formula at all.  The antisymmetric part used below is LINEAR in
+    ``theta``, so it has no such floor and resolves to ``~1e-15 rad``.
+
+    Branches.  ``s = |vee(R - R^T)| / 2 = sin(theta)`` and
+    ``c = (tr(R) - 1) / 2 = cos(theta)``, so ``theta = atan2(s, c)`` is exact
+    and well conditioned for ``theta`` away from ``pi``.  As ``theta -> pi`` the
+    antisymmetric part vanishes and the axis has to come from the symmetric
+    part instead, via ``(R + R^T)/2 = cos(theta) I + (1 - cos(theta)) a a^T``.
+    The switch is at ``cos(theta) < -0.9`` (``theta > 154 deg``), well away from
+    anything this project measures, but present so the function is total.
+    """
+    R = np.asarray(R, dtype=float).reshape(3, 3)
+    A = R - R.T
+    v = 0.5 * np.array([A[2, 1], A[0, 2], A[1, 0]])   # = sin(theta) * axis
+    s = float(np.linalg.norm(v))
+    c = float(np.clip((np.trace(R) - 1.0) / 2.0, -1.0, 1.0))
+
+    if c > -0.9:
+        theta = float(np.arctan2(s, c))
+        if s < 1e-12:
+            # sin(theta)/theta -> 1, so v IS the rotation vector to this order.
+            # Includes theta == 0 exactly, where v == 0 and the answer is 0.
+            return v
+        return v * (theta / s)
+
+    # theta near pi: recover a a^T from the symmetric part, then fix the sign.
+    theta = float(np.arctan2(s, c))
+    aat = (0.5 * (R + R.T) - c * np.eye(3)) / (1.0 - c)
+    k = int(np.argmax(np.diag(aat)))
+    axis = aat[:, k] / np.sqrt(max(aat[k, k], 0.0))
+    axis = axis / np.linalg.norm(axis)
+    if float(axis @ v) < 0.0:
+        axis = -axis
+    return axis * theta
+
+
+def geodesic_angle(R_a: np.ndarray, R_b: np.ndarray) -> float:
+    """Geodesic angle between two rotations, **radians**.
+
+    ``|log_so3(R_a^T R_b)|`` - the magnitude of the rotation vector taking one
+    to the other, which is the same quantity as
+    ``arccos((tr(R_a^T R_b) - 1) / 2)`` and has none of its floor.  See
+    :func:`log_so3`.
+    """
+    return float(np.linalg.norm(log_so3(np.asarray(R_a).T @ np.asarray(R_b))))
+
+
 def fk_residual(geom: Geometry, tips: np.ndarray, R: np.ndarray,
                 T: np.ndarray):
     """The six rod-closure residuals, **millimetres**, and their ingredients.

@@ -12,6 +12,17 @@ internally. Legs are 0-indexed in code (`i = np.arange(6)`, `floor(i/2)`) and
 1-indexed in error messages and prose (`floor((i-1)/2)`). Both appear; check
 which you are reading.
 
+**Pose argument and return order is `(R, T)` — orientation first, everywhere.**
+Settled 2026-09-07 so it stops being a per-function question. It is what
+`stage1(geom, R, T)`, `legs(geom, R, T)`, `w(geom, R, T)` and `ik(geom, R, T)`
+already took, so `fk(geom, alphas, R0, T0) -> (R, T)` and
+`stewart/roundtrip.py`'s `R_hat, T_hat = fk(...)` match rather than depart. The
+mnemonic that keeps it straight is the pose equation itself, `q_i = T + R p_i`:
+`R` is the operator and `T` is the offset, so `R` binds first in every signature
+even though it is written second in the formula. Note the ordering rule is
+independent of §2's table, which lists `T` first — that table is a glossary, not
+a signature.
+
 ---
 
 ## 1. Frames
@@ -402,3 +413,51 @@ believed earlier and acted on:
   the moment rows of any conditioning measure. That choice changes the ranking
   of candidates, so it is a requirement to be stated, not a constant to be
   picked.
+
+  **The FK gate turned this from a tidiness item into a blocking one
+  (2026-09-07).** `cond(J)` now has a job in the score, and the characteristic
+  length is what sets the threshold, so the number cannot stay provisional.
+
+  The finding, from `docs/cc-fk-gate.md` §6. A 6-RSS forward kinematics has
+  several real solutions, and on the four gate fixtures the alternative
+  assembly modes are far away — 30 to 260 mm, and every one either below the
+  base plate or tilted 50–86°, so none is reachable or confusable. Those
+  fixtures sit at `cond(J)` **4–10**. On `smoke_geometry`, at `cond(J)` **9045**
+  and `sigma_min` **1.94e-4**, a second mode sits **0.32 mm and 0.73°** from the
+  commanded pose, with `ik` returning **the same six angles to 2.0e-13 deg** at
+  the recovered pose.
+
+  That last clause is the whole point, and it is not an FK problem. Two poses
+  0.32 mm apart that produce **identical servo commands** are two poses the
+  machine cannot distinguish from its own commands — no control law, no
+  calibration and no better solver separates them, because the information is
+  not in the command. Which of the two the platform assembles into is decided
+  by history and by which side of the fold it was on, not by the command. So
+  near-singular geometry is where assembly modes coalesce, **and nothing in the
+  current feasibility set excludes it**: `|P_i| <= C_i` and `N_i > 0` are both
+  satisfied throughout, so such a candidate would pass feasibility and reach
+  the ranking stage.
+
+  Consequences for the score, none of them yet decided:
+
+  - `cond(J)` (or `sigma_min`) becomes a **discriminator with a floor** —
+    a hard reject below some threshold, not merely a term to be traded off —
+    alongside the reach margin `(C - |P|)/C` and the translation sensitivity
+    already recorded. A weighted sum would let a candidate buy its way past a
+    fold with margin elsewhere.
+  - The threshold is a `cond` value, and `cond` is not defined until the
+    characteristic length is. **The length now decides where a reject line
+    sits**, not just how a ranking sorts, which is why it can no longer be
+    carried as provisional.
+  - The gate quotes everything at `char_len = r_b` and flags it PROVISIONAL.
+    Measured spread over four candidate lengths on the gate fixtures: `r_b`
+    3.7–7.4, `r_p` 3.1–6.4, `d` 4.1–6.7, `a` 3.7–19.5 — a factor of 3 on one
+    fixture, so the choice is not cosmetic even at these benign values.
+  - Open, and not answered by any of the above: whether the right quantity is
+    `cond(J)` of the FK Jacobian at all, or the wrench matrix's `sigma_min`,
+    or the mode separation measured directly. The FK Jacobian is what the gate
+    happened to have; that is a reason to look, not a reason to adopt it.
+
+  `smoke_geometry` is explicitly not a design, so this is a located failure
+  mode rather than a live one. It is recorded here because the feasibility set
+  does not currently exclude it and the sweep has not yet run.

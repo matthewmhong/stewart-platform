@@ -959,17 +959,16 @@ of units and `100 mm` remains the 2026-09-03 placeholder, not a decision.
   infeasible on **3 rows of 4** — A lists `0.95` against a bracket of
   `[1.2000, 1.2900] r_b`; only C's `0.90` is inside. Does not invalidate that
   module, which tests a symmetry of `w_i` and never calls `ik`.
-- **The `arccos` geodesic metric has a `~8.5e-7 deg` floor** — `arccos(1 - eps)`
-  is `~sqrt(2 eps)`, so a trace correct to machine precision still returns that.
-  The gate's `1.7e-06 deg` **is** that floor. Cross-checked via `atan2(sin, cos)`,
-  the true worst rotation error is **7.82e-14 deg**, `~3e7` times lower.
-  `stewart/roundtrip.py`'s `_geodesic_deg` is the same formula and inherits it.
+- ~~**The `arccos` geodesic metric has a `~8.5e-7 deg` floor.**~~ **Fixed
+  2026-09-07**, in both places — see the 7 September entry below.
 - **`fk`'s stub docstring listed `Unreachable`**, which is an inverse condition —
   in forward kinematics the anchors are what is being solved for and no per-leg
   reach test exists. Replaced by `FKNotConverged(RuntimeError)`. `Unreachable` and
   `ik` are unchanged.
 - `fk` returns **`(R, T)`, not `(T, R)`** as specified, because
-  `stewart/roundtrip.py` is marked DONE and unpacks `R, T`. Flagged for reversal.
+  `stewart/roundtrip.py` is marked DONE and unpacks `R, T`. **Resolved
+  2026-09-07 in favour of `(R, T)`** and recorded as a repo convention in
+  `notation.md` — see the 7 September entry below.
 - **`README.md`, `CLAUDE.md` and `demo.py` are stale**: the stub list is fully
   discharged, `CLAUDE.md`'s layout table still calls all five kinematics
   functions STUB, and `demo.py` prints "ik/fk stubbed -> every row reports 'not
@@ -979,6 +978,94 @@ of units and `100 mm` remains the 2026-09-03 placeholder, not a decision.
   settled envelope above, and the "numerical forward kinematics, a passing
   round-trip test" it lists as remaining are done. Left unedited — it is in his
   voice. `TODO(him): rewrite`
+
+---
+
+## 7 September
+
+> Same terms: facts and residuals, no prose, nothing in his voice.
+> Sources: `docs/cc-fk-gate.md` (revised), `docs/notation.md` Conventions and
+> sec.12, `stewart/kinematics.py`, `stewart/diagnostics/roundtrip.py`.
+
+Three corrections to the 5 September gate work. **The gate still passes**; none
+of the three changes the verdict.
+
+**Rotation metric fixed, not annotated.** The `arccos((tr - 1)/2)` geodesic form
+was a spec error and is replaced by `|log_so3(R_cmd^T R_fk)|` — same quantity,
+no floor. `arccos` near the identity: `tr(R) = 3 - theta^2 + O(theta^4)`, so the
+trace carries the angle at **second order** and an `O(eps)` trace error becomes
+`O(sqrt(eps))` in the angle. Floor `sqrt(2 eps)` = **1.21e-06 deg** predicted,
+**2.41e-06 deg** measured. The antisymmetric part is **linear** in the angle and
+has none. `TODO(him): reasoning`
+
+- **Same quantity, measured not asserted.** Both forms compared against a known
+  angle built by `exp_so3` about a random axis, so neither defines the answer:
+
+| true angle (rad) | `\|log\|` rel | `arccos` rel | `\|log\|` abs (deg) | `arccos` abs (deg) |
+|---|---|---|---|---|
+| 3.11 | 3.19e-16 | 9.57e-15 | 5.68e-14 | 1.71e-12 |
+| 1e-2 | 8.91e-15 | 4.59e-12 | 5.11e-15 | 2.63e-12 |
+| 1e-4 | 4.87e-13 | 1.75e-07 | 2.79e-15 | 1.00e-09 |
+| 1e-6 | 4.60e-11 | 1.07e-03 | 2.63e-15 | 6.11e-08 |
+| 1e-8 | 6.97e-09 | 3.22e+00 | 3.99e-15 | 1.84e-06 |
+| 1e-12 | 5.35e-05 | 4.22e+04 | 3.07e-15 | 2.42e-06 |
+| 1e-15 | 6.23e-02 | 2.98e+07 | 3.57e-15 | 1.71e-06 |
+
+  For angles `>= 1e-2 rad` the two differ from each other by `<= 4.6e-12`
+  relative and each matches truth to the same — one quantity, not two.
+  `|log_so3|`'s absolute error is `~3e-15 deg` throughout; its relative error
+  grows below `1e-12 rad`, which is the **rotation matrix's** limit, not the
+  formula's. `TODO(him): reasoning`
+- **Effect on the gate:** worst rotation error was reported **2.091e-06 deg**,
+  is actually **7.820e-14 deg** — `2.7e7x` lower. Worst `|dT|` unchanged at
+  **1.853e-13 mm**. `TODO(him): reasoning`
+- Fixed in **both** places: `stewart/kinematics.py` gains `log_so3` and
+  `geodesic_angle`; `stewart/roundtrip.py`'s `_geodesic_deg` uses them. Leaving
+  one copy floored while fixing the other would be worse than either. Checked:
+  nothing else in the project uses the trace form — the remaining `arccos` calls
+  are all `arccos(P/C)`, the IK branch. `TODO(him): reasoning`
+
+**`(R, T)` pose order recorded as a repo convention.** Written into
+`notation.md`'s Conventions block, so it stops being a per-function question.
+Orientation first, everywhere: `stage1(geom, R, T)`, `legs`, `w`, `ik` all
+already took it, and `fk(geom, alphas, R0, T0) -> (R, T)` matches rather than
+departs. Mnemonic recorded with it: in `q_i = T + R p_i`, `R` is the operator
+and `T` the offset, so `R` binds first even though it is written second. Note
+sec.2's table lists `T` first — it is a glossary, not a signature.
+`TODO(him): reasoning`
+
+**The near-mode case is a SCORING finding, not an FK finding.** `smoke_geometry`,
+`cond(J)` **9045**, `sigma_min` **1.94e-4**: a second assembly mode sits **0.32
+mm** and **0.73 deg** from the commanded pose, residual **1.42e-14**, and `ik` at
+the recovered pose returns **the same six angles to 2.0e-13 deg**.
+`TODO(him): reasoning`
+
+- The `ik` clause is what makes it a design problem, not a solver one. Two poses
+  0.32 mm apart producing **identical servo commands** are two poses the machine
+  cannot distinguish from its own commands — no control law, calibration or
+  better solver separates them, because the information is not in the command.
+  Which mode it assembles into is set by history, not by the command.
+  `TODO(him): reasoning`
+- **Nothing in the current feasibility set excludes it.** `|P_i| <= C_i` and
+  `N_i > 0` both hold throughout on that geometry, so such a candidate would
+  pass feasibility and reach ranking. The four real fixtures sit at `cond` 4–10
+  with modes 30–260 mm apart, all below the plate or tilted 50–86 deg.
+  `TODO(him): reasoning`
+- Argues for `cond(J)` (or `sigma_min`) as a score **discriminator with a
+  floor** — hard reject below a threshold, not a term to trade off, alongside
+  the reach margin and the translation sensitivity. A weighted sum would let a
+  candidate buy its way past a fold. `TODO(him): decision`
+- **Promotes the characteristic length from provisional to blocking.** The
+  threshold is a `cond` value; `cond` is undefined until the length is; so the
+  length now decides where a **reject line** sits, not just how a ranking sorts.
+  Measured spread over four candidate lengths on the gate fixtures: `r_b`
+  3.7–7.4, `r_p` 3.1–6.4, `d` 4.1–6.7, `a` 3.7–19.5 — a factor of 3 on one
+  fixture at benign values. Recorded in `notation.md` sec.12.
+  `TODO(him): decision`
+- **Open, and not settled by the above:** whether the right quantity is
+  `cond(J)` of the FK Jacobian at all, or the wrench matrix's `sigma_min`, or
+  mode separation measured directly. The FK Jacobian is what the gate happened
+  to have in hand. `TODO(him): decision`
 
 ---
 

@@ -14,7 +14,11 @@ is the specific, settled test:
     azimuth in ``[30, 90]``, yaw and translation zero - swept over ``z_home``
     inside the bracket :mod:`.zhome_bracket` computes;
   * poses are compared WITHOUT a rotation convention: ``|T_fk - T_cmd|`` in mm,
-    and the geodesic angle ``arccos((tr(R_cmd^T R_fk) - 1) / 2)`` in degrees.
+    and the geodesic angle ``|log_so3(R_cmd^T R_fk)|`` in degrees.  That angle
+    was ``arccos((tr(R_cmd^T R_fk) - 1) / 2)`` until 2026-09-07; same quantity,
+    but the ``arccos`` form has a ``~8.5e-7 deg`` floor near the identity that
+    sat seven orders above the error being measured.  See
+    :func:`check_metric_agreement`.
 
 Degrees at the boundary, radians internally.  Arrays are (3, 6).  numpy only.
 Reports findings; exits 0 on a passing gate, 1 on a failing one.
@@ -38,7 +42,8 @@ import numpy as np
 
 from ..geometry import make_geometry
 from ..kinematics import (FK_TOL_MM, FKNotConverged, Unreachable, arm_tips,
-                          exp_so3, fk_jacobian, fk_residual, fk_solve, ik)
+                          exp_so3, fk_jacobian, fk_residual, fk_solve,
+                          geodesic_angle, ik, log_so3)
 from .envelope import AZIMUTH_WINDOW_DEG, TILT_LIMIT_DEG, tilt_R
 
 # --------------------------------------------------------------------------- #
@@ -144,35 +149,153 @@ SAME_MODE_DEG = 1e-4
 # pose helpers - no rotation convention anywhere
 # --------------------------------------------------------------------------- #
 def geodesic_deg(R_cmd, R_fk) -> float:
-    """``arccos((tr(R_cmd^T R_fk) - 1) / 2)`` in degrees.  The mandated metric.
+    """Geodesic angle between two rotations, degrees.  The gate's metric.
 
-    The clip guards ``arccos``'s domain against round-off only; it is unrelated
-    to the ``ik`` reachability test, which must never be clipped.
+    ``|log_so3(R_cmd^T R_fk)|`` - the magnitude of the rotation vector taking
+    one to the other.  Still a rotation convention-free comparison: an axis and
+    an angle, no ordered sequence of elementary rotations.
 
-    This formula has a FLOOR near the identity and it is not the solver's.
-    ``arccos`` of ``1 - eps`` is ``~sqrt(2 eps)``, so a trace correct to
-    machine precision still returns an angle of order ``sqrt(2.2e-16) =
-    1.5e-8 rad = 8.5e-7 deg``.  Any rotation error below about ``1e-6 deg``
-    reported by this function is the metric's floor, not a measurement.
-    :func:`geodesic_deg_atan2` is carried alongside it for exactly that reason.
+    **This replaced ``arccos((tr(R_cmd^T R_fk) - 1) / 2)`` on 2026-09-07.**
+    Same quantity, and :func:`check_metric_agreement` measures that it is the
+    same to `1e-12` relative wherever ``arccos`` is well conditioned.  But
+    ``arccos`` has a FLOOR of ``~8.5e-7 deg`` near the identity - the trace
+    carries the angle only at second order, so half the digits are gone before
+    ``arccos`` is even called - and that floor sat seven orders above the real
+    error, where it would have been read as the error.  See
+    :func:`~stewart.kinematics.log_so3`.
+    """
+    return float(np.degrees(geodesic_angle(R_cmd, R_fk)))
+
+
+def geodesic_deg_arccos(R_cmd, R_fk) -> float:
+    """The superseded ``arccos`` form, kept ONLY to measure its own floor.
+
+    Used by :func:`check_metric_agreement` to show that the two agree away from
+    the identity and that the disagreement near it is the ``arccos`` floor.
+    Nothing else may call this.
     """
     c = (np.trace(np.asarray(R_cmd).T @ np.asarray(R_fk)) - 1.0) / 2.0
     return float(np.degrees(np.arccos(np.clip(c, -1.0, 1.0))))
 
 
-def geodesic_deg_atan2(R_cmd, R_fk) -> float:
-    """Same angle, via ``atan2(sin, cos)``; accurate near the identity.
+def check_metric_agreement(verbose=True):
+    """The new rotation metric is the SAME quantity as the old one.
 
-    ``sin`` comes from the antisymmetric part of ``dR = R_cmd^T R_fk`` and is
-    linear in a small angle where the trace is quadratic, so this resolves
-    below the ``arccos`` floor.  Reported only as a CROSS-CHECK on that floor -
-    the gate's stated rotation error is :func:`geodesic_deg`, as specified.
+    Replacing a metric in a gate invites the suspicion that the gate now passes
+    because it measures something easier.  It does not, and this is the check.
+
+    ``|log_so3(dR)|`` and ``arccos((tr(dR) - 1)/2)`` are compared over angles
+    from ``pi`` down to ``1e-15 rad``, on rotations built by
+    :func:`~stewart.kinematics.exp_so3` about random axes so the true angle is
+    known independently of both.  Three things have to hold:
+
+      * away from the identity the two AGREE, so it is one quantity;
+      * against the known true angle, ``log_so3`` stays exact all the way down
+        while ``arccos`` flattens onto its floor;
+      * the floor is where the theory says, ``~sqrt(2 eps) = 8.5e-7 deg``.
     """
-    dR = np.asarray(R_cmd).T @ np.asarray(R_fk)
-    A = dR - dR.T
-    s = 0.5 * np.linalg.norm(np.array([A[2, 1], A[0, 2], A[1, 0]]))
-    c = (np.trace(dR) - 1.0) / 2.0
-    return float(np.degrees(np.arctan2(s, c)))
+    rng = np.random.default_rng(11)
+    angles = np.array([np.pi * 0.99, 1.0, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5,
+                       1e-6, 1e-7, 1e-8, 1e-9, 1e-12, 1e-15])
+    rows = []
+    for th in angles:
+        worst_new = worst_old = worst_gap = 0.0
+        abs_new = abs_old = 0.0
+        for _ in range(50):
+            axis = rng.normal(size=3)
+            axis /= np.linalg.norm(axis)
+            R_cmd = exp_so3(rng.normal(size=3))          # arbitrary base
+            dR = exp_so3(axis * th)
+            R_fk = R_cmd @ dR
+            true_deg = np.degrees(th)
+            new = geodesic_deg(R_cmd, R_fk)
+            old = geodesic_deg_arccos(R_cmd, R_fk)
+            worst_new = max(worst_new, abs(new - true_deg) / true_deg)
+            worst_old = max(worst_old, abs(old - true_deg) / true_deg)
+            abs_new = max(abs_new, abs(new - true_deg))
+            abs_old = max(abs_old, abs(old - true_deg))
+            worst_gap = max(worst_gap, abs(new - old) / true_deg)
+        rows.append((th, worst_new, worst_old, abs_new, abs_old, worst_gap))
+
+    if verbose:
+        print("=" * 78)
+        print("(1a) THE ROTATION METRIC - SAME QUANTITY, NO FLOOR")
+        print("=" * 78)
+        print("  The gate's rotation error was arccos((tr(R_cmd^T R_fk) - 1)/2)")
+        print("  until 2026-09-07 and is now |log_so3(R_cmd^T R_fk)|.  Same")
+        print("  quantity; the change is conditioning, not definition.  Both")
+        print("  are measured here against a KNOWN angle, built by exp_so3")
+        print("  about a random axis, so neither formula defines the answer.")
+        print()
+        print(f"  {'true (rad)':>11} {'true (deg)':>12} "
+              f"{'|log| rel':>11} {'arccos rel':>12}  "
+              f"{'|log| abs deg':>14} {'arccos abs deg':>15}")
+        for th, wn, wo, an, ao, _ in rows:
+            print(f"  {th:>11.0e} {np.degrees(th):>12.3e} {wn:>11.3e} "
+                  f"{wo:>12.3e}  {an:>14.3e} {ao:>15.3e}")
+        print()
+        big = [r for r in rows if r[0] >= 1e-2]
+        print(f"  AGREEMENT - they are ONE quantity, not two.  For angles")
+        print(f"  >= 1e-2 rad, where arccos is still well conditioned, the two")
+        print(f"  forms differ from each other by at most "
+              f"{max(r[5] for r in big):.1e} relative,")
+        print(f"  and each matches the known angle to "
+              f"{max(max(r[1], r[2]) for r in big):.1e}.")
+        print()
+        print(f"  THE arccos FLOOR.  Its ABSOLUTE error stops improving below")
+        print(f"  ~1e-6 rad and saturates near")
+        print(f"  {max(r[4] for r in rows if r[0] <= 1e-9):.2e} deg, against the predicted")
+        print(f"  sqrt(2 eps) = "
+              f"{np.degrees(np.sqrt(2 * np.finfo(float).eps)):.2e} deg.  No")
+        print(f"  rotation smaller than that can be resolved by it AT ALL, so")
+        print(f"  the gate's real 1e-13 deg error was being reported at 1e-6.")
+        print()
+        print(f"  |log_so3| has no floor: its absolute error tracks the angle")
+        print(f"  all the way down, reaching "
+              f"{min(r[3] for r in rows):.1e} deg at the smallest")
+        print(f"  angle tested.  Its RELATIVE error does grow below ~1e-12 rad")
+        print(f"  ({max(r[1] for r in rows):.1e} at 1e-15 rad), and that is the")
+        print(f"  ROTATION MATRIX's limit, not the formula's - a double cannot")
+        print(f"  hold a 1e-15 rad rotation in its entries to full relative")
+        print(f"  precision.  Five decades below anything this project")
+        print(f"  measures.")
+        print()
+        _check_log_inverts_exp()
+    return rows
+
+
+def _check_log_inverts_exp(n=20000):
+    """``log_so3`` really is ``exp_so3``'s inverse, near-pi branch included.
+
+    The conditioning table above says the metric resolves small angles; it does
+    not say the implementation is right. ``log_so3`` carries a hand-written
+    branch for ``theta`` near ``pi``, where the antisymmetric part vanishes and
+    the axis has to come from the symmetric part instead, and that branch is
+    exercised by nothing else in this project.  Angles are drawn to hit it
+    deliberately: uniform, log-spaced towards 0, and log-spaced towards ``pi``.
+    At exactly ``pi`` the axis sign is genuinely ambiguous - ``w`` and ``-w``
+    name the same rotation - so both are accepted there.
+    """
+    rng = np.random.default_rng(3)
+    worst, worst_th = 0.0, None
+    for _ in range(n):
+        ax = rng.normal(size=3)
+        ax /= np.linalg.norm(ax)
+        th = rng.choice([rng.uniform(0.0, np.pi),
+                         np.pi - 10.0 ** rng.uniform(-16, -1),
+                         10.0 ** rng.uniform(-16, 0)])
+        w = ax * th
+        w2 = log_so3(exp_so3(w))
+        e = min(np.linalg.norm(w2 - w), np.linalg.norm(w2 + w))
+        if e > worst:
+            worst, worst_th = e, th
+    print("  IMPLEMENTATION CHECK - log_so3 inverts exp_so3")
+    print(f"    worst |log_so3(exp_so3(w)) - w| over {n} random rotations,")
+    print(f"    angles drawn to hit both the theta -> 0 and theta -> pi ends:")
+    print(f"      {worst:.3e}   (at theta = {worst_th:.6f} rad)")
+    print(f"    exactly pi       -> {np.round(log_so3(exp_so3(np.array([np.pi, 0.0, 0.0]))), 12).tolist()}")
+    print(f"    exactly identity -> {np.round(log_so3(np.eye(3)), 12).tolist()}")
+    print()
 
 
 def envelope_grid(n_mag: int, n_az: int):
@@ -471,7 +594,7 @@ def sweep(kw, z_list, n_mag, n_az, *, tol, char_len, max_iter=100):
             rec.update(
                 pos_err_mm=float(np.linalg.norm(s["T"] - T)),
                 ang_err_deg=geodesic_deg(R, s["R"]),
-                ang_err_atan2_deg=geodesic_deg_atan2(R, s["R"]),
+                ang_err_deg_arccos=geodesic_deg_arccos(R, s["R"]),
                 residual_mm=s["residual_mm"],
                 iterations=s["iterations"],
                 lm_steps=s["lm_steps"],
@@ -618,7 +741,7 @@ def report_tolerance(usable, char_len_of, verbose=True):
                     continue
                 wp = max(wp, r["pos_err_mm"])
                 wa = max(wa, r["ang_err_deg"])
-                wa2 = max(wa2, r["ang_err_atan2_deg"])
+                wa2 = max(wa2, r["ang_err_deg_arccos"])
                 wr = max(wr, r["residual_mm"])
                 wit = max(wit, r["iterations"])
         table.append((tol, wp, wa, wr, wit, failed, wa2))
@@ -660,17 +783,14 @@ def report_tolerance(usable, char_len_of, verbose=True):
             print("  table, moves nothing.")
             print()
         wa, wa2 = live[0][2], live[0][6]
-        print(f"  ROTATION ERROR IS AT ITS METRIC'S FLOOR, not the solver's.")
-        print(f"    arccos((tr - 1)/2)   worst : {wa:.4e} deg   <- as specified")
-        print(f"    atan2(sin, cos)      worst : {wa2:.4e} deg   <- cross-check")
-        print(f"    arccos of 1 - eps is ~sqrt(2 eps), so a trace correct to")
-        print(f"    machine precision still returns ~8.5e-7 deg.  The mandated")
-        print(f"    metric CANNOT resolve below that, and the {wa:.1e} deg")
-        print(f"    reported by the gate is that floor.  The atan2 form, which")
-        print(f"    is linear in a small angle where the trace is quadratic,")
-        print(f"    puts the true worst rotation error {wa / max(wa2, 1e-300):.0f}x")
-        print(f"    lower.  The gate quotes the mandated metric; this is here")
-        print(f"    so nobody reads 1e-6 deg as a real error budget.")
+        print(f"  WHAT THE SUPERSEDED METRIC WOULD HAVE REPORTED.")
+        print(f"    |log_so3(dR)|        worst : {wa:.4e} deg   <- the metric")
+        print(f"    arccos((tr - 1)/2)   worst : {wa2:.4e} deg   <- superseded")
+        print(f"    The arccos form would have reported {wa2 / max(wa, 1e-300):.0f}x")
+        print(f"    the real error, all of it its own floor.  Kept as a line")
+        print(f"    rather than a footnote because the two numbers differ by")
+        print(f"    seven orders and the larger one is the one that looks like")
+        print(f"    an error budget.  See (1a) for the agreement check.")
         print()
     return table
 
@@ -687,7 +807,7 @@ def report_gate(usable, char_len_of, tol, verbose=True):
         print(f"                pose.")
         print(f"  tolerance   : {tol:.0e} mm on max_i | |q_i - h_i| - d |")
         print(f"  translation : |T_fk - T_cmd|, mm")
-        print(f"  rotation    : arccos((tr(R_cmd^T R_fk) - 1)/2), deg")
+        print(f"  rotation    : |log_so3(R_cmd^T R_fk)|, deg  (see (1a))")
         print(f"  envelope    : tilt <= {TILT_LIMIT_DEG:.4f} deg, azimuth "
               f"{AZIMUTH_WINDOW_DEG}, yaw = dxy = dz = 0")
         print()
@@ -806,7 +926,7 @@ def plausibility(kw, r):
     g = make_geometry(**kw)
     q = r["R_fk"] @ g.p + r["T_fk"].reshape(3, 1)
     min_qz = float(np.min(q[2]))
-    tilt = geodesic_deg_atan2(np.eye(3), r["R_fk"])
+    tilt = geodesic_deg(np.eye(3), r["R_fk"])
     try:
         back = ik(g, r["R_fk"], r["T_fk"])
         dalpha = float(np.max(np.abs(back - r["alphas"])))
@@ -947,7 +1067,7 @@ def probe_modes(usable, tol, char_len_of, n_seeds=400, verbose=True):
                                   res=s["residual_mm"],
                                   dT=float(np.linalg.norm(s["T"] - T)),
                                   ang=geodesic_deg(R, s["R"]),
-                                  tilt=geodesic_deg_atan2(np.eye(3), s["R"]),
+                                  tilt=geodesic_deg(np.eye(3), s["R"]),
                                   min_qz=float(np.min(q[2]))))
         roots.sort(key=lambda r: -r["n"])
         summary.append((label, nconv, roots))
@@ -1060,6 +1180,7 @@ def main() -> int:
     usable = report_brackets()
     if len(usable) < 3:
         print("FEWER THAN THREE FIXTURES HAVE A NON-EMPTY BRACKET.")
+    check_metric_agreement()
     worst_j, _ = check_jacobian()
     report_cond_vs_length(usable)
     tol_table = report_tolerance(usable, char_len_of)
@@ -1131,7 +1252,7 @@ def _verdict(worst_j, all_rows, cases, tol):
         unr_all += un
     wp = max((r["pos_err_mm"] for r in ok_all), default=np.nan)
     wa = max((r["ang_err_deg"] for r in ok_all), default=np.nan)
-    wa2 = max((r["ang_err_atan2_deg"] for r in ok_all), default=np.nan)
+    wa2 = max((r["ang_err_deg_arccos"] for r in ok_all), default=np.nan)
     wr = max((r["residual_mm"] for r in ok_all), default=np.nan)
     wc = max((r["cond"] for r in ok_all), default=np.nan)
     ws = max((1.0 / r["sigma_min"] for r in ok_all), default=np.nan)
@@ -1141,8 +1262,8 @@ def _verdict(worst_j, all_rows, cases, tol):
     print(f"  poses where the home seed did not converge: {len(nocv_all)}")
     print(f"  poses ik called unreachable (not a gate failure): {len(unr_all)}")
     print(f"  worst |T_fk - T_cmd|                     : {wp:.4e} mm")
-    print(f"  worst geodesic angle, arccos (specified) : {wa:.4e} deg")
-    print(f"    the same, via atan2 (cross-check)      : {wa2:.4e} deg")
+    print(f"  worst geodesic angle, |log_so3(dR)|      : {wa:.4e} deg")
+    print(f"    superseded arccos form would say       : {wa2:.4e} deg (its floor)")
     print(f"  worst residual at convergence            : {wr:.3e} mm  "
           f"(tol {tol:.0e})")
     print(f"  worst cond(J), 1/sigma_min  [char len = {CHAR_LEN_PROVISIONAL_LABEL}, "
@@ -1162,7 +1283,7 @@ def _verdict(worst_j, all_rows, cases, tol):
             continue
         disp = float(np.hypot(
             r["pos_err_mm"],
-            r["char_len"] * np.radians(r["ang_err_atan2_deg"])))
+            r["char_len"] * np.radians(r["ang_err_deg"])))
         naive = np.sqrt(6.0) * r["residual_mm"] / r["sigma_min"]
         bound = (np.sqrt(6.0) * (r["residual_mm"] + r["resid_noise_mm"])
                  / r["sigma_min"])

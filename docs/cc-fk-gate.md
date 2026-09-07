@@ -1,10 +1,18 @@
 # `fk()` and the round-trip gate
 
-**2026-09-05.** The gate **PASSES**. Worst round-trip translation error
-`1.85e-13 mm`, worst geodesic rotation error `2.09e-06 deg` (which is the
-metric's own floor, not the solver's — see §5), over **14 436 poses** across
-**4 geometries**, seeded HOME everywhere, with **0** non-convergences and **0**
-different-mode returns.
+**2026-09-05, revised 2026-09-07.** The gate **PASSES**. Worst round-trip
+translation error `1.85e-13 mm`, worst geodesic rotation error `7.82e-14 deg`,
+over **14 436 poses** across **4 geometries**, seeded HOME everywhere, with **0**
+non-convergences and **0** different-mode returns.
+
+*Revision 2026-09-07, three items, none of which change the verdict.* The
+rotation metric was **fixed rather than annotated** — the `arccos` trace form
+has a `~8.5e-7 deg` floor, so the rotation error above was previously reported
+as `2.09e-06 deg` when it is really `7.82e-14` (§5). The `(R, T)` pose order was
+**resolved as the repo convention** and written into `notation.md` rather than
+carried as a per-function deviation (§2.2). And the near-mode case was
+**reclassified as a scoring finding**, which promotes the characteristic length
+from provisional to blocking (§6).
 
     python -m stewart.diagnostics.roundtrip     # exit 0 on a pass, 1 on a fail
 
@@ -23,8 +31,10 @@ and every geometry function are unmodified.
 ## 1. What the gate is measuring, and what it is not
 
 `pose -> ik -> six angles -> fk -> pose`, compared without a rotation
-convention: `|T_fk - T_cmd|` in mm, and `arccos((tr(R_cmd^T R_fk) - 1)/2)` in
-degrees.
+convention: `|T_fk - T_cmd|` in mm, and the geodesic angle in degrees. The
+angle is `|log_so3(R_cmd^T R_fk)|`, **not** the `arccos` trace form originally
+specified — same quantity, but the `arccos` form has a `~8.5e-7 deg` floor that
+sat seven orders above the real error. Changed 2026-09-07; see §5.
 
 A pass licenses the downstream plan — `ik` and `fk` are mutually consistent to
 the arithmetic floor, so a scoring function built on them is measuring the
@@ -52,14 +62,17 @@ quantity is identical to the `r_b = 1` fixture.
 the sweep. It is the placeholder from the 2026-09-03 handoff, and it puts `a`
 and `d` in the `[15, 60]` and `[105, 155]` mm ranges the derivation quotes.
 
-### 2.2 Return order is `(R, T)`, not `(T, R)`
+### 2.2 Pose order is `(R, T)` — now the recorded repo convention
 
-The prompt specifies `(T, R)`. I kept the stub's `(R, T)` because
-`stewart/roundtrip.py` — scaffolding, marked DONE, and not mine to edit —
-unpacks `R_hat, T_hat = fk(...)`, and the stub docstring documents `(R, T)`.
-Returning `(T, R)` would break that harness. **Flagged for reversal** if the
-`(T, R)` order is wanted; it is a two-line change in `fk` plus one in
-`stewart/roundtrip.py`.
+The prompt specified `(T, R)`; `fk` takes and returns `(R, T)`. **Resolved
+2026-09-07 in favour of `(R, T)`, and written into `notation.md`'s Conventions
+block so it stops being a per-function question.** It is not a deviation to be
+tolerated but the repo's existing rule: `stage1(geom, R, T)`,
+`legs(geom, R, T)`, `w(geom, R, T)` and `ik(geom, R, T)` all take orientation
+first, and `stewart/roundtrip.py` unpacks `R_hat, T_hat = fk(...)`. The mnemonic
+recorded with it: in `q_i = T + R p_i`, `R` is the operator and `T` the offset,
+so `R` binds first in every signature even though it is written second in the
+formula.
 
 `fk` returns the pose. `fk_solve` returns the full record — residual, iteration
 count, LM steps, `cond`, `sigma_min`, SO(3) drift, residual history — and is
@@ -275,26 +288,62 @@ Tolerance `1e-9 mm`. Seed HOME (`R = I`, `T = (0,0,z_home)`) everywhere.
 
 | fixture | level | poses | ok | other mode | non-conv | `ik` unreach | worst \|dT\| mm | worst ang deg | worst resid | max cond |
 |---|---|---|---|---|---|---|---|---|---|---|
-| A | coarse | 87 | 87 | 0 | 0 | 0 | 5.847e-14 | 1.207e-06 | 1.421e-14 | 4.261 |
-| A | medium | 525 | 525 | 0 | 0 | 0 | 6.829e-14 | 1.708e-06 | 2.842e-14 | 4.295 |
-| A | **fine** | 3609 | 3609 | 0 | 0 | 0 | **8.595e-14** | 1.708e-06 | 2.842e-14 | 4.327 |
-| C | fine | 3609 | 3609 | 0 | 0 | 0 | 4.876e-14 | 2.091e-06 | 2.842e-14 | 6.221 |
-| E | fine | 3609 | 3609 | 0 | 0 | 0 | 1.068e-13 | 1.708e-06 | 2.842e-14 | 9.518 |
-| F | fine | 3609 | 3609 | 0 | 0 | 0 | **1.853e-13** | 1.708e-06 | 2.842e-14 | 6.381 |
+| A | coarse | 87 | 87 | 0 | 0 | 0 | 5.847e-14 | 2.412e-14 | 1.421e-14 | 4.261 |
+| A | medium | 525 | 525 | 0 | 0 | 0 | 6.829e-14 | 3.522e-14 | 2.842e-14 | 4.295 |
+| A | **fine** | 3609 | 3609 | 0 | 0 | 0 | **8.595e-14** | 3.932e-14 | 2.842e-14 | 4.327 |
+| C | fine | 3609 | 3609 | 0 | 0 | 0 | 4.876e-14 | **7.820e-14** | 2.842e-14 | 6.221 |
+| E | fine | 3609 | 3609 | 0 | 0 | 0 | 1.068e-13 | 7.052e-14 | 2.842e-14 | 9.518 |
+| F | fine | 3609 | 3609 | 0 | 0 | 0 | **1.853e-13** | 6.257e-14 | 2.842e-14 | 6.381 |
 
 **Worst case overall: `1.853e-13 mm` on fixture F, at azimuth 62.50°, tilt
-1.974°, `z_home = 133.750 mm`.** Worst rotation error `2.091e-06 deg` on fixture
-C at azimuth 85.00°, tilt 3.290°, `z_home = 103.850 mm`.
+1.974°, `z_home = 133.750 mm`.** Worst rotation error `7.820e-14 deg` on fixture
+C at azimuth 57.50°, tilt 8.555°, `z_home = 65.225 mm`.
 
-### The rotation error is at its metric's floor, not the solver's
+### The rotation metric was changed, 2026-09-07
 
-`arccos` of `1 - eps` is `~sqrt(2 eps)`, so a trace correct to machine precision
-still returns `~8.5e-7 deg`. The mandated metric **cannot resolve below that**,
-and the `~1.7e-06 deg` the gate reports is that floor. Cross-checked with
-`atan2(sin, cos)` on the same rotations — linear in a small angle where the
-trace is quadratic — the true worst rotation error is **`7.82e-14 deg`**, some
-`3e7` times lower. The gate quotes the mandated metric as specified; this is
-recorded so nobody reads `1e-6 deg` as a real error budget.
+The gate originally used `arccos((tr(R_cmd^T R_fk) - 1)/2)` as specified. **That
+formula has a floor of `~8.5e-7 deg` and it was being read as the error.** Near
+the identity `tr(R) = 3 - theta^2 + O(theta^4)`, so the trace carries the angle
+only at second order: an `O(eps)` error in the trace becomes `O(sqrt(eps))` in
+the angle, and `arccos(1 - eps)` returns `~sqrt(2 eps) = 8.5e-7 deg` for a
+rotation that is the identity to machine precision. No rotation smaller than
+that is resolvable by it at all.
+
+The metric is now `|log_so3(R_cmd^T R_fk)|` — the magnitude of the rotation
+vector taking one to the other. Still convention-free: an axis and an angle, no
+ordered sequence of elementary rotations. The antisymmetric part it is built
+from is **linear** in the angle, so it has no floor.
+
+**Same quantity, not an easier one**, and that is measured rather than asserted
+(`check_metric_agreement`, section (1a) of the report). Both forms are compared
+against a *known* angle built by `exp_so3` about a random axis, so neither
+formula defines the answer:
+
+| true angle (rad) | `\|log\|` rel. err | `arccos` rel. err | `\|log\|` abs. (deg) | `arccos` abs. (deg) |
+|---|---|---|---|---|
+| 3.11 | 3.19e-16 | 9.57e-15 | 5.68e-14 | 1.71e-12 |
+| 1e-2 | 8.91e-15 | 4.59e-12 | 5.11e-15 | 2.63e-12 |
+| 1e-4 | 4.87e-13 | 1.75e-07 | 2.79e-15 | 1.00e-09 |
+| 1e-6 | 4.60e-11 | 1.07e-03 | 2.63e-15 | 6.11e-08 |
+| 1e-8 | 6.97e-09 | 3.22e+00 | 3.99e-15 | 1.84e-06 |
+| 1e-12 | 5.35e-05 | 4.22e+04 | 3.07e-15 | 2.42e-06 |
+| 1e-15 | 6.23e-02 | 2.98e+07 | 3.57e-15 | 1.71e-06 |
+
+For angles `>= 1e-2 rad`, where `arccos` is still well conditioned, the two
+differ from each other by at most `4.6e-12` relative and each matches the known
+angle to the same — **one quantity**. Below `~1e-6 rad` the `arccos` absolute
+error stops improving and saturates at `2.4e-06 deg` against the predicted
+`1.2e-06`; `|log_so3|`'s absolute error tracks the angle all the way down,
+`~3e-15 deg` throughout. Its *relative* error does grow below `1e-12 rad`
+(`6.2e-02` at `1e-15 rad`), and that is the rotation matrix's limit rather than
+the formula's — a double cannot hold a `1e-15 rad` rotation in its entries to
+full relative precision. Five decades below anything measured here.
+
+The effect on the gate: worst rotation error was reported as `2.091e-06 deg`
+and is actually **`7.820e-14 deg`**, `2.7e7` times lower. The gate passed either
+way. `stewart/roundtrip.py`'s `_geodesic_deg` carried the same defect and was
+fixed with it — leaving one copy floored while fixing the other would be worse
+than either.
 
 ### Does the worst case move under refinement?
 
@@ -419,10 +468,44 @@ fixtures do not produce:
 Four orders worse conditioning is why two roots sit `0.32 mm` apart there at
 all: `smoke_geometry` is near a singularity where assembly modes coalesce. It is
 explicitly not a design, and the offset seed of `stewart/roundtrip.py` is enough
-to cross between the two. The lesson for the scoring stage is that a
-near-singular candidate produces *nearby* alternative modes, which a pose-distance
-classifier with a `1e-4 mm` cut would call a failure. On well-conditioned
-geometry the modes are 30–260 mm apart and the question does not arise.
+to cross between the two.
+
+### This is a SCORING finding, not an FK finding
+
+*Reclassified 2026-09-07; recorded in `notation.md` §12.* The FK solver is doing
+the right thing here — it finds a real root of the system it was given, and
+reports a residual at the arithmetic floor because the root is real. Nothing
+about `fk` needs to change.
+
+The `ik` clause is what makes it a design problem. **Two poses `0.32 mm` and
+`0.73°` apart produce identical servo commands** — the same six angles to
+`2.0e-13 deg`. They are therefore two poses the machine cannot distinguish from
+its own commands. No control law, no calibration and no better solver separates
+them, because the information is not in the command; which of the two the
+platform assembles into is decided by history and by which side of the fold it
+was on. On the four real fixtures, at `cond` 4–10, the alternative modes are
+30–260 mm away and every one is either below the base plate or tilted 50–86°, so
+the question does not arise.
+
+**Nothing in the current feasibility set excludes the bad case.** `|P_i| <= C_i`
+and `N_i > 0` are both satisfied throughout on `smoke_geometry`, so a candidate
+of that kind would pass feasibility and reach the ranking stage. That argues for
+`cond(J)` (or `sigma_min`) as a score **discriminator with a floor** — a hard
+reject below a threshold, not a term to be traded off — alongside the reach
+margin `(C - |P|)/C` and the translation sensitivity already recorded. A
+weighted sum would let a candidate buy its way past a fold with margin
+elsewhere.
+
+And that is a **concrete reason to settle the characteristic length rather than
+carry it as provisional**: the threshold is a `cond` value, `cond` is not defined
+until the length is, so the length now decides where a *reject line* sits and not
+merely how a ranking sorts. The measured spread over four candidate lengths is a
+factor of 3 even at the benign values of the real fixtures (§4).
+
+Left open, and not answered by any of the above: whether the right quantity is
+`cond(J)` of the FK Jacobian at all, or the wrench matrix's `sigma_min`, or the
+mode separation measured directly. The FK Jacobian is what this gate happened to
+have in hand — a reason to look, not a reason to adopt it.
 
 ---
 
@@ -464,14 +547,23 @@ geometry the modes are 30–260 mm apart and the question does not arise.
    call `ik` at all. But the `z_home` column reads like a feasible operating
    point and is not one on three rows of four.
 
-5. **The `arccos` geodesic metric has a `~8.5e-7 deg` floor** (§5). Anything in
-   the project that reports a rotation error near or below `1e-6 deg` using that
-   formula is reporting the metric, not the measurement. `stewart/roundtrip.py`'s
-   `_geodesic_deg` is the same formula and inherits the floor.
+5. ~~**The `arccos` geodesic metric has a `~8.5e-7 deg` floor.**~~ **FIXED
+   2026-09-07**, in both places, rather than annotated. The metric is now
+   `|log_so3(R_cmd^T R_fk)|` in `stewart/kinematics.py`, used by the gate and by
+   `stewart/roundtrip.py`'s `_geodesic_deg`; `check_metric_agreement` measures
+   that it is the same quantity. See §5. Nothing else in the project uses the
+   trace form — checked.
 
-6. **Two open items are untouched and stay open**, deliberately: the rotation
-   convention (§6 — the rotation-vector parameterisation needs none) and the
-   characteristic length for conditioning (§12 — quoted PROVISIONAL at `r_b`
-   throughout, with the four-candidate spread printed so the dependence is
-   visible). Open item 12 on grid refinement also stands; §5 explains why this
-   gate cannot bear on it.
+6. **The rotation convention (§6) stays open and is untouched**, deliberately:
+   the rotation-vector parameterisation needs none, and `log_so3` is its inverse,
+   so neither introduces one.
+
+7. **Open item 12 on grid refinement stands.** §5 explains why this gate cannot
+   bear on it: no dynamic range.
+
+8. **The characteristic length (§12) is no longer merely provisional — it is
+   blocking.** *Changed 2026-09-07.* It was listed here as an open item carried
+   PROVISIONAL at `r_b`. §6 upgrades it: if `cond(J)` becomes a score
+   discriminator with a floor, the length decides where a reject line sits, not
+   just how a ranking sorts. Recorded in `notation.md` §12 with the measurement
+   behind it.

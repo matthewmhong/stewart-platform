@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from .kinematics import Unreachable
+from .kinematics import Unreachable, geodesic_angle
 
 
 # --------------------------------------------------------------------------- #
@@ -45,15 +45,19 @@ def _axis_angle(axis, angle):
 
 
 def _geodesic_deg(R, R_hat):
-    """Geodesic angle between two rotations, degrees:
+    """Geodesic angle between two rotations, degrees.
 
-        arccos((tr(R^T R_hat) - 1) / 2)
+    ``|log_so3(R^T R_hat)|``.  **Was** ``arccos((tr(R^T R_hat) - 1) / 2)``;
+    changed 2026-09-07 because that form has a floor of ``~8.5e-7 deg`` near
+    the identity - the trace carries the angle only at second order, so half
+    the digits are gone before ``arccos`` is called - and a round trip that is
+    correct to ``1e-13 deg`` was being reported at ``1e-6``.  Same quantity,
+    verified to ``1e-12`` relative wherever ``arccos`` is well conditioned by
+    ``stewart.diagnostics.roundtrip.check_metric_agreement``.
 
-    The clip guards ``arccos``'s domain against round-off only; it is
-    unrelated to the ``ik`` reachability test, which must never be clipped.
+    Neither form is a rotation convention; both name an axis and an angle.
     """
-    c = (np.trace(np.asarray(R).T @ np.asarray(R_hat)) - 1.0) / 2.0
-    return float(np.degrees(np.arccos(np.clip(c, -1.0, 1.0))))
+    return float(np.degrees(geodesic_angle(R, R_hat)))
 
 
 def _unpack(pose):
