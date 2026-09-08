@@ -633,6 +633,12 @@ than by a per-leg construction.
   `TODO(him): reasoning`
 - **Tilt target does not scale with the kinematics** — `1/k` against translations'
   `k`, so absolute scale re-enters upstream of the sweep. `TODO(him): reasoning`
+  — **MOOT 2026-09-08, not wrong.** The tilt target is decided to be a **fixed
+  angle**: the ball surface is a bought sheet decoupled from the anchor ring, so
+  `x0 = 80 mm` is a property of the sheet and not of `r_b`. **The `k`-dependence
+  this entry establishes no longer exists to be established.** Its conclusion —
+  absolute scale enters upstream — survives, but on the bed and on `p`'s
+  denominator, not on this. See the 8 September entry and `notation.md` sec.9.
 
 ### Decided, reversing an earlier decision the same day
 
@@ -731,10 +737,25 @@ and **required tilt scales as `k`** - it *grows* with plate size. The conclusion
 survives unchanged (absolute scale enters upstream, `r_b` fixed before the sweep);
 the mechanism is the opposite sign. `TODO(him): reasoning`
 
+> **MOOT 2026-09-08, not wrong.** Both this entry and the 2026-09-04 entry it
+> inverts assumed **`x0` scales with the plate**. Decided 2026-09-08: the ball
+> surface is a **bought plastic sheet on a hub, decoupled from the anchor ring**,
+> so `x0 = 80 mm` is a property of **the sheet** and the **tilt target is a fixed
+> angle — 10.529 deg at every mechanism scale**. There is no longer a
+> `k`-dependence for the two framings to disagree about, so neither is corrected:
+> the quantity they argue over does not exist. **ASSERTED, not measured.**
+>
+> What survives: absolute scale does enter upstream. It enters in **exactly two
+> places** — the bed (`r_b <= 90 mm`) and `p`'s denominator (the asserted 80 mm
+> `r_b` floor) — and **not** through the tilt target. See the 8 September entry
+> and `notation.md` sec.9 and sec.12.
+
 **Envelope is two axes, not four.** `dxy = 0` removes `x` and `y`; what remains is
 tilt magnitude and tilt azimuth. Being purely angular it carries no length
 dimension and does not scale with `k` at all. `notation.md` sec.9's note about
 translations forcing the envelope to scale is deleted. `TODO(him): reasoning`
+*(Unaffected by the 2026-09-08 decision above: the envelope was already angular,
+and a fixed tilt target is what it was already being read as.)*
 
 **Azimuth window - a claim tested and half-refuted.** Claim: a 60-degree azimuth
 window suffices by D3. Measured over the full circle at 0.25 deg, four geometries,
@@ -1280,6 +1301,26 @@ Recorded in `notation.md` sec.12.
 - **Consequence for the objective finding above:** the decoupling **removed the
   one physical argument that would have bounded `r_p` from below**, so **the
   runaway is live**. `TODO(him): reasoning`
+
+**The tilt target is a FIXED ANGLE, not a function of plate size.** `x0 = 80 mm`
+is a property of **the sheet**, not of `r_b`, so the tilt limit is **10.529 deg
+at every mechanism scale**. `TODO(him): reasoning`
+
+- **Withdrawn: the premise that absolute scale enters through the tilt target's
+  dependence on plate size.** It is struck in `notation.md` sec.9 and marked at
+  both design-log entries that rest on it. `TODO(him): reasoning`
+- **Absolute scale enters in exactly two places**: the **bed**, giving
+  `r_b <= 90 mm`; and **`p`'s denominator**, the asserted 80 mm `r_b` floor.
+  There is no third. `TODO(him): reasoning`
+- **The 4 September "tilt target does not scale with the kinematics" and the
+  5 September "the `1/k` result is inverted" entries are MOOT, not wrong** —
+  marked as such at both sites, with the date and the reason. The
+  `k`-dependence they disagree about **no longer exists**; neither is corrected,
+  because there is nothing left to get right. `TODO(him): reasoning`
+- **Bought-part specification, not a constraint:** the sheet needs a radius of
+  **about 110 mm** — contact point out to **80 mm**, ball hanging **20 mm** past
+  it, plus edge margin. Recorded **so it is ordered at the right size**. It
+  bounds nothing the sweep searches over. `TODO(him): reasoning`
 
 ### Servo travel is excluded from feasibility — a decision, not an omission
 

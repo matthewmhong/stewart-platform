@@ -248,6 +248,28 @@ Two instances are on record:
   refinement; they break on **hardware ranges downstream** — horn set, ball-joint
   housing OD, rod stock — not on anything the sweep computes.
 
+**Breaking a tie on hardware is legitimate. An optimum located by a hardware
+limit is not. — stated 2026-09-08.** The two look alike and are opposites, so the
+distinction is recorded rather than left to be inferred:
+
+- **Breaking a TIE on hardware ranges is legitimate.** The score has *genuinely
+  said all it can say* — the candidates are equal to machine precision, or closer
+  together than the grid's own `2.88e-3` resolution — and something has to
+  choose. Handing that choice to the horn set, the housing OD or the rod stock
+  takes nothing away from the analysis, because the analysis has no preference
+  left to express.
+- **An OPTIMUM located by a hardware limit is the failure.** There the score has
+  *not* run out of preference — it is still descending when it hits the wall —
+  and the wall is what stops it. Then **the hardware chose the geometry rather
+  than the analysis**, which is the 19 August rule inverted.
+
+**Both statements stand.** The paragraph above is the first case; the objective
+finding of 2026-09-08 — `r_p` running to the smallest value probed, margin
+climbing monotonically, no turn — is the second. See the **8 September entry in
+`docs/phase-0-design-log.md`**. Neither is softened by the other: the sweep may
+end in a tie set broken by what you can buy, and must not end at an optimum set
+by what you can buy.
+
 **Open item 12 closes.** Feasibility comes from the closed forms; the ranking runs
 on the 10° azimuth grid and is optimistic by a bounded **`2.88e-3`**. That is the
 second of the two candidate resolutions, taken with the bound used as a
@@ -366,9 +388,51 @@ carries **no length dimension at all**, so it is invariant under scaling every
 length by `k` and needs no scaling alongside the geometry. *(The note that used
 to stand here — that translations carry length dimension so the envelope must be
 scaled with the geometry or scale invariance fails — is deleted, not softened.
-It described an envelope with translations in it. This one has none. Absolute
-scale still enters the sweep upstream, but through the tilt target's dependence
-on plate size, not through the envelope's units — see the handoff.)*
+It described an envelope with translations in it. This one has none.)*
+
+*(The clause that stood here until 2026-09-08 — "absolute scale still enters the
+sweep upstream, but through the tilt target's dependence on plate size, not
+through the envelope's units" — is **withdrawn**. Its second half stands; its
+first half rested on a premise that no longer holds. See the block below.)*
+
+**The tilt target is a FIXED ANGLE, not a function of plate size — decided
+2026-09-08. ASSERTED, not measured.**
+
+The **ball surface is a bought plastic sheet on a hub, decoupled from the anchor
+ring** (§12). So `x0 = 80 mm` is a property of **the sheet**, not of `r_b`, and
+nothing in the recovery model varies with the mechanism scale:
+
+```
+x0  =  50 mm working  +  30 mm latency drift     property of the sheet
+tilt limit  =  10.529 deg     at EVERY mechanism scale
+```
+
+**Withdrawn with it: the whole `k`-dependence of the tilt target.** Both earlier
+results about it are now **moot rather than wrong** — the quantity they disagreed
+about does not exist:
+
+- the 2026-09-04 result that the tilt target goes as `1/k` against translations'
+  `k` (arrest framing), and
+- the 2026-09-05 inversion of it, that under the recovery framing `x0` scales
+  with `k` so required tilt goes as `k` and *grows* with plate size.
+
+Both assumed the ball surface scales with the mechanism. **It does not — it is
+bought.** Neither is corrected here, because there is no longer a scaling to get
+right.
+
+**Absolute scale therefore enters in exactly two places, and they are both in
+§12:**
+
+1. **the bed**, giving `r_b <= 90 mm`; and
+2. **`p`'s denominator**, the asserted 80 mm `r_b` floor (§8).
+
+Nothing else in the sweep carries an absolute length. In particular the envelope
+does not, per the paragraph above.
+
+**Bought-part specification, not a constraint.** The sheet needs a radius of
+about **110 mm**: contact point out to **80 mm**, ball hanging **20 mm** past it,
+plus edge margin. Recorded so it is **ordered at the right size** — it is not a
+bound on `r_p`, on `r_b`, or on anything the sweep searches over.
 
 **Grid.** Tilt azimuth is swept over a **60° window, `[30°, 90°]`**, not the full
 circle. The leg set has D₃ symmetry, so the leg aggregates are periodic in 120°
@@ -596,6 +660,27 @@ believed earlier and acted on:
   **`p`**, the build error the margin is read at — three probes were carried side
   by side and none preferred. — **`p` fixed 2026-09-08 at `0.004330`, ASSERTED
   and not measured: §8.**
+
+  **Restated 2026-09-08 — the strike-through above is kept, and it is only half
+  the story.** Two different things were being tracked under one line:
+
+  - **The FORM is settled** (2026-09-07). `score = margin(dxy = p)`; one term and
+    nothing to weight; the `cond(J_fk) <= 1e6` cap on the inner `delta` tune, not
+    a floor on the outer score; the output a **tie set, not a winner**. All of it
+    measured, all of it in §8. **Not reopened.**
+  - **The OBJECTIVE it encodes is OPEN** (2026-09-08). **`margin` has no interior
+    optimum.** It measures distance from unreachability, not capability, so a
+    platform ring shrinking toward a point improves it and nothing penalises a
+    mechanism that can barely move. Opening the sampled box moves the optimum
+    *further onto* the boundary: `r_p/r_b` runs to `0.10`, the smallest value
+    probed, margin climbing monotonically to `0.963815` with no turn.
+
+  So the function is well-specified and computes what it says; **what it says is
+  not yet the thing worth maximising.** A settled form over an open objective is
+  not a settled scoring function, and the strike-through should not be read as
+  though it were. Sources: **§8** for the form and the tie/optimum distinction,
+  and the **8 September entry in `docs/phase-0-design-log.md`** for the objective
+  finding, its options — none chosen — and its residuals.
 - The characteristic length used to normalise the moment rows of any conditioning
   measure. That choice changes the ranking of candidates, so it is a requirement
   to be stated, not a constant to be picked. **Still open — but narrowed the same
@@ -679,30 +764,48 @@ believed earlier and acted on:
     cap is calibrated on what it catches, not on the measure being the right one.
 
 **Absolute scale — 2026-09-08. ASSERTED, not measured.** Decisions taken in
-discussion. **No diagnostic stands behind any of the three**, and none is cited.
-They are recorded here because absolute scale is what §9 says re-enters the sweep
-upstream of the envelope, and it had no value at all until now.
+discussion. **No diagnostic stands behind any of them**, and none is cited.
 
-- **`r_b <= 90 mm`**, from a **180 x 180 mm print volume**. This is the
-  **upstream absolute length**: it arrived from the **bed**, not from torque.
-  *(Note: the `r_b = 100 mm` in `cc-fk-gate.md`'s fixtures and in
-  `box_boundary.py`'s buildability columns is a reference scale for reading
-  ratios as lengths — labelled "not a choice of `r_b`" in both — and it sits
-  above this ceiling. Not a conflict of decisions, but that placeholder is now
-  out of range and should not be mistaken for one that is in it.)*
-- **The ball surface is a bought plastic sheet on a hub**, decoupled from the
-  anchor ring. **Plate radius therefore does not bound `r_p`**, and the
-  envelope's `x0 = 80 mm` **survives a bed that could not carry a printed plate
-  of the required radius** — the sheet is bought, not printed.
+**Absolute scale enters in exactly two places.** Both are below; there is no
+third, and in particular **not** the tilt target, whose plate-size dependence was
+withdrawn the same day (§9):
+
+1. **The bed.** Print volume **180 x 180 mm**, so **`r_b <= 90 mm`**. This is the
+   **upstream absolute length**, and **it arrived from the bed, not from torque**.
+2. **`p`'s denominator** — the asserted **80 mm `r_b` floor** that normalises
+   `p = 0.3464 / 80 = 0.004330` (§8).
+
+**The ball surface is a bought plastic sheet on a hub**, decoupled from the
+anchor ring. Three things follow:
+
+- **Plate radius does not bound `r_p`.** The sheet is bought, not printed, so
+  `x0 = 80 mm` **survives a bed that could not carry a printed plate of the
+  required radius**.
+- **The tilt target is a fixed angle** — 10.529 deg at every mechanism scale,
+  because `x0` is a property of the sheet. §9 carries this and what it withdrew.
 - **`h_p` change from the hub-and-sheet arrangement is judged negligible**, and
   **leg forces are re-ruled-out with the bought sheet in mind**. The 20 August
   force ruling (2.7 g ball) **predates the sheet**, so this is a **fresh
   judgement, not that ruling carrying forward**.
 
+**Bought-part specification, not a constraint.** Sheet radius about **110 mm** —
+contact point to 80 mm, ball hanging 20 mm past it, plus edge margin. It is a
+number for the order form. **It bounds nothing the sweep searches over.**
+
 **Consequence for the objective, and it is the live one.** The decoupling
 **removes the one physical argument that would have bounded `r_p` from below**.
 The `r_p` runaway measured in `box_boundary.py` is therefore **live** — nothing
 about the plate stops it. See the 8 September design-log entry.
+
+**The `r_b = 100 mm` fixtures predate the bed constraint.** `cc-fk-gate.md`'s
+four fixtures and `box_boundary.py`'s buildability columns are quoted at
+`r_b = 100 mm`, which is **above the 90 mm ceiling above**. Both label it a
+**units placeholder** and neither is a choice of `r_b`; the kinematics is
+homogeneous of degree one and the envelope is purely angular, so that figure is a
+**change of units, and every ratio, margin and residual measured at it is
+unaffected**. Nothing is rescaled and nothing is re-run. Recorded so the number
+is not later read as a candidate `r_b` — **it is not one, and it is now out of
+range**.
 
 **Servo travel is excluded from feasibility — 2026-09-08. A decision, not an
 omission. ASSERTED.** Feasibility stays the **three** tests, unchanged:

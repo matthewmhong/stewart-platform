@@ -62,6 +62,21 @@ quantity is identical to the `r_b = 1` fixture.
 the sweep. It is the placeholder from the 2026-09-03 handoff, and it puts `a`
 and `d` in the `[15, 60]` and `[105, 155]` mm ranges the derivation quotes.
 
+> **These fixtures predate the bed constraint — note added 2026-09-08.**
+> Absolute scale has since been decided: **`r_b <= 90 mm`**, from a 180 x 180 mm
+> print volume (`notation.md` sec.12). **`100 mm` is above that ceiling**, and it
+> is **still not a candidate `r_b`** — it never was one. It is a **unit of
+> length chosen so a millimetre tolerance can be written down**, and because the
+> kinematics is homogeneous of degree one and the envelope is purely angular,
+> **every angle, ratio, margin, residual and iteration count in this document is
+> unchanged by the ceiling**. Nothing here is rescaled and nothing is re-run.
+>
+> Read `r_b = 100 mm` throughout this document as **"the `r_b = 1` fixture, with
+> lengths printed in units of 100 mm"**. It must not be read as a proposed,
+> preferred, or surviving value of `r_b`. The mm figures in §2.1 above — `a` in
+> `[15, 60]`, `d` in `[105, 155]` — inherit that: they are the ratio ranges
+> printed at the fixture scale, not dimensions for a build.
+
 ### 2.2 Pose order is `(R, T)` — now the recorded repo convention
 
 The prompt specified `(T, R)`; `fk` takes and returns `(R, T)`. **Resolved
