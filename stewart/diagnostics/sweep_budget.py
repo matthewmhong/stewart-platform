@@ -262,13 +262,36 @@ def part3() -> None:
     print("  consequence, and now written down instead of looking like a")
     print("  discrepancy the next time someone checks.")
     print()
-    print("  The two framings scale OPPOSITELY in plate size k:")
-    print("    arrest   - v fixed, L ~ k  ->  required tilt ~ 1/k")
-    print("    recovery - x0 ~ k, tau fixed  ->  required tilt ~ k")
+    print("  " + "-" * 74)
+    print("  MOOT as of 2026-09-08.  READ THIS BEFORE QUOTING THE TABLE BELOW.")
+    print("  " + "-" * 74)
+    print("  The ball surface is a BOUGHT PLASTIC SHEET on a hub, DECOUPLED from")
+    print("  the anchor ring.  x0 = 80 mm is therefore a property of THE SHEET,")
+    print("  not of r_b, and it does NOT scale with plate size.  The tilt target")
+    print("  is a FIXED ANGLE - 10.529 deg at every mechanism scale.")
+    print()
+    print("  So NEITHER framing's k-dependence applies.  The table below is not a")
+    print("  correction of one framing by the other and not a live result: it is")
+    print("  the arithmetic of a question that no longer has a subject.  Both")
+    print("  rows are MOOT, not wrong - the quantity they disagree about does")
+    print("  not exist.  See notation.md sec.9, which carries the withdrawal and")
+    print("  what replaced it (absolute scale enters in exactly two places: the")
+    print("  bed, r_b <= 90 mm, and p's denominator, the asserted 80 mm floor).")
+    print()
+    print("  Kept and still computed, because a withdrawn claim that leaves no")
+    print("  trace gets re-derived.  DO NOT quote these rows forward as live.")
+    print()
+    print("  [MOOT] The two framings were said to scale OPPOSITELY in plate")
+    print("  [MOOT] size k:")
+    print("  [MOOT]   arrest   - v fixed, L ~ k  ->  required tilt ~ 1/k")
+    print("  [MOOT]   recovery - x0 ~ k, tau fixed  ->  required tilt ~ k")
+    print("  [MOOT] The recovery row's premise, x0 ~ k, is the one withdrawn.")
     for k in (0.5, 1.0, 2.0):
-        print(f"      k = {k:>4}: arrest "
+        print(f"  [MOOT]     k = {k:>4}: arrest "
               f"{arrest_tilt(ARREST_V, ARREST_L * k, G):>7.4f} deg    "
               f"recovery {tilt_for(X0_BARE * k, TAU):>7.4f} deg")
+    print("  [MOOT] Against a tilt target that is now fixed at "
+          f"{TILT_LIMIT_DEG:.4f} deg for all k.")
 
 
 def main() -> None:

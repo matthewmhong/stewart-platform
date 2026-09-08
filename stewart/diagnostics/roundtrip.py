@@ -33,6 +33,17 @@ identical to the ``r_b = 1`` fixture.  ``100 mm`` is a FIXTURE, not a decision
 - absolute scale is still upstream of the sweep.  It is the placeholder from
 the 2026-09-03 handoff, and it is what makes ``a`` and ``d`` land in the
 ``[15, 60]`` and ``[105, 155]`` mm ranges the derivation quotes.
+
+THESE FIXTURES PREDATE THE BED CONSTRAINT.  Absolute scale was decided
+2026-09-08: ``r_b <= 90 mm``, from a 180 x 180 mm print volume
+(``notation.md`` sec.12).  100 > 90, so ``100 mm`` is NOT a value ``r_b`` can
+take - it is a UNITS PLACEHOLDER and was never a candidate.  Read it
+throughout as "the ``r_b = 1`` fixture, with lengths printed in units of
+100 mm".  Nothing is rescaled and nothing is re-run: by the homogeneity above,
+every angle, ratio, iteration count and relative residual in this module is
+unchanged by the ceiling, and only the mm-denominated tolerance moves with the
+unit.  The same applies to the ``a`` and ``d`` mm ranges just quoted - those
+are ratio ranges printed at the fixture scale, not dimensions for a build.
 """
 from __future__ import annotations
 
