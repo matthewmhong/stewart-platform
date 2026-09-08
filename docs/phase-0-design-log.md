@@ -1055,6 +1055,10 @@ the recovered pose returns **the same six angles to 2.0e-13 deg**.
   floor** — hard reject below a threshold, not a term to trade off, alongside
   the reach margin and the translation sensitivity. A weighted sum would let a
   candidate buy its way past a fold. `TODO(him): decision`
+  — **Superseded later the same day.** `cond` becomes a cap on the **inner
+  `delta` tune**, not a floor on the outer score: a floor reads the candidate
+  after the tune has already selected the degenerate `delta`. See *The score
+  function — settled* below.
 - **Promotes the characteristic length from provisional to blocking.** The
   threshold is a `cond` value; `cond` is undefined until the length is; so the
   length now decides where a **reject line** sits, not just how a ranking sorts.
@@ -1062,10 +1066,111 @@ the recovered pose returns **the same six angles to 2.0e-13 deg**.
   3.7–7.4, `r_p` 3.1–6.4, `d` 4.1–6.7, `a` 3.7–19.5 — a factor of 3 on one
   fixture at benign values. Recorded in `notation.md` sec.12.
   `TODO(him): decision`
+  — **Narrowed later the same day.** With no reject line there is no threshold
+  for the length to set, so it **no longer blocks the score**. It stays open for
+  quoting `C` and for the FK residual-to-pose bound. See below.
 - **Open, and not settled by the above:** whether the right quantity is
   `cond(J)` of the FK Jacobian at all, or the wrench matrix's `sigma_min`, or
   mode separation measured directly. The FK Jacobian is what the gate happened
   to have in hand. `TODO(him): decision`
+
+### The score function — settled
+
+> Same terms: facts and residuals, no prose, nothing in his voice.
+> Sources: `stewart/diagnostics/score_discriminators.py`, part numbers cited per
+> claim; recorded in `docs/notation.md` sec.8 and sec.12.
+
+**Settled form.**
+
+```
+score  =  margin(dxy = p)
+```
+
+the maximin normalised reach margin `(C_i - |P_i|)/C_i` over the six legs and the
+29-pose envelope grid, evaluated at platform displacement `p`, with `delta` tuned
+per candidate to maximise `margin(0)` subject to `cond(J_fk) <= 1e6` at
+`char_len = r_b`. Feasibility stays pass/fail before scoring. **`p` is not yet
+fixed** — three probes, `0.005`, `0.0075`, `0.010 r_b`, ran side by side and none
+was preferred. `TODO(him): reasoning`
+
+**One term, no weights, and nothing to weight.** `sens(p)` is defined as
+`[margin(0) - margin(p)]/p`, so `margin - sens(p)*p` **is** `margin(dxy = p)`
+identically — **6.9e-18** worst case over the field and all three probes
+(part 7). The plan's weighted scalar with stated weights is met by a single
+functional with one stated requirement, `p`. `p` is not a weight; it is the build
+error the margin is read at. `TODO(him): reasoning`
+
+**`tau_min` is measured-and-redundant.** Spearman `rho = 0.835` against `margin`
+over the feasible set (part b). Not weighted into the score, not dropped from the
+measurement. `TODO(him): reasoning`
+
+**`cond` is a cap on the inner tune, not a ranking term.** At `C = 1e6` on
+`cond(J_fk)` at `char_len = r_b` it catches **exactly** the 34 candidates with
+`beta_p == beta` — none outside that set, none of the 34 untouched — costs
+**4.87e-5** of margin worst case, and sits **13 decades** clear of the worst
+near-miss at `e = beta_p - beta != 0` (parts 2, 5). Reverses the bullet above.
+`TODO(him): reasoning`
+
+- **General rule, and it is what the reversal rests on.** A quantity that matters
+  and is **not monotone in the pointwise margin** must enter the **inner tune**,
+  not the outer score, or the tune will spend it: `delta` is chosen before the
+  score is read, so anything the score would penalise is something the tuner
+  trades away for margin first, and the score never sees the configuration it
+  would have rejected. Two instances now — `cond`, and the tune/score mismatch
+  below. `TODO(him): reasoning`
+
+**Tune/score mismatch: real, bounded, left as it is.** `delta` is tuned on
+`margin(0)`, the score is `margin(p)`, so every candidate is scored at a `delta`
+chosen for a different objective. Worst margin given up **1.37e-3**, below the
+ranking grid's own resolution of **2.8801e-3**; maximum rank movement **2
+places**; **nothing** enters or leaves the top 20 (part 9). **Re-check if `p` is
+taken above `0.01 r_b`** — the bound was measured at and below it.
+`TODO(him): reasoning`
+
+**The `|e|` collapse is real, and narrower than it read.** Grouping by
+`(r_p, a, d, |e|)`, `e = beta_p - beta`: tuned margins agree within a group to
+**1.33e-15**, and still do on a 0.25-degree azimuth grid, 40x finer. Only the
+**tuned maximum** collapses — at a **common** `delta` the members' margin fields
+differ pointwise by up to **7.81e-1** against a full-field margin range of
+**7.93e-1**, and **0 of 124** groups are equal at a common `delta` (part 8). The
+members of a group are not the same machine. **The six sweep axes stand**;
+`beta` and `beta_p` are sampled independently. `TODO(him): reasoning`
+
+- **CC self-correction 1 — the field comparison was at the wrong `delta`.**
+  Comparing each member's margin field at its **own** tuned `delta` compares two
+  different configurations, which differ for that reason alone and say nothing
+  about the collapse. Redone at a **common** `delta`. That is what turned the
+  finding from "the same machine" into "the same maximum only".
+  `TODO(him): reasoning`
+- **CC self-correction 2 — the single-leg negative control proved nothing.**
+  `margin` is a min over legs, so displacing an anchor on a leg that is not
+  binding and does not become binding moves nothing, and a control that moves
+  nothing tests nothing. Re-run **six times, once per leg**, which separates a
+  group the control cannot reach from a group it moves without separating — only
+  the second would falsify. `TODO(him): reasoning`
+- **The two corrections are why the finding is narrow.** Neither was an
+  arithmetic error. Both were controls that, as first written, could not have
+  failed. `TODO(him): reasoning`
+
+**Open, and no candidate explanation is verified:** why the tuned maximum
+collapses to **1.33e-15** when the fields at a common `delta` differ by
+**7.81e-1**. Two different machines, different `margin(delta)` curves, peaking at
+the same height to the last bit. Recorded as a property of `max over delta` of
+the maximin margin rather than of the geometry at any one `delta` — which locates
+it, and is not a mechanism. `TODO(him): decision` — whether it needs explaining
+before the sweep runs.
+
+**Open item 12 closes.** Feasibility from the closed forms; ranking from the
+10-degree azimuth grid, optimism bounded at **2.88e-3** in margin units. The
+second of the two candidate resolutions, taken with the bound used as a
+**resolution**: candidates closer together than it are ties, not an ordering. The
+uniformity of the optimism across candidates, which the item doubted, is not
+assumed. `TODO(him): reasoning`
+
+**The output is a tie set, not a winner.** Top-of-field ties are exact to machine
+precision and persist under grid refinement, so no refinement breaks them. They
+break on **hardware ranges downstream** — horn set, ball-joint housing OD, rod
+stock — not on anything the sweep can compute. `TODO(him): decision`
 
 ---
 

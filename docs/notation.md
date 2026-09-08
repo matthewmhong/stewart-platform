@@ -164,6 +164,103 @@ Not part of the mechanism. Used for tuning `delta` and for scoring.
 | `tau_i` | transmission ratio, `\|rod . tangent\| / d`. Zero at a loss-of-authority configuration. | — | new |
 | `k` | uniform length scale factor. `alpha_i` is exactly invariant under scaling every length by `k`, envelope included. | — | new |
 
+**The score function — settled 2026-09-07.**
+
+```
+score  =  margin(dxy = p)
+```
+
+The same normalised reach margin as the row above — maximin `(C_i - |P_i|)/C_i`
+over the six legs and the 29-pose envelope grid of §9 — evaluated at a platform
+displacement `p` instead of at the nominal pose, with `delta` tuned per candidate
+to maximise `margin(dxy = 0)` **subject to `cond(J_fk) <= 1e6` at
+`char_len = r_b`**. Feasibility stays pass/fail before scoring, unchanged. **`p`
+is not yet fixed** — three probes (`0.005`, `0.0075`, `0.010 r_b`) were carried
+side by side and none preferred.
+
+Everything in this block is measured in
+`stewart/diagnostics/score_discriminators.py`; the part number is cited per claim.
+
+- **One term, and there is nothing to weight.** `sens(p)` is *defined* as
+  `[margin(0) - margin(p)] / p`, so `margin - sens(p)*p` **is** `margin(dxy = p)`
+  identically — verified over the whole field and all three probes at **`6.9e-18`**
+  (part 7). The "two-term score" was one quantity read at a displaced pose, not two
+  competing ones. The plan's requirement of a weighted scalar with stated weights is
+  met by a single functional with one stated requirement, `p`. `p` is not a weight;
+  it is the build error the margin is read at.
+- **`tau_i` is measured-and-redundant.** Spearman `rho = 0.835` against `margin`
+  over the feasible set (part b). Not weighted into the score, and not dropped from
+  the measurement.
+- **`cond` is not a ranking term.** It is the cap on the inner tune — next block.
+
+**The cap on the inner `delta` tune — `cond(J_fk) <= 1e6` at `char_len = r_b`.**
+The maximin-margin tune does not merely fail to see a rank degeneracy, it
+*selects* it: at `beta_p == beta` and `delta = 0` the anchor is radially in line
+with the shaft and the whole rod lies in the servo plane, so at `R = I` all six rod
+lines meet the `z`-axis and `J_fk` drops rank at the home pose — and the tuner buys
+that configuration for a margin difference in the third decimal place. Measured
+(parts 2, 5):
+
+- at `C = 1e6` the cap binds on **exactly** the 34 of 363 candidates with
+  `beta_p == beta` — nothing outside that set is touched, and none of the 34 is
+  left alone;
+- it costs **`4.87e-5`** of margin, worst case over the field;
+- the exact coincidence sits **13 decades** above the worst near-miss at
+  `e = beta_p - beta != 0`. The cap separates a rank drop from a merely
+  ill-conditioned neighbour; it is not cutting into a continuum.
+
+`C` is a `cond` value, so quoting it requires the characteristic length — §12.
+
+**Rule, and it is general.** A quantity that matters and is **not monotone in the
+pointwise margin** must enter the **inner tune**, not the outer score, or the tune
+will spend it. `delta` is chosen before the score is read, so anything the score
+would have penalised is something the tuner is free to trade away for margin
+first — and the score then never sees the configuration it would have rejected.
+Two instances are on record:
+
+- **`cond`.** As an outer ranking term, or as a reject floor, it arrives too late:
+  the tune has already selected the degenerate `delta` (part 5). As a cap on the
+  tune it works, at the cost above. *(This supersedes the same-day entry that made
+  `cond` a discriminator with a hard floor — §12.)*
+- **The tune/score mismatch.** `delta` is tuned on `margin(0)`; the score is
+  `margin(p)`. So every candidate is scored at a `delta` chosen for a different
+  objective. Real, and **bounded**: worst margin given up **`1.37e-3`**, below the
+  ranking grid's own resolution of **`2.8801e-3`**; maximum rank movement **2
+  places**, and nothing enters or leaves the top 20 (part 9). Left as it stands, on
+  that bound. **Re-check if `p` is ever taken above `0.01 r_b`** — the bound was
+  measured at and below it.
+
+**What the score returns is a tie set, not a winner.**
+
+- **The margin collapses on `|e| = |beta_p - beta|`.** Grouping the field by
+  `(r_p, a, d, |e|)` and ignoring `beta` and `beta_p` entirely, the tuned margin
+  agrees within a group to **`1.33e-15`**, and still does on an azimuth grid 40x
+  finer (0.25°). **The collapse is real and narrow** (part 8): only the **tuned
+  maximum** collapses. At a **common** `delta` the members' margin fields differ
+  pointwise by up to **`7.81e-1`**, against a full-field margin range of
+  **`7.93e-1`**, and **0 of 124** groups are equal at a common `delta`. The members
+  of a group are not the same machine. **This licenses nothing about the sweep**:
+  the six axes stand and `beta` and `beta_p` are sampled independently.
+- **Ties below `2.88e-3` are not an ordering.** That is the ranking grid's own
+  resolution — what the 10° azimuth grid overstates a margin by against 0.25°
+  (§9). Candidates closer together than it are ties the grid cannot separate.
+  The top-of-field ties are exact to machine precision and persist under
+  refinement; they break on **hardware ranges downstream** — horn set, ball-joint
+  housing OD, rod stock — not on anything the sweep computes.
+
+**Open item 12 closes.** Feasibility comes from the closed forms; the ranking runs
+on the 10° azimuth grid and is optimistic by a bounded **`2.88e-3`**. That is the
+second of the two candidate resolutions, taken with the bound used as a
+*resolution* rather than assumed uniform across candidates — the uniformity the
+item doubted is not claimed.
+
+**Open, and no candidate explanation is verified.** Why the tuned maximum
+collapses to `1.33e-15` when the fields at a common `delta` differ by `7.81e-1`.
+Two different machines, with different `margin(delta)` curves, peak at the same
+height to the last bit. Recorded as a property of `max over delta` of the maximin
+margin rather than of the geometry at any one `delta` — which is a restatement of
+where it sits, not a mechanism.
+
 ## 9. Working envelope
 
 **Specified 2026-09-05.** This closes handoff open item 8 and open item 1. The
@@ -409,10 +506,16 @@ believed earlier and acted on:
   linearly with `a` (log-log slope 0.992), so it vanishes only as `a -> 0`, which
   is exactly where the proxy becomes exact.
 - The working envelope.
-- The scoring function, including the characteristic length used to normalise
-  the moment rows of any conditioning measure. That choice changes the ranking
-  of candidates, so it is a requirement to be stated, not a constant to be
-  picked.
+- ~~The scoring function.~~ **Settled 2026-09-07 — see §8.**
+  `score = margin(dxy = p)`: one term, no weights, `delta` tuned under a
+  `cond(J_fk) <= 1e6` cap at `char_len = r_b`. What remains open under it is
+  **`p`**, the build error the margin is read at — three probes were carried side
+  by side and none preferred.
+- The characteristic length used to normalise the moment rows of any conditioning
+  measure. That choice changes the ranking of candidates, so it is a requirement
+  to be stated, not a constant to be picked. **Still open — but narrowed the same
+  day, and it no longer blocks the score. Read the block below with the note that
+  closes it.**
 
   **The FK gate turned this from a tidiness item into a blocking one
   (2026-09-07).** `cond(J)` now has a job in the score, and the characteristic
@@ -461,3 +564,31 @@ believed earlier and acted on:
   `smoke_geometry` is explicitly not a design, so this is a located failure
   mode rather than a live one. It is recorded here because the feasibility set
   does not currently exclude it and the sweep has not yet run.
+
+  **What the length is still needed for — 2026-09-07, later the same day.** Of
+  the three consequences above, one is superseded and the rest narrow. Evidence:
+  `stewart/diagnostics/score_discriminators.py`, part numbers cited.
+
+  - **Superseded: there is no reject line, and `cond` is not a discriminator with
+    a floor.** It is a **cap on the inner `delta` tune** — §8 carries the value,
+    what it catches and what it costs. A floor on the outer score arrives too
+    late: the tune selects the degenerate `delta` before any outer test reads the
+    candidate (part 5). So the characteristic length no longer decides where a
+    reject line sits, and **it no longer blocks the score**, which is settled
+    above without it.
+  - **Still open, for two narrower reasons.** *(1) Quoting `C`.* The cap is a
+    `cond` value, so `C = 1e6` says nothing without the length it is evaluated
+    at; it is quoted at `char_len = r_b` throughout and is PROVISIONAL in that
+    length. Its *effect* is measured: at `r_b` it binds on exactly the 34
+    `beta_p == beta` candidates and sits 13 decades clear of the worst near-miss
+    (parts 2, 5), so it is not balanced on a boundary — though that is a reading
+    of the isolation, not a re-measurement at the other three lengths.
+    *(2) The FK residual-to-pose bound.* The residual is in mm and the pose has a
+    rotation part, so converting one into the other needs a length. That is
+    independent of scoring and is where the question now lives.
+  - **Unchanged and still open:** whether the right quantity is `cond(J_fk)` at
+    all, rather than the wrench matrix's `sigma_min` or mode separation measured
+    directly. `J_fk` and `J_cmd` were carried side by side throughout
+    `score_discriminators.py` and never merged; its part (c) reports whether the
+    two even order the field differently. Nothing in the cap turns on this — the
+    cap is calibrated on what it catches, not on the measure being the right one.
