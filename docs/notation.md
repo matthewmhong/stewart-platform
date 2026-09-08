@@ -261,6 +261,49 @@ height to the last bit. Recorded as a property of `max over delta` of the maximi
 margin rather than of the geometry at any one `delta` — which is a restatement of
 where it sits, not a mechanism.
 
+**`p` is fixed — 2026-09-08. ASSERTED, not measured.**
+
+```
+p_mm  =  sqrt(0.2^2 + 0.2^2 + 0.2^2)  =  0.3464 mm
+p     =  0.3464 / 80                  =  0.004330
+```
+
+normalised by an **asserted `r_b` floor of 80 mm** (§12). This supersedes the
+"**`p` is not yet fixed**" sentence in the score block above, and the same
+statement in §12.
+
+It is a **decision taken in discussion. No diagnostic stands behind it**, and
+none is cited. The three probes that were carried side by side were `0.005`,
+`0.0075` and `0.010 r_b`; **`0.004330` is below all three**, so the score has not
+been evaluated at the value now in force. Recorded as asserted so it is not later
+read back as measured.
+
+**The three sources, each 0.2 mm:**
+
+| source | status |
+|---|---|
+| printer tolerance | the one figure with a source |
+| ball-joint free play | **placeholder at the printer's figure**, pending the hardware pull |
+| platform centring | **placeholder at the printer's figure**, pending the hardware pull |
+
+**Combined RSS, on an independence assumption.** The worst-case sum of `0.6 mm`
+is **rejected as unphysical for three independent sources** — it requires all
+three to err in the same direction at once.
+
+Two properties that travel with the number:
+
+- **`p` scales inversely with the `r_b` floor.** 80 mm is a *floor*, so raising
+  it lowers `p` and lowering it raises `p`: **raising the floor is safe, lowering
+  it is not.** The floor is itself asserted — §12.
+- **Rod cut tolerance is deliberately excluded.** It perturbs `d`, not the
+  platform pose, so it does not belong in a platform displacement. It is checked
+  **separately, after `r_b` is chosen**, alongside the already-owed
+  `min(C_i - |P_i|)` millimetre check.
+
+**Consequence.** `p = 0.004330 < 0.010 r_b`, so part (9)'s tune/score mismatch
+bound of **`1.37e-3`** carries and **needs no re-measurement** — that bound was
+measured at and below `0.01 r_b`, and the re-check clause above is not triggered.
+
 ## 9. Working envelope
 
 **Specified 2026-09-05.** This closes handoff open item 8 and open item 1. The
@@ -481,6 +524,47 @@ Listed so nothing in this file is mistaken for a settled value.
   a floor; reach is a **two-sided interval**. There is no `N_i` ceiling, so a reach
   floor cannot sit above one.
 
+  **The `X = 1` crossing is limit-dependent — 2026-09-08**, from
+  `stewart/diagnostics/tilt_bracket.py`. That single candidate is the *whole* of
+  the counterexample: it is what refuted "`N_i > 0` is not binding". Re-running
+  the same 540-candidate screen at three tilt limits — `tau_L` = 75 / 150 /
+  300 ms, tilt **8.5383 / 10.5290 / 14.5520 deg** — the count of that category is
+  **0 / 1 / 2**:
+
+  - at **8.54 deg**, `X = 0`, and the claim "`N_i > 0` is not binding" **stands
+    unrefuted**;
+  - at **10.529 deg**, `X = 1` — the candidate above;
+  - at **14.55 deg**, `X = 2` — it fails twice.
+
+  So **the correction rests on one candidate at one provisional tilt**, and
+  `tau_L` is the provisional number (§9). The candidate is real — its reach
+  ceiling was refined by bisection, not read off the `0.025 r_b` grid — but *the
+  existence of the category* is a property of the tilt limit, not of the
+  constraint set.
+
+  **What survives the full range, stated separately.** `N_i > 0` **never sets the
+  lower end of a surviving bracket**: 0 of **425 / 363 / 259** at the three
+  limits. That is the limit-independent part of the 2026-09-05 sentence — and it
+  is still a **survivorship sample** of exactly the kind the 2026-09-05
+  correction named, now taken three times instead of once.
+
+  Two figures from the same module that must not be read without their caveats:
+
+  - **The censored margin minimum.** The survivors' five-number summary has a
+    minimum that is **non-monotone in the tilt limit and is not a trend**. It is
+    taken over a survivor set that is itself shrinking, and the worst candidate
+    at any limit is typically **one about to leave the set entirely**. Each
+    pass's argmin is traced across all three limits and marked `infeasible`
+    where the carrier is gone — so that the three minima are not differenced
+    against each other.
+  - **The rank correlation, and the shrinking common set behind it.** Spearman
+    of the constrained-tune margin ranking against the 10.529-deg reference:
+    **`rho = 0.987`** downward (8.54 deg) and **`rho = 0.959`** upward
+    (14.55 deg). Both are over candidates feasible at **both** limits, and that
+    common set shrinks as the limit rises. **A high `rho` on a shrinking common
+    set is a weaker statement than the same `rho` on a stable one**; the lost and
+    gained counts are reported beside it for that reason.
+
   `z_flat(delta)` (§8, derivation §8.1) remains a useful reference point inside the
   bracket even though home no longer sits on it.
 - `beta_p`'s range, which needs a **ball-joint housing diameter** — two housings
@@ -510,7 +594,8 @@ believed earlier and acted on:
   `score = margin(dxy = p)`: one term, no weights, `delta` tuned under a
   `cond(J_fk) <= 1e6` cap at `char_len = r_b`. What remains open under it is
   **`p`**, the build error the margin is read at — three probes were carried side
-  by side and none preferred.
+  by side and none preferred. — **`p` fixed 2026-09-08 at `0.004330`, ASSERTED
+  and not measured: §8.**
 - The characteristic length used to normalise the moment rows of any conditioning
   measure. That choice changes the ranking of candidates, so it is a requirement
   to be stated, not a constant to be picked. **Still open — but narrowed the same
@@ -592,3 +677,39 @@ believed earlier and acted on:
     `score_discriminators.py` and never merged; its part (c) reports whether the
     two even order the field differently. Nothing in the cap turns on this — the
     cap is calibrated on what it catches, not on the measure being the right one.
+
+**Absolute scale — 2026-09-08. ASSERTED, not measured.** Decisions taken in
+discussion. **No diagnostic stands behind any of the three**, and none is cited.
+They are recorded here because absolute scale is what §9 says re-enters the sweep
+upstream of the envelope, and it had no value at all until now.
+
+- **`r_b <= 90 mm`**, from a **180 x 180 mm print volume**. This is the
+  **upstream absolute length**: it arrived from the **bed**, not from torque.
+  *(Note: the `r_b = 100 mm` in `cc-fk-gate.md`'s fixtures and in
+  `box_boundary.py`'s buildability columns is a reference scale for reading
+  ratios as lengths — labelled "not a choice of `r_b`" in both — and it sits
+  above this ceiling. Not a conflict of decisions, but that placeholder is now
+  out of range and should not be mistaken for one that is in it.)*
+- **The ball surface is a bought plastic sheet on a hub**, decoupled from the
+  anchor ring. **Plate radius therefore does not bound `r_p`**, and the
+  envelope's `x0 = 80 mm` **survives a bed that could not carry a printed plate
+  of the required radius** — the sheet is bought, not printed.
+- **`h_p` change from the hub-and-sheet arrangement is judged negligible**, and
+  **leg forces are re-ruled-out with the bought sheet in mind**. The 20 August
+  force ruling (2.7 g ball) **predates the sheet**, so this is a **fresh
+  judgement, not that ruling carrying forward**.
+
+**Consequence for the objective, and it is the live one.** The decoupling
+**removes the one physical argument that would have bounded `r_p` from below**.
+The `r_p` runaway measured in `box_boundary.py` is therefore **live** — nothing
+about the plate stops it. See the 8 September design-log entry.
+
+**Servo travel is excluded from feasibility — 2026-09-08. A decision, not an
+omission. ASSERTED.** Feasibility stays the **three** tests, unchanged:
+
+1. non-empty `z_home` bracket,
+2. envelope reachable, `|P_i| <= C_i`,
+3. `N_i > 0`.
+
+The angular range `alpha_i` is allowed to sweep is **not** a fourth test.
+Recorded here so it is not reintroduced later as an oversight.

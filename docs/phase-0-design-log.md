@@ -1174,6 +1174,158 @@ stock — not on anything the sweep can compute. `TODO(him): decision`
 
 ---
 
+## 8 September
+
+> Skeleton only, same terms as the 4, 5 and 7 September entries: facts and
+> residuals, no prose, nothing in his voice, `TODO(him): reasoning` against each.
+>
+> **Read the ASSERTED marks.** Several entries below are **decisions taken in
+> discussion, with no diagnostic behind them**. They are marked **ASSERTED** and
+> must not be read back as measured. Nothing here invents support for them.
+>
+> Sources: `stewart/diagnostics/box_boundary.py` and
+> `stewart/diagnostics/tilt_bracket.py`, both committed `fd42513`;
+> `docs/notation.md` sec.8 and sec.12.
+
+### THE OBJECTIVE IS INCOMPLETE — an open problem, not a solved one
+
+Source: `box_boundary.py`. The top-5 at every tilt limit sat on **three walls of
+the sampled box** — max `a`, min `r_p`, min `d` — so each axis was opened 10
+steps of 0.05 `r_b` at the current limit.
+
+**The optimum does not come off the boundary when the box is opened. It moves
+further onto it.** `TODO(him): reasoning`
+
+- **`r_p/r_b` runs to `0.10`**, the **smallest value probed**, with margin
+  climbing **monotonically to `0.963815`** and **no turn**. The probe ran out of
+  steps; the optimum did not run out of descent.
+- **Opening `a/r_b` alone moves the winner to `a/r_b = 0.60`** and **drags
+  `d/r_b` from `0.80` to `1.20`**.
+- **The original corner — `r_p 0.60`, `a 0.35`, `d 0.80` — was an artifact of
+  where the grid stopped, not a result.** It is withdrawn as a result.
+  `TODO(him): reasoning`
+
+**Diagnosis.** **Margin measures distance from unreachability, not capability.**
+A platform ring shrinking toward a point improves it. **Nothing in the score
+penalises a mechanism that can barely move.** `TODO(him): reasoning`
+
+**Consequence.** As specified, the sweep returns **the smallest platform whose
+ball joints do not collide**, and **every dimension would trace to a housing OD
+rather than to the analysis**. That **fails the rule set on 19 August** — nothing
+purchased and no CAD drawn until the sweep has chosen the dimensions, every
+number traceable to the analysis. `TODO(him): reasoning`
+
+**Options named. None chosen. `TODO(him): decision`**
+
+- **A tilt-authority term.** Moment arm falls with `r_p`, so a fixed servo travel
+  buys less platform tilt. **Distinct from the 20 August resolution result**,
+  where the geometry ratio cancels for **step count** but **not for range**.
+- **Stiffness against the bought sheet.**
+- **Fixing `r_p` outright and dropping to five axes.**
+
+**Protocol finding — the stopping rule fired and reversed.** On **two of four
+rays** the top-5 lost the extreme value and then **got it back**. On the `a` ray
+the rule **would have stopped at `0.50` and been wrong**. **Running all ten steps
+regardless is what caught it.** Same failure mode as the 15 / 10 / 0.25-deg
+azimuth aliasing recorded on 5 September: **a discrete probe reporting a turn
+that is not there.** `TODO(him): reasoning`
+
+**Limitation, recorded with the finding.** Each ray moves **one axis with the
+other four pinned at coarse-grid values**, so **a joint optimum needing two axes
+to move together is invisible to all four probes**. **The `a` ray pulling `d`
+from `0.80` to `1.20` is direct evidence that the coupling is present.**
+`TODO(him): reasoning`
+
+### `p` is fixed — ASSERTED, not measured
+
+```
+p_mm  =  sqrt(0.2^2 + 0.2^2 + 0.2^2)  =  0.3464 mm
+p     =  0.3464 / 80                  =  0.004330
+```
+
+normalised by an **asserted `r_b` floor of 80 mm**. Recorded in `notation.md`
+sec.8, which supersedes its own "`p` is not yet fixed". `TODO(him): reasoning`
+
+- **Three sources at 0.2 mm**: printer tolerance; ball-joint free play; platform
+  centring. **The latter two are placeholders at the printer's figure**, pending
+  the hardware pull. `TODO(him): reasoning`
+- **RSS, on an independence assumption.** The **worst-case sum of 0.6 mm is
+  rejected as unphysical** for three independent sources. `TODO(him): reasoning`
+- **`p` scales inversely with the `r_b` floor**, so **raising the floor is safe
+  and lowering it is not.** `TODO(him): reasoning`
+- **Rod cut tolerance deliberately excluded** — it perturbs `d`, not the platform
+  pose. **Checked separately, after `r_b` is chosen**, alongside the already-owed
+  `min(C_i - |P_i|)` millimetre check. `TODO(him): reasoning`
+- **Consequence:** `p < 0.010 r_b`, so part (9)'s tune/score mismatch bound of
+  **`1.37e-3`** carries and **needs no re-measurement**. `TODO(him): reasoning`
+- **Residual:** the three probes carried side by side were `0.005`, `0.0075` and
+  `0.010 r_b`. **`0.004330` is below all three** — the score has not been
+  evaluated at the value now in force. `TODO(him): reasoning`
+
+### Absolute scale — ASSERTED
+
+Recorded in `notation.md` sec.12.
+
+- **Print volume 180 x 180 mm, so `r_b <= 90 mm`.** This is the **upstream
+  absolute length**, and **it arrived from the bed, not from torque**.
+  `TODO(him): reasoning`
+- **The ball surface is a bought plastic sheet on a hub**, decoupled from the
+  anchor ring. **Plate radius therefore does not bound `r_p`**, and **`x0 = 80
+  mm` survives a bed that could not carry a printed plate of the required
+  radius.** `TODO(him): reasoning`
+- **`h_p` change from the hub-and-sheet arrangement judged negligible; leg forces
+  re-ruled-out with the bought sheet in mind.** The **20 August force ruling
+  predates the sheet**, so this is a **fresh judgement, not that one carrying**.
+  `TODO(him): reasoning`
+- **Consequence for the objective finding above:** the decoupling **removed the
+  one physical argument that would have bounded `r_p` from below**, so **the
+  runaway is live**. `TODO(him): reasoning`
+
+### Servo travel is excluded from feasibility — a decision, not an omission
+
+**ASSERTED.** Feasibility stays the **three** tests: non-empty `z_home` bracket,
+envelope reachable, `N_i > 0`. **Recorded so it is not reintroduced.**
+`TODO(him): reasoning`
+
+### The `X = 1` crossing is limit-dependent
+
+Source: `tilt_bracket.py`. Recorded in `notation.md` sec.12 beside the
+2026-09-05 correction it qualifies.
+
+**The 2026-09-05 attribution — one candidate where the reach ceiling falls below
+the `N_i` floor — is what refuted "`N_i > 0` is not binding".** Re-run at
+`tau_L` = 75 / 150 / 300 ms (tilt **8.5383 / 10.5290 / 14.5520 deg**), that
+category counts **0 / 1 / 2**:
+
+- at **8.54 deg**, `X = 0`, and **the claim stands unrefuted**;
+- at **14.55 deg**, **it fails twice**.
+
+**The correction rests on a single candidate at a provisional tilt.**
+`TODO(him): reasoning`
+
+**Stated separately — what survives the full range.** **`N_i > 0` never sets the
+lower end of a surviving bracket: 0 of 425 / 363 / 259.** `TODO(him): reasoning`
+
+- **The censored margin minimum**, with its caveat: **non-monotone**, because
+  **each limit's worst candidate is one about to leave the set**. Not a trend,
+  and the three minima are not differenced. `TODO(him): reasoning`
+- **The shrinking common set behind `rho = 0.959`** (upward, 14.55 deg;
+  `rho = 0.987` downward). Both are over candidates feasible at **both** limits.
+  **A high `rho` on a shrinking common set is a weaker statement than the same
+  `rho` on a stable one.** `TODO(him): reasoning`
+
+### The tilt limit stays at 10.529 deg
+
+The sweep runs there rather than at 14.55 deg. **The trade, both halves:**
+**feasibility is monotone in the tilt limit**, so running at the **higher** limit
+would need **no re-check**; running at **10.529** keeps **363 of 540** and median
+margin **0.436** against **0.341**. `TODO(him): decision`
+
+- **This creates a re-check obligation.** It belongs in the handoff, **which he
+  writes** — not written here.
+
+---
+
 ## Where Phase 0 stands
 
 The inverse kinematics is derived and verified. The frame conversion, the leg
