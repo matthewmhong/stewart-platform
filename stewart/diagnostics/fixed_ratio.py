@@ -207,7 +207,7 @@ def _key_no_rp(rec):
     return (rec["beta"], rec["beta_p"], rec["a"], rec["d"])
 
 
-def run_slice(r_p, label, short, probe=P_SCORE, verbose=True):
+def run_slice(r_p, label, short, probe=P_SCORE, verbose=True, axes=None):
     """Screen, attribute, tune and score one ``r_p/r_b`` slice.
 
     Every step is the existing one: :func:`.tilt_bracket.screen` (the same
@@ -219,10 +219,19 @@ def run_slice(r_p, label, short, probe=P_SCORE, verbose=True):
     :func:`.score_discriminators.probe_margin` for the score at :data:`P_SCORE`.
     Nothing is reimplemented, so this slice and the coarse grid are the same
     screen run over different ``r_p``.
+
+    ``axes`` overrides the OTHER axis lists handed to :func:`.tilt_bracket.screen`
+    (``beta_vals``, ``beta_p_vals``, ``a_vals``, ``d_vals``); ``rp_vals`` stays
+    ``[r_p]`` and is not overridable, because a slice is one ratio by
+    definition.  ``None`` is :mod:`.zhome_bracket`'s own coarse axes, which is
+    what every call in this module passes and what part (0) through (6) below
+    report.  It exists so :mod:`.sweep_ranges` can put the hardware pull's
+    discrete ``a`` set and its ``beta_p`` bounds through THIS pipeline rather
+    than standing up a second one.
     """
     t0 = time.time()
     az, mg = ZB.fine_poses()
-    rows, feasible = screen(rp_vals=[r_p])
+    rows, feasible = screen(rp_vals=[r_p], **(axes or {}))
     cat_R, cat_X, artifacts = attribute(rows, az, mg)
     measured, dropped = constrained_margins(feasible)
     R29, az29, _ = SD._pose_grid(None)

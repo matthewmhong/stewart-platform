@@ -208,6 +208,16 @@ def screen(beta_vals=BETA, beta_p_vals=BETA_P, rp_vals=RP_RB,
                             cf=float(floor), nreach=int(reach.sum()),
                             reach_hi=(float(Z_GRID[ridx[-1]]) if ridx.size
                                       else np.nan),
+                            # reach_lo is the lowest z_home the reach test
+                            # allows BEFORE the N_i > 0 floor is intersected
+                            # in.  Carried so that "did the floor set the
+                            # lower end?" can be answered by comparison
+                            # (reach_lo < z_lo) rather than by the coincidence
+                            # test z_lo <= floor, which the strict `Z_GRID >
+                            # floor` above can never satisfy.  Additive: no
+                            # existing field or outcome moves.
+                            reach_lo=(float(Z_GRID[ridx[0]]) if ridx.size
+                                      else np.nan),
                             z_lo=(float(Z_GRID[idx[0]]) if idx.size else np.nan),
                             z_hi=(float(Z_GRID[idx[-1]]) if idx.size else np.nan),
                             contiguous=(bool(idx.size) and
