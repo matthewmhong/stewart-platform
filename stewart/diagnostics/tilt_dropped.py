@@ -670,9 +670,15 @@ def main() -> None:
           f"REUSED, not reimplemented;")
     print("  the only change is the tilt limit.")
     print()
-    assert abs(tilt_of(COLUMNS[REFERENCE_INDEX][0]) - ENV.TILT_LIMIT_DEG) < 1e-9,\
-        ("the reference column is not the limit envelope.py carries; "
-         "REFERENCE_INDEX is wrong")
+    # Repointed 2026-09-09 (b0703ab): this used to check the reference column
+    # against ENV.TILT_LIMIT_DEG, which was the same number by construction -
+    # both were tilt_for(0.080).  TILT_LIMIT_DEG now derives from X0_WORKING
+    # and no longer equals this column, so the check is pinned to the
+    # column's own definition (150 ms, x0 = 0.080) instead of to a constant
+    # that has since moved to mean something else.
+    assert abs(tilt_of(COLUMNS[REFERENCE_INDEX][0]) - ENV.tilt_for(0.080)) \
+        < 1e-9, ("the reference column is not tilt_for(0.080); "
+                 "REFERENCE_INDEX is wrong")
     assert abs(FR.P_SCORE - FR.P_SCORE_QUOTED) < 1e-6, "p disagrees with 0.003849"
 
     print("-" * 78)

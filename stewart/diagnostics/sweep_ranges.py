@@ -997,9 +997,17 @@ def main() -> None:
     print()
     print(f"  TILT LIMIT = {tilt:.4f} deg, from envelope.tilt_for at "
           f"x0 = {ENV.X0_WORKING*1e3:.0f} mm - the")
-    print(f"  working displacement ALONE.  tau_L is DROPPED (tilt_dropped.py);")
-    print(f"  envelope.TILT_LIMIT_DEG still reads {ENV.TILT_LIMIT_DEG:.4f} and "
-          f"is not edited here.")
+    print(f"  working displacement ALONE.  tau_L is DROPPED (tilt_dropped.py).")
+    # Checked at runtime, not quoted as a literal (2026-09-09, b0703ab made
+    # this true - it was false before that commit) - so this line reports
+    # whatever envelope.py currently carries instead of assuming it still
+    # lags, which is exactly the assumption that went stale once already.
+    agrees = abs(ENV.TILT_LIMIT_DEG - tilt) < 1e-9
+    note = ("the constant derives from X0_WORKING now" if agrees else
+            "envelope.py has drifted from tilt_for(X0_WORKING) again")
+    print(f"  envelope.TILT_LIMIT_DEG reads {ENV.TILT_LIMIT_DEG:.4f} deg - "
+          f"{'MATCHES' if agrees else 'DOES NOT MATCH'} the {tilt:.4f} deg")
+    print(f"  computed directly above ({note}).")
     print()
     print("  NO JOINT, NO SERVO AND NO HORN IS CHOSEN.  The harness is not")
     print("  specced.  notation.md is not touched.")

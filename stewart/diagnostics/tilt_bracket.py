@@ -377,9 +377,15 @@ def main() -> None:
     print("  tau_L moves the limit by less than doubling it would suggest, and")
     print("  halving it costs less than half.")
     print()
-    assert abs(ref_tilt - ENV.TILT_LIMIT_DEG) < 1e-9, (
-        f"the reference column ({ref_tilt}) is not the limit in force "
-        f"({ENV.TILT_LIMIT_DEG}); REFERENCE_INDEX is wrong")
+    # Repointed 2026-09-09 (b0703ab): this used to check ref_tilt against
+    # ENV.TILT_LIMIT_DEG, which was the same number by construction - both
+    # were tilt_for(0.080).  TILT_LIMIT_DEG now derives from X0_WORKING and
+    # no longer equals this column, so the check is pinned to the column's
+    # own definition (150 ms, x0 = 0.080) instead of to a constant that has
+    # since moved to mean something else.
+    assert abs(ref_tilt - ENV.tilt_for(0.080)) < 1e-9, (
+        f"the reference column ({ref_tilt}) is not tilt_for(0.080) "
+        f"({ENV.tilt_for(0.080)}); REFERENCE_INDEX is wrong")
     print(f"  reference column = tau_L {TAU_L_S[REFERENCE_INDEX]*1e3:.0f} ms, "
           f"tilt {ref_tilt:.4f} deg, and it AGREES with envelope.TILT_LIMIT_DEG")
     print(f"  to {abs(ref_tilt - ENV.TILT_LIMIT_DEG):.1e} deg - checked, not "
