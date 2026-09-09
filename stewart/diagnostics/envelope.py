@@ -79,9 +79,19 @@ def tilt_for(x0: float, tau: float = TAU) -> float:
 
 #: The requirement: recover the 50 mm working displacement in ``tau``.
 TILT_BARE_DEG = tilt_for(X0_BARE)
-#: The envelope: the requirement plus the latency drift.  Everything in this
-#: package is evaluated on this number, never on the bare requirement.
-TILT_LIMIT_DEG = tilt_for(X0_ENVELOPE)
+#: The envelope.  ``tau_L`` was DROPPED 2026-09-08 (``notation.md`` sec.9):
+#: ``docs/hardware-pull.md`` finds neither of its two terms reconstructable
+#: from published data, so the 30 mm of latency drift it produced has no
+#: basis and is removed rather than left provisional.  What is left is the
+#: working displacement alone, so this is derived from ``X0_WORKING`` through
+#: ``tilt_for`` - the same call ``TILT_BARE_DEG`` makes - rather than sitting
+#: as a literal that can go stale the way the withdrawn 10.5290 did.
+#: SUPERSEDED value, kept visible rather than deleted: ``tilt_for(X0_ENVELOPE)``
+#: = ``10.5290`` deg, computed at ``x0 = 80 mm`` (50 mm working + `tau_L`
+#: latency drift) while ``tau_L`` was still provisional.  Every result
+#: committed before 2026-09-09 that reads this constant was computed at that
+#: value; see the commit that makes this change for which modules those are.
+TILT_LIMIT_DEG = tilt_for(X0_WORKING)
 
 DXY = 0.0
 DZ = 0.0
