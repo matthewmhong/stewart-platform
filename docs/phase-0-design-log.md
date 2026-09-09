@@ -1365,6 +1365,212 @@ margin **0.436** against **0.341**. `TODO(him): decision`
 - **This creates a re-check obligation.** It belongs in the handoff, **which he
   writes** — not written here.
 
+**Superseded 2026-09-09 by the `tau_L` drop, below — flagged, not rewritten.**
+This entry decided to run the sweep at `10.529°` from within a `75`/`150`/
+`300 ms` `tau_L` sensitivity range. `tau_L` is no longer in that range; it is
+removed. The decision recorded here is preserved as the record of what was
+decided and why, on the premise then in force; it is not the decision that
+stands now. See the continuation below.
+
+### Continued 2026-09-09 — same 8 September entry, written up the next day
+
+> Skeleton only, same terms as the 4, 5 and 7 September entries: facts and
+> residuals, no prose, nothing in his voice, `TODO(him): reasoning` against
+> each. Written 2026-09-09, recording decisions dated and asserted 2026-09-08
+> together with diagnostics run 2026-09-09 to check them.
+>
+> **Read the ASSERTED marks**, as above: several entries are decisions taken
+> in discussion with no diagnostic behind them, and none is invented here.
+>
+> Sources: `docs/hardware-pull.md`; `stewart/diagnostics/tilt_authority.py`
+> (`3a01bd3`); `stewart/diagnostics/tilt_dropped.py`,
+> `stewart/diagnostics/sweep_ranges.py`, `stewart/diagnostics/fixed_ratio.py`
+> (all `2af4f3a`); `stewart/diagnostics/box_boundary.py` (`fd42513`,
+> referenced, not re-run); `docs/notation.md` sec.8, sec.9, sec.12.
+
+#### `tau_L` is dropped, not revised
+
+Source: `docs/hardware-pull.md`. Recorded in `docs/notation.md` sec.9.
+
+**ASSERTED.** Neither term of `tau_L = 150 ms` is published by any candidate
+maker. Servo step response: Hitec, Savox and ROBOTIS each publish
+seconds-per-60° no-load speed — a **slew rate**, not a step response — and the
+one third-party dynamic study is on two servos that are **not candidates**,
+with its ~10 ms delay figure identified by its own author as a **100 Hz
+sampling-rig artefact**. Sensor frame interval: published, `4.85`–`33.33 ms`
+across the cameras checked, but exposure, readout, transfer and detection are
+not, so the term has a floor and no value. `TODO(him): reasoning`
+
+- **Completes the 2026-09-03 withdrawal** of the `300 mm/s` figure `tau_L`
+  inherited from — that withdrawal left `tau_L` provisional and unclosable;
+  this closes it by removal rather than by a new figure. `TODO(him): reasoning`
+- **New limit: `6.558°`**, from `x0 = 50 mm` (working displacement only)
+  through `envelope.tilt_for` — the same closed form, called at a different
+  `x0`, not restated. Numerically identical to the "bare requirement" row
+  recorded 2026-09-05; what changes is that it is now the limit **in force**,
+  not a lower reference beside the envelope figure. `TODO(him): reasoning`
+- **`envelope.py` still reads `10.529`.** The drop is a documentation entry,
+  not yet a code change; every diagnostic that has not explicitly rebound the
+  limit still runs at `10.529°`. `TODO(him): decision` — when the code
+  changes.
+
+#### Absolute scale: `r_p` fixed, `r_b` fixed exactly, `r_p/r_b` drops out of the sweep
+
+Source: recorded in `docs/notation.md` sec.12.
+
+**ASSERTED, both numbers.** `r_b = 90 mm`, the full print bed — sharper than
+the 8 September `r_b <= 90 mm`, which left the exact value open. `r_p = 80 mm`,
+from the printed hub carrying the bought `220 mm` sheet — new, not on the
+8 September list of two. `TODO(him): reasoning`
+
+- **The sweep is five axes, not six** — `beta`, `beta_p`, `a/r_b`, `d/r_b`,
+  `z_home/r_b`. **Not the 4 September "five"**, which dropped `z_home/r_b` and
+  was withdrawn the same day; this one drops `r_p/r_b` and leaves `z_home/r_b`
+  in. Same count by coincidence, not a reversal. `TODO(him): reasoning`
+- **`p`'s denominator was `r_p` under the wrong name.** The `80 mm` `p` was
+  divided by, labelled "an asserted `r_b` floor," is this same `80 mm`. `r_b`
+  is `90 mm`. `p` recomputed: `0.3464 / 90 = 0.003849`, replacing `0.004330`.
+  Same three sources, same RSS argument — only the denominator was wrong.
+  `TODO(him): reasoning`
+- **This is the option named and chosen from the 8 September list below**:
+  "Fixing `r_p` outright and dropping to five axes" was one of three named
+  there, none chosen at the time. It is the one taken. `TODO(him): decision`
+  — why this one and not a tilt-authority term or a stiffness term; see the
+  next entry for why authority specifically was ruled out rather than merely
+  unchosen.
+- **Fixing `r_p` closed one axis of the runaway. It did not fix the
+  objective.** See below. `TODO(him): reasoning`
+
+#### The tilt-authority option is closed, and the reason is the finding
+
+Source: `stewart/diagnostics/tilt_authority.py`, committed `3a01bd3`. Recorded
+in `docs/notation.md` sec.12 beside the objective-open paragraph it qualifies.
+
+**`rho(authority, score) = +0.9088`** over the 363 feasible candidates —
+authority ranks **with** margin, more strongly than `tau_min`'s already-
+recorded `+0.835`. **Negative on all four `box_boundary` rays** (in
+`rho(alpha_span, score)` terms: `a` up `-0.2237`, `r_p` down `-0.6251`, `d`
+down `-0.2556`, `d` up `-0.9387`). `TODO(him): reasoning`
+
+- **On the runaway axis it agrees with the runaway.** Down the `r_p` ray,
+  `0.60 -> 0.10`: best score `0.784 -> 0.951`, winner's `alpha_span`
+  **`18.89 -> 1.89°`**. Both readings favour the same shrinking platform.
+  `TODO(him): reasoning`
+- **Mechanism, part 2b, measured not asserted.** The moment-arm argument
+  assumes an envelope commanding a fixed **displacement**; the settled
+  envelope is a fixed **angle** (`dxy = dz = yaw = 0`), so anchor excursion
+  goes as `r_p sin(tilt)` and **shrinks** with the ring. **General form: under
+  a purely angular envelope, no kinematic quantity bounds `r_p` from below.**
+  That is why `r_p` was fixed rather than bounded — no term on this envelope
+  was going to supply the missing floor. `TODO(him): reasoning`
+- **If authority is ever revisited:** the margin-tuned and swing-tuned `delta`
+  differ on `349` of `363` candidates, median gap `6°` — it would have to
+  enter the **inner tune**, under the same rule `cond` already follows (§8),
+  not the outer score. `TODO(him): decision` — not taken here; recorded so it
+  is not re-discovered.
+
+#### The objective remains open — restated so the `r_p` decision is not read as having closed it
+
+Two different fixes happened in the same session and must not be read as one.
+`TODO(him): reasoning`
+
+- **Fixing `r_p` removed the axis the 8 September runaway was measured on** —
+  `r_p/r_b` can no longer run to `0.10`, because it is no longer free.
+- **It did not fix the objective.** `margin` still measures **distance from
+  unreachability**, not **capability**, on every axis still free. Nothing
+  above changes that diagnosis.
+- **The tilt-authority option being closed is not the objective being fixed
+  either** — it removes one *proposed counterweight*, and leaves the
+  imbalance it would have counterweighed exactly where the 8 September entry
+  found it.
+- **Options still open, restated, none chosen:** stiffness against the bought
+  sheet; a term not yet named. `TODO(him): decision`
+
+#### The `N_i > 0` floor binds more than a test that could not fire showed
+
+Source: `stewart/diagnostics/tilt_dropped.py`, committed `2af4f3a`. Recorded
+in `docs/notation.md` sec.12 beside the 2026-09-05 survivorship correction.
+
+**`fixed_ratio.py`'s `z_lo <= floor` test is `0` by construction** — the
+screen it reads intersects reach with `Z_GRID > floor` strictly, so no
+survivor can fail it. The real test, `reach_lo < z_lo` (the reach test's own
+lower end, before the floor is intersected in), reads **8** at every one of
+four tilt limits checked (`6.558` / `8.538` / `10.529` / `14.552°`).
+`TODO(him): reasoning`
+
+- **Same shape, same constraint, second instance.** The 2026-09-05 correction
+  found "`N_i > 0` sets the lower end in 0 of 363" resting on a survivorship
+  sample; this is a different test, also reporting zero for a reason **built
+  into the test**, not the geometry. `N_i > 0` keeps proving load-bearing more
+  often than each individual measurement of it suggested.
+  `TODO(him): reasoning`
+
+#### Zero-width brackets are a scan artefact, and get a floor
+
+Source: `stewart/diagnostics/tilt_dropped.py`, `2af4f3a`. Recorded in
+`docs/notation.md` sec.12.
+
+**21 of 143** candidates feasible at `6.558°` have `z_home` brackets of grid
+width `0.000 r_b`. On the **122** candidates common to the `10.529°`
+reference, median width **rises** `0.337 -> 0.462 r_b`; the **21 added** by
+the lower limit carry median width `0.000` and are what pull the pooled
+figure down. The `143`-vs-`122` improvement is **overstated by composition**.
+`TODO(him): reasoning`
+
+- **`MINIMUM BRACKET WIDTH = 2 mm = 0.0222 r_b`. ASSERTED**, from build
+  tolerance on `z_home`, not measured. Just under one `0.025 r_b` grid step,
+  so it removes the 21 and little else past them — a floor, not a
+  discriminating filter. `TODO(him): decision` — not applied to the sweep
+  here; recorded as a requirement.
+- **Fourth recorded instance of a discrete grid reporting something the
+  continuum does not.** The other three: the `N_i > 0` bound reporting
+  satisfied `+5.911e-4` early (2026-09-05); the 10° tilt-azimuth grid
+  overstating margin `~1.9e-3` against 0.25° (2026-09-05/07); `box_boundary`'s
+  per-ray stopping rule, which would have stopped early and been wrong on the
+  `a` ray (8 September, above). `TODO(him): reasoning`
+
+#### `TIE_TOL` is eight decades wrong at `dxy = p`
+
+Source: `stewart/diagnostics/sweep_ranges.py` part 7, `2af4f3a`. Recorded in
+`docs/notation.md` sec.8.
+
+**Measured ranking resolution `~1.5e-4`** at 24 displacement-azimuth
+directions (`probe_margin`'s own sampling); refining to 72 and 360 buys
+nothing further. `TIE_TOL = 1e-12` is correct for the `dxy = 0` collapse it
+was verified against and is **eight decades wrong** as a tie threshold for the
+score now in force, which reads at `dxy = p`. `TODO(him): decision` — a
+harness requirement, not taken as a code change here.
+
+#### Sweep ranges from the hardware pull
+
+Source: `docs/hardware-pull.md`; `stewart/diagnostics/sweep_ranges.py`,
+`2af4f3a`. Recorded in `docs/notation.md` sec.12.
+
+- **`a` is discrete**: 32 published ProModeler hole positions, `9.0`–
+  `60.4 mm` = `0.1000`–`0.6711 r_b`. Ceiling is hardware, not sampling;
+  Thingiverse extension arms excluded as a print. `TODO(him): reasoning`
+- **`a`'s optimum is interior — first axis clean end to end.** Best
+  `margin(dxy = p) = 0.847657` at `47.63 mm` (`0.5292 r_b`), holes on both
+  sides. `box_boundary`'s `a/r_b = 0.60` pointed at a gap in the ladder, not a
+  wall. `TODO(him): reasoning`
+- **`beta_p` bounded both ends of the published `9.0`–`13.0 mm` housing-OD
+  range**: `[3.2246°, 56.7754°]` at `9.0 mm`, `[4.6604°, 55.3396°]` at
+  `13.0 mm`. No joint chosen. Closes the 2026-09-05 "needs a ball-joint
+  housing diameter" open item. `TODO(him): reasoning`
+- **`d/r_b` capped at `2.0` (`180 mm`) — ASSERTED**, a judgement about
+  slenderness and bow, not a hardware limit; stock runs to `2.1x` that
+  length. Both straightness cells NOT RETRIEVED (MISUMI 403; McMaster
+  unreachable for a different reason) — the `108 mm` rod at the current
+  `d/r_b = 1.20` optimum has no published straightness or buckling figure,
+  and that optimum sits on the cell maximum in both directions probed, so the
+  wall is untested. `TODO(him): reasoning`
+- **`beta`'s range: partially answered.** Body width published,
+  `11.4`–`13.0 mm`, and not among the pull's 39 unpublished cells. Installed-
+  arc clearance — mounting-flange footprint, screw pitch, inter-body
+  clearance — **is** among the 39, for every servo checked. Body width is a
+  proxy; the quantity the range actually needs is not published.
+  `TODO(him): reasoning`
+
 ---
 
 ## Where Phase 0 stands

@@ -47,7 +47,7 @@ code written before it is settled is provisional.
 
 | Symbol | Meaning | Units | Status | Provenance |
 |---|---|---|---|---|
-| `r_b` | base ring radius | mm | swept | key |
+| `r_b` | base ring radius | mm | **fixed at 90 mm — ASSERTED 2026-09-08**, the full print bed; not swept. See §12. | key |
 | `beta` | pair half-split | deg | swept; range set by servo-body collision | key |
 | `s_i` | within-pair sign, `(-1, +1, -1, +1, -1, +1)`. Also the `C3` orbit label: legs 0,2,4 in one orbit, 1,3,5 in the other. | — | fixed by the parameterisation | body |
 | `theta_i` | shaft azimuth, `120*floor(i/2) + s_i*beta` | deg | derived | key/body |
@@ -62,8 +62,8 @@ code written before it is settled is provisional.
 
 | Symbol | Meaning | Units | Status | Provenance |
 |---|---|---|---|---|
-| `r_p` | platform ring radius | mm | swept | new |
-| `beta_p` | pair half-split | deg | swept; range set by ball-joint housing diameter, **not yet known** | new |
+| `r_p` | platform ring radius | mm | **fixed at 80 mm — ASSERTED 2026-09-08**, from the printed hub carrying the bought 220 mm sheet; not swept. See §12. | new |
+| `beta_p` | pair half-split | deg | swept; range bounded by ball-joint housing OD, **published 9.0–13.0 mm, both ends on record — §12**; no joint chosen | new |
 | `phi_i` | anchor azimuth, `120*floor(i/2) + s_i*beta_p` — same skeleton as `theta_i`, which is what makes leg `i` pair with leg `i` | deg | derived | new |
 | `p_i` | platform anchor position | mm, `{P}` | design constant | key |
 | `h_p` | plate offset: the common `z` component of `p_i` in `{P}`, so `p_i = (r_p cos phi_i, r_p sin phi_i, -h_p)` | mm | **quantity settled 2026-09-03**; *symbol* still open, see §11 | new |
@@ -123,7 +123,7 @@ written down as final.
 
 | Symbol | Meaning | Units | Status | Provenance |
 |---|---|---|---|---|
-| `a` | servo arm length | mm | design variable, restricted to horns you can buy | key |
+| `a` | servo arm length | mm | design variable, restricted to horns you can buy — **now a discrete published set, §12** | key |
 | `d` | push-rod length | mm | design variable; *measure after cutting*, do not assume nominal | key |
 
 ## 6. Per-leg intermediates
@@ -162,7 +162,7 @@ Not part of the mechanism. Used for tuning `delta` and for scoring.
 | `J(delta)` | worst `\|w\|` over the envelope and all six legs. **Superseded** by the normalised reach margin below. Reason corrected 2026-09-04: not that `J` misses infeasibility, but that the two differ in **aggregation**. `delta` is absent from `L_i`, so `P_i` is `delta`-free and only `C_i` moves; at a fixed leg and pose the margin is strictly decreasing in `\|w_i\|`, so maximising it *is* minimising `\|w_i\|` exactly. But `J` is a minimax over `\|w_i\|` while the margin is a maximin over `(C_i-\|P_i\|)/C_i`, and since `\|L_i\|` varies across legs and poses the largest-`\|w_i\|` leg is generally not the smallest-margin leg. Different worst cases, different minimisers. Retained for reasoning about `delta` before `a` and `d` exist. | mm | new |
 | *(normalised reach margin)* | `(C_i - \|P_i\|) / C_i`, maximin over legs and envelope poses. Positive means leg `i` solves; negative means the candidate is infeasible. **The division by `C_i` is required**: `C` and `P` both carry length, so the raw difference `C_i - \|P_i\|` scales with `k` and breaks the normalised sweep, where candidates differing only in `r_b` must score identically. This is the form the branch check reports, and where `-5.7e-3` came from. *(Was `C_i - \|P_i\|` here; normalised 2026-09-04.)* | — | **unnamed** |
 | `tau_i` | transmission ratio, `\|rod . tangent\| / d`. Zero at a loss-of-authority configuration. | — | new |
-| `k` | uniform length scale factor. `alpha_i` is exactly invariant under scaling every length by `k`, envelope included. | — | new |
+| `k` | uniform length scale factor. `alpha_i` is exactly invariant under scaling every length by `k`, envelope included. **The justification for normalising the sweep by it has changed, not the invariance itself — 2026-09-08/09.** It was "absolute scale is unknown"; with `r_b` and `r_p` now fixed (§12) it is "ratios are the natural parameterisation." `k`-invariance is still true and is now **descriptive of the geometry rather than load-bearing for the sweep design**. | — | new |
 
 **The score function — settled 2026-09-07.**
 
@@ -240,13 +240,29 @@ Two instances are on record:
   pointwise by up to **`7.81e-1`**, against a full-field margin range of
   **`7.93e-1`**, and **0 of 124** groups are equal at a common `delta`. The members
   of a group are not the same machine. **This licenses nothing about the sweep**:
-  the six axes stand and `beta` and `beta_p` are sampled independently.
+  the axes stand and `beta` and `beta_p` are sampled independently. *(Was "the
+  six axes" when this was measured 2026-09-07; the sweep is **five** axes as of
+  2026-09-08/09 — `r_p/r_b` fixed, §12. The finding does not change: it was
+  never about the count.)*
 - **Ties below `2.88e-3` are not an ordering.** That is the ranking grid's own
   resolution — what the 10° azimuth grid overstates a margin by against 0.25°
   (§9). Candidates closer together than it are ties the grid cannot separate.
   The top-of-field ties are exact to machine precision and persist under
   refinement; they break on **hardware ranges downstream** — horn set, ball-joint
   housing OD, rod stock — not on anything the sweep computes.
+- **A second, coarser resolution applies once `dxy = p`, and `TIE_TOL` is not
+  it — 2026-09-09.** `2.88e-3` above is the *tilt-azimuth* grid's resolution
+  (10° against 0.25°). Scoring at `dxy = p` sweeps a second, independent
+  azimuth — the *displacement* direction, 24 samples around the circle in
+  `probe_margin` — and refining it 24 -> 72 -> 360 shows the ranking resolved
+  to only **`~1.5e-4`**, eight decades above the code constant
+  `TIE_TOL = 1e-12` the `|e|` collapse above was verified against. `TIE_TOL` is
+  **correct for the `dxy = 0` collapse it was set from** — the group agreement
+  really is exact to `~1e-15` there — and **wrong by eight decades as a tie
+  threshold for the score now in force**, which is read at `dxy = p`.
+  Measured, not changed: no constant is edited here, and this is a harness
+  requirement to carry forward, not a code fix.
+  (`stewart/diagnostics/sweep_ranges.py` part 7, `2af4f3a`.)
 
 **Breaking a tie on hardware is legitimate. An optimum located by a hardware
 limit is not. — stated 2026-09-08.** The two look alike and are opposites, so the
@@ -326,16 +342,58 @@ Two properties that travel with the number:
 bound of **`1.37e-3`** carries and **needs no re-measurement** — that bound was
 measured at and below `0.01 r_b`, and the re-check clause above is not triggered.
 
+**`p`'s denominator corrected — 2026-09-09. ASSERTED, not measured.**
+
+The block above normalises by "an asserted `r_b` floor of 80 mm." That labelling
+is **wrong as of the absolute-scale decision below (§12)**: `r_b` is now fixed
+at `90 mm`, not `80 mm`, and `80 mm` is `r_p`. The number the block divides by
+was never an `r_b` floor at all — it is the platform-ring radius, read under the
+wrong name. Not a new decision and not a re-measurement: the same three 0.2 mm
+sources and the same RSS argument, redivided by the length that is actually
+`r_b`.
+
+```
+p_mm  =  sqrt(0.2^2 + 0.2^2 + 0.2^2)  =  0.3464 mm
+p     =  0.3464 / 90                  =  0.003849
+```
+
+`0.004330` is **retained above**, unedited, as the record of what was written
+2026-09-08 and why; it is **superseded, not deleted**, and it must not be read
+back as the value in force. `0.003849` is what the RSS argument means now that
+`r_b` has a fixed value.
+
+- **The "raises the floor" property no longer applies.** The struck note above
+  — "raising the `r_b` floor is safe, lowering it is not" — was about a *floor*
+  on an unresolved `r_b`. `r_b` is fixed, not floored, so there is nothing left
+  to raise or lower; the sentence retires along with the mislabel that produced
+  it, not carried forward under the new value.
+- **The consequence is unchanged in substance.** `p = 0.003849 < 0.010 r_b`,
+  still below all three probes carried side by side (`0.005`, `0.0075`,
+  `0.010 r_b`), so part (9)'s tune/score mismatch bound of `1.37e-3` still
+  carries and still needs no re-measurement — the re-check clause fires on
+  `p > 0.01 r_b`, and `0.003849` is further from that line than `0.004330` was,
+  not closer.
+- **`p` has since been evaluated directly, not just fixed.** `probe_margin` at
+  `p = 0.003849` over the fixed-ratio feasible set: five-number margin
+  `-0.0062 / 0.2010 / 0.3960 / 0.4618 / 0.6425` over 122 survivors at the
+  10.529-deg reference (`fixed_ratio.py`, `76adc0e`); repeated at every tilt
+  limit in the 6.558–14.552 deg range (`tilt_dropped.py`, `2af4f3a`) and over
+  the hardware-pull `a`/`beta_p` axes (`sweep_ranges.py`, `2af4f3a`). No slope
+  is extrapolated off `sens` anywhere in that work; the direct-vs-extrapolated
+  difference is measured and reported alongside it every time.
+
 ## 9. Working envelope
 
 **Specified 2026-09-05.** This closes handoff open item 8 and open item 1. The
-slots below are filled, not proposed.
+slots below are filled, not proposed. **Amended 2026-09-09**: the tilt limit is
+revised by the `tau_L` withdrawal below; the slots that do not depend on it —
+`dxy`, `dz`, yaw limit, grid shape — are unchanged.
 
 | Symbol | Value | Units | Basis |
 |---|---|---|---|
 | `dxy` | **0** | mm | The control law commands **tilt only**. |
 | `dz` | **0** | mm | As above. |
-| *(tilt limit)* | **10.529** | deg | Recovery envelope; derived below. |
+| *(tilt limit)* | ~~10.529~~ **6.558** | deg | Recovery envelope; derived below. `tau_L` DROPPED 2026-09-09 — see below. |
 | *(yaw limit)* | **0** | deg | A circular plate is axisymmetric, so yaw does not move the ball. |
 | *(grid)* | 5 magnitudes x 7 azimuths = **29 poses**, `29 x 6 = 174` `w` evaluations per objective evaluation | — | See *Grid* below. |
 
@@ -355,30 +413,78 @@ With `tau = 0.5 s` and `g = 9.80665 m/s^2`:
 | **bare requirement** | 50 mm working displacement | 0.800 m/s² | **6.558°** |
 | **envelope** | 50 mm + 30 mm latency drift = 80 mm | 1.280 m/s² | **10.529°** |
 
-Both are recorded on purpose. **6.6° is the requirement; 10.5° is the envelope;
-the difference is the latency margin.** Everything is evaluated on 10.529°.
+Both rows are recorded on purpose and **both still stand as arithmetic** —
+nothing above changed. What changed 2026-09-09 is which row is *in force*.
+**`tau_L` is DROPPED, not revised** (below), so the envelope row's 30 mm of
+latency drift has no basis, and **the bare-requirement row is now the limit:
+6.558°, not 10.529°.** The envelope row is retained as the historical record of
+what every result before 2026-09-09 was evaluated on.
 
-**`tau_L = 150 ms` is PROVISIONAL.** The 30 mm of latency drift is
-`tau_L * v_peak = 150 ms * 200 mm/s`, and `tau_L` is inherited from the 300 mm/s
-figure **withdrawn 2026-09-03 as invented**. It has no basis of its own and it
-needs one: **sensor frame interval plus servo step response**, both on the
-hardware pull. It carries 30 of the 80 mm and 3.97 of the 10.53 degrees. Do not
-promote it silently.
+**`tau_L` is DROPPED, not revised — 2026-09-09. ASSERTED, not measured.**
+`docs/hardware-pull.md` establishes that servo step response is **unpublished
+by every candidate maker** — Hitec, Savox and ROBOTIS each publish
+seconds-per-60° no-load speed, which is a **slew rate**, not a step response:
+no propagation delay, no rise time to a small commanded step, no overshoot, no
+settling criterion. The one third-party dynamic measurement that exists is on
+**two servos that are not candidates**, and its author identifies the closest
+thing to a delay figure in it (~10 ms at the start of a 15° step) as an
+**artefact of the measurement rig's 100 Hz sampling**, not a servo quantity.
+Frame intervals *are* published — 4.85–33.33 ms across the cameras checked —
+but exposure, sensor readout, transfer and detection are not, so that term has
+a **floor and no value**. Neither term of `tau_L = 150 ms` can be reconstructed
+from published data. The 30 mm of latency drift it produced, and the 3.97 of
+the 10.529 degrees that drift carried, are therefore **removed, not left
+provisional** — nothing found supports any particular value, including the
+withdrawn one. This **completes** the 2026-09-03 withdrawal of the 300 mm/s
+figure `tau_L` inherited from; that withdrawal left `tau_L` provisional and
+unable to be closed, and it is now closed by removal.
+
+```
+x0         =  50 mm                    working displacement only
+tilt limit =  6.558 deg                envelope.tilt_for(0.050), printed, not
+                                        hardcoded — see stewart/diagnostics/
+                                        tilt_dropped.py
+```
+
+**`envelope.py` still reads `TILT_LIMIT_DEG = 10.529`, unedited.** The drop is
+recorded here and is not yet a code change — `stewart/diagnostics/envelope.py`
+carries the constant every other module reads, and every module downstream of
+it still runs at 10.529° until that file is edited. That edit is **pending, not
+done**, and this paragraph is not a substitute for it.
 
 **Sensitivity — this travels with the number wherever it is quoted.** Tilt goes
 as `1/tau^2`, so a 10% error in `tau` moves the required `sin(tilt)` by ~20%.
-Measured:
+Measured, and **unchanged by the `tau_L` drop** — the arithmetic did not move,
+only which column is read. The `bare` column is now simply **the tilt limit**;
+the `envelope` column is **historical**, the figure everything before
+2026-09-09 was evaluated on, kept so the record does not go silent about what
+changed:
 
-| `tau` [s] | bare [deg] | envelope [deg] |
+| `tau` [s] | bare [deg] (now: the limit) | envelope [deg] (historical, withdrawn) |
 |---|---|---|
 | 0.40 | 10.280 | 16.590 |
 | 0.45 | 8.106 | 13.038 |
-| **0.50** | **6.558** | **10.529** |
+| **0.50** | **6.558** | 10.529 |
 | 0.60 | 4.549 | 7.290 |
 | 0.75 | 2.910 | 4.658 |
 
 `tau` is the least-defended number in the envelope and the envelope is most
-sensitive to it. Both facts belong together.
+sensitive to it. Both facts belong together, and neither is touched by the
+`tau_L` drop — `tau` is a different number from `tau_L`, unrelated in the
+derivation, and the drop removes a term added to `x0`, not the sensitivity of
+`sin(tilt)` to `tau`.
+
+**Flagged, not edited: two passages below still read `x0 = 80 mm` /
+`10.529 deg`.** *The tilt target is a FIXED ANGLE* block later in this section,
+and its `x0 = 50 mm working + 30 mm latency drift = 80 mm` arithmetic, and the
+*Bought-part specification* sheet-sizing note that follows it (`~110 mm` radius
+from an `80 mm` contact-point reach) — both **rest on the dropped latency term**
+and are out of the scope named for this pass (the tilt-limit block, the `tau_L`
+PROVISIONAL block, and the sensitivity table only). They are not corrected
+here. The scale-invariance ARGUMENT those passages make — that the tilt target
+does not scale with `k` because the ball surface is bought, not printed — does
+not depend on which `x0` is in force and is unaffected; only the **arithmetic
+inside** them is now stale.
 
 **The envelope is two axes, and it does not scale with `k`.** With
 `dxy = dz = yaw = 0` the only free parameters are **tilt magnitude** and **tilt
@@ -532,7 +638,55 @@ Listed so nothing in this file is mistaken for a settled value.
   ball-centre plane), coplanar anchors, one shared `z`. What remains open is only
   the *symbol*, §11.
 - The rotation convention behind roll/pitch/yaw (§6).
-- `a` and `d`.
+- ~~`a` and `d`.~~ **Ranges now populated from the hardware pull — 2026-09-09**
+  (`docs/hardware-pull.md`; `stewart/diagnostics/sweep_ranges.py`, `2af4f3a`).
+  Neither is *chosen* — no horn, joint or servo is picked by this entry — but
+  neither is an unconstrained real interval any more either.
+
+  **`a` is a DISCRETE set, not an interval.** 32 published ProModeler hole
+  positions, `9.0`–`60.4 mm` = `0.1000`–`0.6711 r_b` at the fixed `r_b = 90 mm`,
+  each tagged `STATED` (every position printed), `ENDPOINT` (the ladder is
+  elided on the maker's page and only the printed ends are used — interior
+  holes are **not interpolated**) or `DERIVED` (positions follow by arithmetic
+  on a stated count and pitch, not read off the page). The ceiling, `60.4 mm`,
+  is a **hardware** ceiling — no single off-the-shelf arm was found longer —
+  not a sampling wall; the Thingiverse 44–92 mm "extension arms" are a 3D
+  print, not stock, and are excluded.
+
+  **`a`'s optimum is INTERIOR**, and it is the first axis to come out clean end
+  to end: best `margin(dxy = p) = 0.847657` at `a = 47.63 mm` (`0.5292 r_b`),
+  with published holes on both sides of it. The earlier reading —
+  `box_boundary`'s `a/r_b = 0.60` pairwise-favoured direction — pointed at a
+  **gap in the hole ladder**, not a wall: `54 mm` is not a hole on any
+  published arm.
+
+  **`beta_p` is bounded by ball-joint housing OD**, published range
+  `9.0`–`13.0 mm` across twelve M3-class parts. Computed at **both** ends:
+  `[3.2246°, 56.7754°]` at `9.0 mm`, `[4.6604°, 55.3396°]` at `13.0 mm`. Both
+  carried in parallel through the sweep; **no joint is chosen between them**.
+
+  **`d/r_b` capped at `2.0`, i.e. `180 mm` at `r_b = 90` — ASSERTED, a
+  judgement about rod slenderness and bow, NOT a hardware limit.** Rod stock
+  runs to `2.1x` the longest length this sweep has ever used (§7 of the
+  hardware pull), so length is not what bounds `d`. **Both straightness cells
+  came back NOT RETRIEVED** — MISUMI's product and PDF pages returned HTTP
+  403; McMaster-Carr's category page carries filters only and its product
+  pages, where straightness lives, were unreachable for a different reason.
+  So a `108 mm` rod at `d/r_b = 1.20` — which is where the sweep's own optimum
+  currently sits — has **no published straightness or buckling figure behind
+  it**, and `d/r_b = 1.20` sits on the cell maximum in both directions the box
+  has been opened, so **the wall is untested, not merely unconfirmed**.
+
+  **`beta`'s usable range still needs the installed-arc clearance, not just
+  body width.** The pull's §5 publishes body width for five Hitec/Savox
+  parts, `11.4`–`13.0 mm` (`0.127`–`0.144 r_b`) — a real number, and it is
+  **not** among the pull's 39 unpublished cells. But the quantity §12
+  actually needs — *two bodies cannot occupy one mounting arc* — is the
+  **installed clearance**, and the mounting-flange footprint, screw-hole
+  pitch and required inter-body clearance (including wiring) are explicitly
+  **among the 39**, listed under §5 as unpublished for every servo checked.
+  Body width is a proxy, on record; the clearance the bullet below asks for is
+  not.
 - ~~**`z_home`'s range**~~ *(reopened 2026-09-04; bracketed 2026-09-05 — this
   supersedes the entry that said nothing supplied a range)*. Both ends are now
   computed, from `stewart/diagnostics/zhome_bracket.py`.
@@ -547,6 +701,21 @@ Listed so nothing in this file is mistaken for a settled value.
   exactly under horizontal shafts and `b_i . z = 0`, so `N_i = q_i . z` and the
   bound involves only `r_p`, `h_p` and the tilt limit. Verified against
   `make_geometry`: `min N_i` at the bound is `0` to `5.6e-17`.
+
+  **At the tilt limit now in force (6.558°, §9) the same closed form gives:**
+
+  ```
+  z_home  >  r_p sin(tilt) + h_p cos(tilt)      = 0.114208 r_p + 0.993457 h_p
+  ```
+
+  **This bound is tilt-dependent by construction — sin and cos of the limit —
+  so it moves whenever the limit does, and does not carry over from the
+  10.529° figure above.** The `0.182733 r_p + 0.983163 h_p` form is retained as
+  the value everything before 2026-09-09 was screened against; it is not the
+  bound in force. (`stewart/diagnostics/tilt_dropped.py`, `2af4f3a`, verifies
+  the rebinding reaches all three places the limit enters — the screen
+  envelope, the harness grid and this floor — together, at every limit
+  checked.)
 
   Two things about it. It is a **continuum** bound — a discrete pose grid reports
   the constraint satisfied slightly *before* it truly is (measured `+5.9e-4` on the
@@ -606,6 +775,18 @@ Listed so nothing in this file is mistaken for a settled value.
   existence of the category* is a property of the tilt limit, not of the
   constraint set.
 
+  **Flagged, not re-run — 2026-09-09.** `tau_L` is no longer provisional; it is
+  **dropped** (§9), and the `75`/`150`/`300 ms` sensitivity range this
+  correction was measured across never included `tau_L = 0`. The limit now in
+  force, `6.558°`, sits **below** the lowest tilt this three-point range
+  considered (`8.538°` at `tau_L = 75 ms`). Whether the `X = 1` category
+  reappears at `6.558°` specifically is **not answered by the table above** and
+  is not re-measured here — `tilt_dropped.py` (`2af4f3a`) re-runs the *fixed-
+  ratio* screen at `6.558°` and finds `0` of that category there, but that is a
+  **different, narrower** screen (`r_p/r_b` fixed at one value, not the three
+  this paragraph's 540-candidate grid spans), so it does not stand in for a
+  re-run of *this* grid at the new limit.
+
   **What survives the full range, stated separately.** `N_i > 0` **never sets the
   lower end of a surviving bracket**: 0 of **425 / 363 / 259** at the three
   limits. That is the limit-independent part of the 2026-09-05 sentence — and it
@@ -631,10 +812,76 @@ Listed so nothing in this file is mistaken for a settled value.
 
   `z_flat(delta)` (§8, derivation §8.1) remains a useful reference point inside the
   bracket even though home no longer sits on it.
-- `beta_p`'s range, which needs a **ball-joint housing diameter** — two housings
-  cannot occupy one hole.
-- `beta`'s usable range, which needs a **servo body diameter** — two servo bodies
-  cannot occupy one mounting arc.
+
+  **The `z_lo <= floor` coincidence test cannot fire, and a different test that
+  can now runs beside it — 2026-09-09.** `fixed_ratio.py`'s report of the lower
+  end has always asked `z_lo <= floor`; the screen it reads intersects reach
+  with `Z_GRID > floor` **strictly**, so that test is `0` **by construction**,
+  not by measurement — the screen cannot produce a survivor that fails it. The
+  real question, *does the `N_i > 0` floor set the lower end the reach test
+  alone would have given?*, needs the reach test's own lower end before the
+  floor is intersected in — call it `reach_lo` — and asks `reach_lo < z_lo`.
+  `tilt_dropped.py` (`2af4f3a`) adds `reach_lo` to the screen record and
+  reports both tests side by side: at every one of the four tilt limits
+  measured (6.558 / 8.538 / 10.529 / 14.552°), the coincidence test reads **0**
+  and the binding test reads **8** — the floor sets 8 lower ends at every limit
+  checked, unchanged by the limit moving. **Same shape, same constraint,
+  second instance**: the 2026-09-05 correction above found the `N_i > 0` claim
+  resting on a **survivorship sample** (the 363 candidates measured were the
+  ones that had *already* survived, so a crossing among them could not have
+  appeared); this is a test that reports zero **because of how the screen is
+  built**, not because nothing binds. Both are "the metric was structurally
+  prevented from showing the effect it was checked for." `N_i > 0` is proving
+  load-bearing **more often than each individual measurement of it
+  suggested** — first at the edges of the bracket set (2026-09-05), now at the
+  lower end of every surviving bracket (2026-09-09).
+
+  **Zero-width brackets are a scan artefact, and a minimum width is now a
+  feasibility test — 2026-09-09.** At the 6.558° limit, **21 of the 143**
+  candidates with a non-empty bracket have a grid width of **`0.000 r_b`** — a
+  single feasible point at the `0.025 r_b` scan resolution, not a design. This
+  overstates the 143-vs-122 improvement over the 10.529° reference by
+  **composition**: on the **122** candidates common to both limits the median
+  width **rises**, `0.337 -> 0.462 r_b`; the **21** the lower limit *adds*
+  carry a median width of `0.000 r_b`, and it is that addition, not a widening
+  of the existing set, that pulls the pooled median down
+  (`0.337 -> 0.225 r_b`, the wrong-direction reading a pooled figure alone
+  would give). **`MINIMUM BRACKET WIDTH = 2 mm = 0.0222 r_b` — ASSERTED, from
+  build tolerance on `z_home`, not measured.** This sits **just under one
+  `0.025 r_b` grid step** (`2.25 mm` at `r_b = 90`), so it removes the 21
+  zero-width candidates and **little else past them** — a floor beneath which
+  a bracket is not buildable, not a discriminating filter that reorders the
+  surviving field.
+
+  **This is the FOURTH recorded instance of a discrete grid reporting
+  something the continuum does not**, and the other three are named so the
+  pattern is on the record rather than implied:
+  1. **This same `N_i > 0` lower bound**, above: the 29-pose harness grid
+     reports it satisfied **`+5.911e-4`** before it truly is (2026-09-05).
+  2. **The tilt-azimuth pose grid**, §9: the 10° grid overstates worst-case
+     margin by **`~1.9e-3`** against a 0.25° reference (2026-09-05), bounded
+     at **`2.88e-3`** and used as the ranking's resolution (2026-09-07).
+  3. **`box_boundary`'s per-ray stepping rule**, the 8 September entry in
+     `docs/phase-0-design-log.md`: on the `a` ray the stopping rule **would
+     have stopped at step 5 and been wrong** — the top-5 lost the sampled
+     extreme and then got it back at a later step. Named there as "the same
+     failure mode as the 15/10/0.25° azimuth aliasing," i.e. instance 2.
+  4. **Zero-width `z_home` brackets**, here: a single grid point registering
+     as a full bracket, overstating the feasible count's *improvement* rather
+     than any one candidate's feasibility.
+
+  All four are the same shape at different resolutions — a grid point
+  standing in for an interval too narrow for the grid to see — and none has
+  yet been wrong about **feasibility itself**: each is a resolution problem in
+  a *derived* quantity (a bound's satisfaction margin, a ranking's optimism, a
+  probe's stopping decision, a bracket's apparent width), not a case of the
+  closed-form feasibility tests giving the wrong verdict.
+- ~~`beta_p`'s range, which needs a **ball-joint housing diameter**~~ — **closed
+  2026-09-09, below.** Published range 9.0–13.0 mm, both ends computed, no
+  joint chosen.
+- `beta`'s usable range, which needs a **servo body diameter** — **partially
+  answered 2026-09-09**, below: body width is published, installed-arc
+  clearance is not.
 
 **What does *not* constrain those two ranges.** The exclusions above are
 **hardware**, not rank degeneracy, on both rings. Recorded because the opposite was
@@ -681,6 +928,47 @@ believed earlier and acted on:
   though it were. Sources: **§8** for the form and the tie/optimum distinction,
   and the **8 September entry in `docs/phase-0-design-log.md`** for the objective
   finding, its options — none chosen — and its residuals.
+
+  **The tilt-authority option is CLOSED, and the reason is itself a finding —
+  2026-09-08/09.** `stewart/diagnostics/tilt_authority.py` (`3a01bd3`) measures
+  `rho(authority, score) = +0.9088` over the 363 feasible candidates —
+  authority ranks **with** the margin, more strongly than `tau_min`'s `+0.835`
+  already recorded above as measured-and-redundant — and **negative on all
+  four `box_boundary` rays too** (`rho(alpha_span, score)`: `a` up `-0.2237`,
+  `r_p` down `-0.6251`, `d` down `-0.2556`, `d` up `-0.9387` — negative
+  `alpha_span` correlation is positive `authority` correlation, same sign as
+  the coarse-grid figure throughout). **On the runaway axis it agrees with the
+  runaway, not against it**: down the `r_p` ray from the incumbent `0.60` to
+  `0.10`, best score climbs `0.784 -> 0.951` while the winner's `alpha_span`
+  **falls** `18.89 -> 1.89°`. A shrinking platform is better on both readings
+  at once.
+
+  **Why, measured not asserted (part 2b of that module).** The moment-arm
+  argument for a tilt-authority term assumes an envelope commanding a fixed
+  platform **displacement**. The settled envelope (§9) is `dxy = dz = yaw = 0`
+  and a fixed tilt **angle**, so anchor excursion goes as `r_p sin(tilt)` and
+  **shrinks with the ring** — a smaller platform reaches the same commanded
+  angle with less servo swing, not more. **General form, stated once so it need
+  not be re-derived per candidate term: under a purely angular envelope, no
+  kinematic quantity bounds `r_p` from below.** That is the reason `r_p` was
+  **fixed** rather than **bounded** — no term measured on this envelope was
+  going to supply the missing lower bound. (Recorded for if authority is
+  revisited: the margin-tuned and swing-tuned `delta` differ on `349` of `363`
+  candidates, median gap `6°`, so a resurrected term would have to enter the
+  **inner tune**, not the outer score — the same rule `cond` follows, above.)
+
+  **Fixing `r_p` is not the same move as closing the objective, and the
+  distinction is worth restating precisely because the two happened in the
+  same session.** Fixing `r_p` (below, *Absolute scale*) removed the **axis**
+  the runaway was measured on — `r_p/r_b` is no longer free to run to `0.10`,
+  because it is no longer free at all. It did **not** fix what was wrong with
+  the runaway: `margin` still measures **distance from unreachability**, not
+  **capability**, on every axis that remains free. **The objective stays
+  open** under the same diagnosis as the 8 September entry in
+  `docs/phase-0-design-log.md`, and fixing `r_p` should not be read as having
+  closed it — it closed off one candidate's-worth of counterweight (tilt
+  authority) and one axis of the runaway (`r_p/r_b`), and left the objective
+  itself exactly as open as it was.
 - The characteristic length used to normalise the moment rows of any conditioning
   measure. That choice changes the ranking of candidates, so it is a requirement
   to be stated, not a constant to be picked. **Still open — but narrowed the same
@@ -774,6 +1062,37 @@ withdrawn the same day (§9):
    **upstream absolute length**, and **it arrived from the bed, not from torque**.
 2. **`p`'s denominator** — the asserted **80 mm `r_b` floor** that normalises
    `p = 0.3464 / 80 = 0.004330` (§8).
+
+**Sharpened 2026-09-09 — `r_b` is fixed, not floored, and `r_p` joins it.**
+Both numbers above have moved:
+
+1. **`r_b = 90 mm`, exactly — the full bed, not a ceiling on it.** The
+   2026-09-08 wording, `r_b <= 90 mm`, left the exact value open; the design
+   now uses the whole bed and `r_b` is fixed at `90 mm`.
+2. **`r_p = 80 mm` — ASSERTED, from the printed hub carrying the bought
+   `220 mm` sheet** (the sheet sized under *Bought-part specification* below:
+   `~110 mm` radius = `220 mm` diameter). This is a **new** entry, not on the
+   original 2026-09-08 list of two.
+3. **`p`'s denominator was item 2 above, and it was `r_p` under the wrong
+   name.** The `80 mm` that normalised `p` was labelled "an asserted `r_b`
+   floor"; it is the same `80 mm` as `r_p` here. `r_b`'s actual fixed value is
+   `90 mm`. §8 carries the correction and the recomputed `p = 0.003849`.
+
+**Consequence for the sweep: `r_p/r_b = 80/90` and `r_p/r_b` is NO LONGER A
+SWEEP AXIS.** The sweep is **five** axes — `beta`, `beta_p`, `a/r_b`, `d/r_b`,
+`z_home/r_b` — not six. **This is not the "five axes" struck on 4 September**
+(`docs/phase-0-design-log.md`): that entry's five dropped `z_home/r_b`, which
+is back and stays; this five drops `r_p/r_b` instead, which the 4 September
+entry never touched. Same count, different set — read as a coincidence of
+arithmetic, not a reversal of that decision. **The normalised
+parameterisation's justification has changed with it, not the invariance
+itself (§8's `k` row): it was "absolute scale is unknown," so every length
+was carried as a ratio because there was nothing to divide by yet; it is now
+"ratios are the natural parameterisation" of a mechanism whose two absolute
+lengths are fixed and small in number. The `k`-invariance results —
+`alpha_i` exactly invariant under a uniform scale — stay true and stay
+measured; they are now DESCRIPTIVE of the geometry rather than LOAD-BEARING
+for why the sweep is normalised at all.**
 
 **The ball surface is a bought plastic sheet on a hub**, decoupled from the
 anchor ring. Three things follow:
