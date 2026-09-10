@@ -22,7 +22,7 @@ has never been evaluated.  This module evaluates it.
 
 WHAT IS NOT DECIDED HERE.  **No range is chosen and the sweep harness is not
 specced.**  Every axis below is exactly as :mod:`.zhome_bracket` builds it -
-``BETA``, ``BETA_P``, ``A_RB``, ``D_RB`` and ``Z_GRID`` unchanged, ``h_p/r_b =
+``BETA``, ``BETA_P``, ``A_RB``, ``D_RB`` and ``Z_GRID`` unchanged, ``c_p/r_b =
 0.1``, the 1-degree ``delta`` scan, the 366-pose screen envelope, the 29-pose
 harness grid, the 10.529-degree tilt limit and the existing cap ``cond(J_fk)
 <= 1e6`` at ``char_len = r_b``.  The ONLY thing this module changes is that
@@ -89,7 +89,7 @@ from . import zhome_bracket as ZB
 from .envelope import TILT_LIMIT_DEG
 from .score_discriminators import TIE_TOL, _abs_e_groups, _five_number, _spearman
 from .tilt_bracket import CAP, _key, attribute, constrained_margins, screen
-from .zhome_bracket import (A_RB, BETA, BETA_P, D_RB, DELTA_GRID, H_P, R_B,
+from .zhome_bracket import (A_RB, BETA, BETA_P, D_RB, DELTA_GRID, C_P, R_B,
                             RP_RB, Z_GRID)
 
 # --------------------------------------------------------------------------- #
@@ -285,7 +285,7 @@ def sep_p_rb(rec):
     floor it is on the hardware pull, unread.
     """
     g = make_geometry(r_b=R_B, beta=rec["beta"], delta=0.0, r_p=rec["r_p"],
-                      beta_p=rec["beta_p"], a=rec["a"], d=rec["d"], h_p=H_P)
+                      beta_p=rec["beta_p"], a=rec["a"], d=rec["d"], c_p=C_P)
     D = np.linalg.norm(g.p[:, :, None] - g.p[:, None, :], axis=0)
     return float(D[~np.eye(6, dtype=bool)].min())
 
@@ -354,7 +354,7 @@ def part0(main, quoted, ref_slices):
     print(f"    beta_p      : {BETA_P}")
     print(f"    a/r_b       : {A_RB}")
     print(f"    d/r_b       : {D_RB}")
-    print(f"    h_p/r_b     : {H_P}")
+    print(f"    c_p/r_b     : {C_P}")
     print(f"    z_home/r_b  : {Z_GRID[0]} .. {Z_GRID[-1]} step "
           f"{Z_GRID[1]-Z_GRID[0]}  ({Z_GRID.size} points)")
     print(f"    delta       : {DELTA_GRID.size} points over [0, 180)")
@@ -537,7 +537,7 @@ def part3(main, ref_slices):
           f"   (0 means the scan clips nothing)")
     print()
     print("  The floor is delta-free, a-free and d-free - it is r_p sin(tilt) +")
-    print("  h_p cos(tilt) and depends on r_p, h_p and the tilt limit alone - so")
+    print("  c_p cos(tilt) and depends on r_p, c_p and the tilt limit alone - so")
     print("  it is ONE number for the whole slice here, which it was not across")
     print("  the coarse grid's three ratios.")
     print()

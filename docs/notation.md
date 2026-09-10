@@ -66,7 +66,7 @@ code written before it is settled is provisional.
 | `beta_p` | pair half-split | deg | swept; range bounded by ball-joint housing OD, **published 9.0–13.0 mm, both ends on record — §12**; no joint chosen | new |
 | `phi_i` | anchor azimuth, `120*floor(i/2) + s_i*beta_p` — same skeleton as `theta_i`, which is what makes leg `i` pair with leg `i` | deg | derived | new |
 | `p_i` | platform anchor position | mm, `{P}` | design constant | key |
-| `h_p` | plate offset: the common `z` component of `p_i` in `{P}`, so `p_i = (r_p cos phi_i, r_p sin phi_i, -h_p)` | mm | **quantity settled 2026-09-03**; *symbol* still open, see §11 | new |
+| `c_p` | plate offset: the common `z` component of `p_i` in `{P}`, so `p_i = (r_p cos phi_i, r_p sin phi_i, -c_p)` | mm | **quantity settled 2026-09-03; symbol resolved 2026-09-10** — was `h_p`, see §11 | new |
 | `mu` | a rotation of the whole platform ring inside `{P}` | deg | **not a parameter.** Gauge under `q_i = T + R p_i`: send `p -> Rz(mu) p` and `R -> R Rz(-mu)` and every world anchor is identical at every pose, so nothing measurable distinguishes them. Leg-set D3 pins the discrete residue — but see the caveat below. Recorded so it is not reintroduced. | new |
 
 **Plate offset — settled 2026-09-03.** The origin of `{P}` sits on the **plate
@@ -82,23 +82,26 @@ Putting the origin in the **anchor plane** instead is tempting — it gives
 something other than tilt the surface the ball is on. Recorded because the tidier
 algebra is what will argue for it again.
 
-It **cannot be absorbed into `T`**. Writing `p_i = p_i^flat - h_p * z_hat`,
+It **cannot be absorbed into `T`**. Writing `p_i = p_i^flat - c_p * z_hat`,
 
 ```
-q_i  =  T  +  R p_i^flat  -  h_p (R z_hat)
+q_i  =  T  +  R p_i^flat  -  c_p (R z_hat)
 ```
 
 and `R z_hat = z_hat` only when `R` fixes the vertical — i.e. under pure yaw. Under
 any tilt the offset acquires a **horizontal** component, so it enters
 `w_i = L_i · n_i` (with `n_i` horizontal), **so it changes the tuned `delta`**.
-Folding `h_p` into `T` is therefore exact at yaw and wrong everywhere else. Pure
+Folding `c_p` into `T` is therefore exact at yaw and wrong everywhere else. Pure
 algebra, no geometry needed.
 
-Sequencing consequence: `delta` cannot be tuned before `h_p` is fixed. `h_p` comes
+Sequencing consequence: `delta` cannot be tuned before `c_p` is fixed. `c_p` comes
 from components, so component selection has to precede the inner `delta` tune, not
 follow it.
 
-Only the *quantity* is settled. The *symbol* `h_p` is still contested — see §11.
+**Symbol resolved 2026-09-10 — see §11.** The quantity was settled 2026-09-03;
+the letter was `h_p` throughout that discussion and everywhere else in the repo
+until today, which read as a seventh arm tip (`h_i`). Renamed to `c_p`, call
+sites included; §11's clash entry is marked resolved, not deleted.
 
 **`mu` and the datum for `R = I` — convention adopted 2026-09-03.** Write the
 platform ring with **no `mu` term**, and read `R = I` as *the orientation in which
@@ -118,6 +121,22 @@ pairing, while the pairing result ranged over all 720 bijections. Each argument
 froze what the other varied. This changes only how the result is *stated*, not
 whether `mu` is a sweep axis, but it should be stated correctly before it is
 written down as final.
+
+**Assessed 2026-09-10: cannot be honestly restated yet — flagged, not guessed.**
+The pairing result (`docs/session-handoff-2026-09-04.md`, open item 10) found 720
+bijections reducing to 6 survivors in one D3 orbit, with two readings on record
+and **neither tested**: that the rotations among the six are the same machine
+relabelled, and that the reflections give the mirror-image machine. Restating the
+`mu ∈ {0, 180}` result correctly requires knowing whether it holds unchanged
+across all 6 survivors (if the "same machine, relabelled" reading is right) or
+only across the 3 related by rotation, with reflection flipping or altering the
+residue (if reflections are genuinely the mirror machine and mu behaves
+differently under one). Neither is known. The test named in the handoff — leg
+1's angular span `gamma_tau(1) - theta_1` compared as a multiset across the six
+survivors at `beta = 20, beta_p = 40` — has not been run. Until it is, any single
+sentence combining the two results would be asserting one of two live
+possibilities as though it were settled, which is not stating it correctly; it is
+guessing. Left flagged, per the pairing item's own standing status.
 
 ## 5. Link lengths
 
@@ -139,8 +158,8 @@ written down as final.
 | `N_i` | `L_i . v_i`. Equals the anchor's height above the base plate, because `b_i . z = 0`. | mm | key/body |
 | `C_i` | `sqrt(M_i^2 + N_i^2) = sqrt(\|L_i\|^2 - w_i^2)`. In-plane magnitude of the **leg**. Distinct from `rho_i`, which is the in-plane magnitude of the **rod**; equal only if `\|L_i\| = d`. | mm | key/body |
 | `P_i` | `(\|L_i\|^2 + a^2 - d^2) / (2a)`. Contains no `delta`. Equals `a` exactly under `a^2 + d^2 = \|L_home\|^2`. | mm | key/body |
-| *(rod vector)* | `q_i - h_i`, magnitude `d` | `{W}`, mm | **unnamed** — see §11 |
-| *(arm tangent)* | unit vector along `dh_i/dalpha_i`; `-u_i sin alpha + v_i cos alpha` | `{W}` | **unnamed** |
+| `rod_i` | `q_i - h_i`, magnitude `d` | `{W}`, mm | **named 2026-09-10** — was unnamed, see §11. Adopted from the provisional local name already in use in `score_discriminators.py` and `tilt_authority.py`. | key/body |
+| `tangent_i` | unit vector along `dh_i/dalpha_i`; `-u_i sin alpha + v_i cos alpha` | `{W}` | **named 2026-09-10** — was unnamed, see §11. Same provenance as `rod_i`. | key/body |
 
 ## 7. The unknown
 
@@ -155,13 +174,13 @@ Not part of the mechanism. Used for tuning `delta` and for scoring.
 | Symbol | Meaning | Units | Provenance |
 |---|---|---|---|
 | `z_home` | platform height above the base plane at the home pose. **Status: swept; lower bracket closed-form, upper per-candidate** — an outer sweep axis, restored 2026-09-04 when the `z_home = z_flat` datum was dropped. *(This supersedes the same-day entry that made it determined and removed it from the sweep.)* Bracketed 2026-09-05: §12. | mm | new |
-| `z_flat` | plate height at which the arms lie flat (`alpha_i = 0`) with the rods attached, at `R = I` and no horizontal translation. Closed form and residuals: derivation §8.1. **An assembly datum only** — the 2026-09-04 identification `z_home = z_flat` was made and dropped the same day. | mm | new |
+| `z_flat` | plate height at which the arms lie flat (`alpha_i = 0`) with the rods attached, at `R = I` and no horizontal translation. Closed form and residuals: derivation §9. **An assembly datum only** — the 2026-09-04 identification `z_home = z_flat` was made and dropped the same day. | mm | new |
 | `A_i`, `B_i` | coefficients in `w_i(delta) = A_i cos delta + B_i sin delta`; both independent of `delta`, which is what makes the `delta` scan cheap | mm | new |
 | *(amplitude)* | `sqrt(A_i^2 + B_i^2)`, so `w_i(delta) = amplitude * cos(delta - phase)` | mm | **unnamed** — collides with `R` |
 | *(phase)* | `atan2(B_i, A_i)` | deg | **unnamed** |
 | `J(delta)` | worst `\|w\|` over the envelope and all six legs. **Superseded** by the normalised reach margin below. Reason corrected 2026-09-04: not that `J` misses infeasibility, but that the two differ in **aggregation**. `delta` is absent from `L_i`, so `P_i` is `delta`-free and only `C_i` moves; at a fixed leg and pose the margin is strictly decreasing in `\|w_i\|`, so maximising it *is* minimising `\|w_i\|` exactly. But `J` is a minimax over `\|w_i\|` while the margin is a maximin over `(C_i-\|P_i\|)/C_i`, and since `\|L_i\|` varies across legs and poses the largest-`\|w_i\|` leg is generally not the smallest-margin leg. Different worst cases, different minimisers. Retained for reasoning about `delta` before `a` and `d` exist. | mm | new |
 | *(normalised reach margin)* | `(C_i - \|P_i\|) / C_i`, maximin over legs and envelope poses. Positive means leg `i` solves; negative means the candidate is infeasible. **The division by `C_i` is required**: `C` and `P` both carry length, so the raw difference `C_i - \|P_i\|` scales with `k` and breaks the normalised sweep, where candidates differing only in `r_b` must score identically. This is the form the branch check reports, and where `-5.7e-3` came from. *(Was `C_i - \|P_i\|` here; normalised 2026-09-04.)* | — | **unnamed** |
-| `tau_i` | transmission ratio, `\|rod . tangent\| / d`. Zero at a loss-of-authority configuration. | — | new |
+| `tau_i` | transmission ratio, `\|rod_i . tangent_i\| / d`. Zero at a loss-of-authority configuration. | — | new |
 | `k` | uniform length scale factor. `alpha_i` is exactly invariant under scaling every length by `k`, envelope included. **The justification for normalising the sweep by it has changed, not the invariance itself — 2026-09-08/09.** It was "absolute scale is unknown"; with `r_b` and `r_p` now fixed (§12) it is "ratios are the natural parameterisation." `k`-invariance is still true and is now **descriptive of the geometry rather than load-bearing for the sweep design**. | — | new |
 
 **The score function — settled 2026-09-07.**
@@ -622,25 +641,39 @@ Every one of these is live. None should be resolved silently.
 
 | Clash | Detail | Suggested resolution |
 |---|---|---|
-| `h` | `h_i` is the arm tip. The plate offset in §4 was written `h_p` during working, which reads as a seventh arm tip. | rename the plate offset, e.g. `c_p` |
+| `h` | ~~`h_i` is the arm tip. The plate offset in §4 was written `h_p` during working, which reads as a seventh arm tip.~~ **RESOLVED 2026-09-10** — the plate offset is renamed `c_p`, everywhere: §4, code call sites, this file, the design log. Kept here, not deleted, as the record of the clash and why it was named that way in the first place. | ~~rename the plate offset, e.g. `c_p`~~ **done** |
 | `R` | `R` is the platform orientation matrix; the sinusoid amplitude in §8 also wants `R`. | give the amplitude another letter |
-| rod vector | proposed `r_i`, which collides with `r_b` and `r_p` | needs a third option |
+| rod vector | ~~proposed `r_i`, which collides with `r_b` and `r_p`~~ **RESOLVED 2026-09-10** — named `rod_i`, adopted from the provisional local name already used in `score_discriminators.py` and `tilt_authority.py`. Recorded in §6. | ~~needs a third option~~ **`rod_i`** |
 | `P` | `P_i` is a scalar; `{P}` is the platform frame. Pre-existing. | leave, but never write `P` unsubscripted |
 | `C` | `C_i` is a length; `C3` is a rotation | leave; the subscript disambiguates |
 | `s` | `s_i` is the within-pair sign; screw direction also conventionally `s` | rename the screw direction |
 | `p` | `p_i` is an anchor; `pitch` abbreviates to `p` | spell pitch out |
-| `t` | arm tangent wants `t`; plate thickness also wants `t` | pick one |
+| `t` | ~~arm tangent wants `t`; plate thickness also wants `t`~~ **arm tangent's HALF resolved 2026-09-10** — named `tangent_i` (§6), adopted from the same provisional local name, so it no longer wants `t`. Plate thickness's own choice is still open; the collision that named it is gone but the symbol is not chosen. | ~~pick one~~ **`tangent_i`** for arm tangent; plate thickness still flagged |
 | `a` / `A_i` | arm length vs sinusoid coefficient, distinguished only by case | acceptable, but flag in code |
 | `w` | out-of-plane component. Must **not** be reused for the rod vector, which it was in scratch code. | reserved for `L_i . n_i` |
 | indexing | 0-based in code, 1-based in prose and error messages | record which, per document |
 
-**On `h` / `h_p`.** The clash above is **still open** — 2026-09-03 settled the
-*quantity* (§4), not the symbol. The quantity is now in code as `h_p`, so a rename
-is a pending decision with real call sites, not a free edit:
-`stewart/geometry.py` — `platform_ring` (parameter, docstring, body, assert) and
-`make_geometry` (parameter, docstring, pass-through) — and `test_kinematics.py`
-(fixture key). `stewart/kinematics.py` has **no** `h_p` call site; it reads the
-offset only through `geom.p`, so it is unaffected by a rename.
+**On `h` / `h_p` → `c_p` — RESOLVED 2026-09-10.** 2026-09-03 settled the
+*quantity* (§4); the symbol sat open from then until now. Renamed at every real
+call site: `stewart/geometry.py` — `platform_ring` (parameter, docstring, body,
+assert) and `make_geometry` (parameter, docstring, pass-through) — and
+`test_kinematics.py` (fixture key). `stewart/kinematics.py` was checked, not
+assumed, and confirmed to have **no** `h_p` call site: it reads the offset only
+through `geom.p`. The diagnostics under `stewart/diagnostics/` carried `h_p` in
+constants, docstrings and report text across sixteen files and were renamed with
+it, consistently. `python -m pytest`-equivalent here is `test_kinematics.py` and
+`demo.py`; both were re-run after the rename and both pass, `demo.py`'s output
+byte-identical to before it.
+
+**On the rod vector → `rod_i`, and arm tangent → `tangent_i` — RESOLVED
+2026-09-10.** Both were unnamed in §6 and both had a provisional LOCAL name
+already doing real work in code — `rod_i` in `score_discriminators.py`, reused
+by `tilt_authority.py`; `tangent_i` the same. Adopting the name already in use
+costs nothing and ends two live "unnamed" rows. Recorded in §6; no call site
+changes, since the code already used these names locally and notation.md is what
+was silent. The remaining clashes in this section — `R` (sinusoid amplitude),
+`s` (screw direction), `t` (plate thickness alone now), `a`/`A_i`, `p` (pitch) —
+have no agreed answer and are left flagged, not guessed at.
 
 ## 12. Not yet decided
 
@@ -731,23 +764,23 @@ Listed so nothing in this file is mistaken for a settled value.
   **Lower, closed form, from `N_i > 0`:**
 
   ```
-  z_home  >  r_p sin(tilt) + h_p cos(tilt)      = 0.182733 r_p + 0.983163 h_p
+  z_home  >  r_p sin(tilt) + c_p cos(tilt)      = 0.182733 r_p + 0.983163 c_p
   ```
 
   at `tilt = 10.529°`. It is **`delta`-free, `a`-free and `d`-free**: `v_i = z`
   exactly under horizontal shafts and `b_i . z = 0`, so `N_i = q_i . z` and the
-  bound involves only `r_p`, `h_p` and the tilt limit. Verified against
+  bound involves only `r_p`, `c_p` and the tilt limit. Verified against
   `make_geometry`: `min N_i` at the bound is `0` to `5.6e-17`.
 
   **At the tilt limit now in force (6.558°, §9) the same closed form gives:**
 
   ```
-  z_home  >  r_p sin(tilt) + h_p cos(tilt)      = 0.114208 r_p + 0.993457 h_p
+  z_home  >  r_p sin(tilt) + c_p cos(tilt)      = 0.114208 r_p + 0.993457 c_p
   ```
 
   **This bound is tilt-dependent by construction — sin and cos of the limit —
   so it moves whenever the limit does, and does not carry over from the
-  10.529° figure above.** The `0.182733 r_p + 0.983163 h_p` form is retained as
+  10.529° figure above.** The `0.182733 r_p + 0.983163 c_p` form is retained as
   the value everything before 2026-09-09 was screened against; it is not the
   bound in force. (`stewart/diagnostics/tilt_dropped.py`, `2af4f3a`, verifies
   the rebinding reaches all three places the limit enters — the screen
@@ -758,9 +791,9 @@ Listed so nothing in this file is mistaken for a settled value.
   the constraint satisfied slightly *before* it truly is (measured `+5.9e-4` on the
   29-pose harness grid at `beta_p = 25°`), so the harness must take this bound from
   the formula, **not** from its own grid. And the back-of-envelope
-  `z_home - h_p > r_p sin(tilt)` is **not** this bound: it drops the `cos(tilt)`,
-  overstating the requirement by `h_p(1 - cos tilt) = 1.68e-3 r_b` at
-  `h_p = 0.1 r_b`. Conservative, so it errs safe, but it is not the bound.
+  `z_home - c_p > r_p sin(tilt)` is **not** this bound: it drops the `cos(tilt)`,
+  overstating the requirement by `c_p(1 - cos tilt) = 1.68e-3 r_b` at
+  `c_p = 0.1 r_b`. Conservative, so it errs safe, but it is not the bound.
 
   **Upper, per candidate, from reach `|P_i| <= C_i`.** No closed form. It depends
   on `a`, `d`, `r_p`, `beta`, `beta_p` and on `delta` being free to tune, so it is
@@ -847,7 +880,7 @@ Listed so nothing in this file is mistaken for a settled value.
     set is a weaker statement than the same `rho` on a stable one**; the lost and
     gained counts are reported beside it for that reason.
 
-  `z_flat(delta)` (§8, derivation §8.1) remains a useful reference point inside the
+  `z_flat(delta)` (§8, derivation §9) remains a useful reference point inside the
   bracket even though home no longer sits on it.
 
   **The `z_lo <= floor` coincidence test cannot fire, and a different test that
@@ -1143,7 +1176,7 @@ anchor ring. Three things follow:
   required radius**.
 - **The tilt target is a fixed angle** — 10.529 deg at every mechanism scale,
   because `x0` is a property of the sheet. §9 carries this and what it withdrew.
-- **`h_p` change from the hub-and-sheet arrangement is judged negligible**, and
+- **`c_p` change from the hub-and-sheet arrangement is judged negligible**, and
   **leg forces are re-ruled-out with the bought sheet in mind**. The 20 August
   force ruling (2.7 g ball) **predates the sheet**, so this is a **fresh
   judgement, not that ruling carrying forward**.

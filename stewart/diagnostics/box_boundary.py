@@ -19,7 +19,7 @@ are DIAGNOSTIC PROBES, run to find out where the optimum actually sits; the
 grid that a sweep harness should eventually run is a separate decision and this
 module does not make it.  The coarse grid is held exactly as
 :mod:`.zhome_bracket` builds it in every axis but the one under test, including
-``h_p / r_b = 0.1``, and the tilt limit is the current 10.529 degrees
+``c_p / r_b = 0.1``, and the tilt limit is the current 10.529 degrees
 throughout - :mod:`.tilt_bracket` already measured the tilt sensitivity and
 this module does not repeat it.
 
@@ -91,7 +91,7 @@ from . import zhome_bracket as ZB
 from .envelope import TILT_LIMIT_DEG
 from .score_discriminators import TIE_TOL, _abs_e_groups
 from .tilt_bracket import CAP, _key, constrained_margins, screen
-from .zhome_bracket import A_RB, BETA, BETA_P, D_RB, H_P, R_B, RP_RB
+from .zhome_bracket import A_RB, BETA, BETA_P, D_RB, C_P, R_B, RP_RB
 
 #: Step size on every extended axis, in ``r_b``.  One number, used in all four
 #: directions, so no axis is probed more finely than another by accident.
@@ -218,7 +218,7 @@ def buildability(rec):
     real ones for that candidate rather than a representative value.
     """
     g = make_geometry(r_b=R_B, beta=rec["beta"], delta=0.0, r_p=rec["r_p"],
-                      beta_p=rec["beta_p"], a=rec["a"], d=rec["d"], h_p=H_P)
+                      beta_p=rec["beta_p"], a=rec["a"], d=rec["d"], c_p=C_P)
     sep_p = _min_sep(g.p)
     sep_b = _min_sep(g.b)
     return dict(sep_p=sep_p, sep_b=sep_b,
@@ -359,7 +359,7 @@ def _print_extension(ext, rows, secs):
     print("=" * 78)
     print(f"  watched value : {ext.label}")
     print(f"  base axis     : {ext.base}")
-    print(f"  every other axis is zhome_bracket's coarse grid, h_p/r_b = {H_P}")
+    print(f"  every other axis is zhome_bracket's coarse grid, c_p/r_b = {C_P}")
     print(f"  margin is under the constrained tune, cond(J_fk) <= {CAP:.0e} at")
     print(f"  char_len = {SD.CONSTRAINT_CHAR_LEN}; margin itself carries no "
           f"char_len.")
@@ -531,7 +531,7 @@ def main() -> None:
     print("-" * 78)
     print(f"  tilt limit  : {TILT_LIMIT_DEG:.4f} deg (current; tilt sensitivity")
     print(f"                is tilt_bracket's question, not this module's)")
-    print(f"  h_p/r_b     : {H_P}")
+    print(f"  c_p/r_b     : {C_P}")
     print(f"  beta        : {BETA}")
     print(f"  beta_p      : {BETA_P}")
     print(f"  z_home      : midpoint of each candidate's bracket")

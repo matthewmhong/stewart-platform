@@ -34,7 +34,7 @@ A_DELTA   = [0.0, 30.0, 60.0, 90.0, 120.0, 150.0]
 A_RP_RB   = [0.6, 1.0, 1.4]
 A_A_RB    = [0.15, 0.30]
 A_R_B     = 100.0
-A_H_P     = 10.0
+A_C_P     = 10.0
 A_D_NOMINAL = 120.0          # unused by check A; make_geometry requires d > 0
 
 # --------------------------------------------------------------------------- #
@@ -50,18 +50,18 @@ B_RP_RB   = [0.6, 0.85, 1.2]
 B_A_RB    = [0.10, 0.20, 0.35]
 B_D_RB    = [0.8, 1.2, 1.6]
 B_R_B     = 1.0
-B_H_P     = 0.1
+B_C_P     = 0.1
 B_DELTA_ORIGINAL = 40.0      # the value held fixed in the original run
 
 
 # --------------------------------------------------------------------------- #
 # helpers
 # --------------------------------------------------------------------------- #
-def _geom(r_b, beta, delta, r_p_rb, beta_p, a_rb, d_rb, h_p):
+def _geom(r_b, beta, delta, r_p_rb, beta_p, a_rb, d_rb, c_p):
     """Geometry from the library.  Returns None if the library rejects it."""
     try:
         return make_geometry(r_b, beta, delta, r_p_rb * r_b, beta_p,
-                             a_rb * r_b, d_rb * r_b, h_p=h_p)
+                             a_rb * r_b, d_rb * r_b, c_p=c_p)
     except ValueError:
         return None
 
@@ -102,7 +102,7 @@ def check_flat_arm_leg_independence():
     print("=" * 78)
     print("anchors from make_geometry; closed form written in input parameters only")
     print(f"grid: beta {A_BETA} x beta_p {A_BETA_P} x delta {A_DELTA}")
-    print(f"      r_p/r_b {A_RP_RB} x a/r_b {A_A_RB},  r_b = {A_R_B}, h_p = {A_H_P}")
+    print(f"      r_p/r_b {A_RP_RB} x a/r_b {A_A_RB},  r_b = {A_R_B}, c_p = {A_C_P}")
 
     worst_ind = (-1.0, None)     # residual 1: leg-independence
     worst_cf = (-1.0, None)      # residual 2: closed form vs repo geometry
@@ -116,7 +116,7 @@ def check_flat_arm_leg_independence():
                 for rp in A_RP_RB:
                     for a_rb in A_A_RB:
                         g = _geom(A_R_B, beta, delta, rp, beta_p, a_rb,
-                                  A_D_NOMINAL / A_R_B, A_H_P)
+                                  A_D_NOMINAL / A_R_B, A_C_P)
                         if g is None:
                             n_rejected += 1
                             rejected_beta_p.add(beta_p)
@@ -168,7 +168,7 @@ def check_flat_arm_leg_independence():
 # CHECK B
 # --------------------------------------------------------------------------- #
 def _zhome_sq(d, g2, a, gu):
-    """``(z_home - h_p)^2 = d^2 - |g|^2 - a^2 + 2a(g.u)``."""
+    """``(z_home - c_p)^2 = d^2 - |g|^2 - a^2 + 2a(g.u)``."""
     return d ** 2 - g2 - a ** 2 + 2.0 * a * gu
 
 
@@ -198,7 +198,7 @@ def sweep_zhome_delta():
                         dG = _delta_G_deg(r_b, r_p, beta, beta_p)
 
                         z = np.full_like(sq, np.nan)
-                        z[feas] = B_H_P + np.sqrt(sq[feas])
+                        z[feas] = B_C_P + np.sqrt(sq[feas])
                         if feas.any():
                             zf = z[feas]
                             swing = float((zf.max() - zf.min()) / zf.mean())
@@ -273,7 +273,7 @@ def sweep_zhome_delta():
                          (not r["dG_lower"]) and r["upper"])]
     print(f"\n     feasible half differs from the half containing delta_G: "
           f"{len(mismatch)} of {n}")
-    print("     (delta_G is where (z_home-h_p)^2 is MINIMISED, so a nonzero count")
+    print("     (delta_G is where (z_home-c_p)^2 is MINIMISED, so a nonzero count")
     print("      is expected and is not by itself evidence that [0,180) is unsafe)")
 
     lo_insufficient = [r for r in rows if r["upper"] and not r["lower"]]
@@ -325,7 +325,7 @@ def sweep_zhome_delta():
     print(f"\n[B4] z_home swing over the feasible delta set:")
     print(f"     (max-min)/mean      min {sw.min():.4f}  median {np.median(sw):.4f}"
           f"  max {sw.max():.4f}")
-    print(f"     raw 4a|g| swing in (z_home-h_p)^2   "
+    print(f"     raw 4a|g| swing in (z_home-c_p)^2   "
           f"min {rs.min():.4f}  median {np.median(rs):.4f}  max {rs.max():.4f}")
     return rows
 
@@ -351,8 +351,8 @@ def confirm_zhome_against_arm_tips(n_samples=8):
         sq = _zhome_sq(d, g2, a, gu)
         if sq <= 0.0:
             continue
-        z_home = B_H_P + np.sqrt(sq)
-        g = _geom(r_b, beta, delta, rp, beta_p, a_rb, d_rb, B_H_P)
+        z_home = B_C_P + np.sqrt(sq)
+        g = _geom(r_b, beta, delta, rp, beta_p, a_rb, d_rb, B_C_P)
         if g is None:
             continue
         q = stage1(g, np.eye(3), np.array([0.0, 0.0, z_home]))

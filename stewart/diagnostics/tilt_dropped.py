@@ -44,7 +44,7 @@ A SECOND ONE, on comparability.  :mod:`.tilt_bracket`'s columns are the
 was asserted 2026-09-08 and ``r_p/r_b`` is one number now, so those columns are
 **not** the comparison asked for and are not quoted as counts.  Every column
 below is re-run at the fixed absolute scale - ``r_b = 90 mm``, ``r_p = 80 mm``,
-``h_p/r_b = 0.1`` - through :func:`.fixed_ratio.run_slice`, so the four columns
+``c_p/r_b = 0.1`` - through :func:`.fixed_ratio.run_slice`, so the four columns
 differ in the tilt limit and in nothing else.
 
 WHAT IS MEASURED, at each of the four limits and all at ``r_p/r_b = 80/90``:
@@ -85,7 +85,7 @@ from . import score_discriminators as SD
 from . import tilt_bracket as TB
 from .score_discriminators import _five_number, _spearman
 from .tilt_bracket import CAP
-from .zhome_bracket import A_RB, BETA, BETA_P, D_RB, H_P, Z_GRID
+from .zhome_bracket import A_RB, BETA, BETA_P, D_RB, C_P, Z_GRID
 
 # --------------------------------------------------------------------------- #
 # the columns - x0 in metres, because tau_L is gone and x0 is the honest axis
@@ -279,7 +279,7 @@ def part1(cols):
     print(f"  All four columns: {len(BETA)}x{len(BETA_P)}x{len(A_RB)}x"
           f"{len(D_RB)} = {len(cols[0]['rows'])} candidates at "
           f"r_p/r_b = {FR.R_P_RB:.6f},")
-    print(f"  h_p/r_b = {H_P}.  Only the tilt limit differs.")
+    print(f"  c_p/r_b = {C_P}.  Only the tilt limit differs.")
     print()
     print(f"    {'tilt [deg]':>11} {'cand':>6} {'non-empty':>10} {'frac':>7} "
           f"{'empty':>6} {'R':>5} {'X':>5} {'artifact':>9}  status")
@@ -384,7 +384,7 @@ def part3(cols):
               f"{c['feasible'][0]['cf']*M:>11.2f}")
     print()
     print("  The floor is delta-free, a-free and d-free - it is")
-    print("  r_p sin(tilt) + h_p cos(tilt) and depends on r_p, h_p and the tilt")
+    print("  r_p sin(tilt) + c_p cos(tilt) and depends on r_p, c_p and the tilt")
     print("  limit alone - so it is ONE number per column.")
     print()
     print(f"    {'tilt':>8} {'non-contiguous':>15} {'clipped at top':>15} "
@@ -664,7 +664,7 @@ def main() -> None:
     print("  re-runs the feasibility screen at the new limit, at the fixed")
     print(f"  absolute scale r_b = {FR.R_B_MM:.0f} mm, r_p = {FR.R_P_MM:.0f} "
           f"mm (r_p/r_b = {FR.R_P_RB:.6f}),")
-    print(f"  h_p/r_b = {H_P}, under the existing cap cond(J_fk) <= {CAP:.0e} "
+    print(f"  c_p/r_b = {C_P}, under the existing cap cond(J_fk) <= {CAP:.0e} "
           f"at")
     print(f"  char_len = {SD.CONSTRAINT_CHAR_LEN}.  fixed_ratio's screen is "
           f"REUSED, not reimplemented;")

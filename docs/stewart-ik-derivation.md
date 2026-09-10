@@ -321,7 +321,7 @@ range. The alternating `s_i` is what makes the family mirror-symmetric.
 > lies **outside the sampled region and its extent is unknown**.
 >
 > Also worth recording: `delta*` reduced mod 180 returns to `delta_G = arg G` of
-> §8.1, which is exactly where `(z_flat - h_p)²` is **minimised**. Under the datum
+> §9, which is exactly where `(z_flat - h_p)²` is **minimised**. Under the datum
 > the closed-form seed therefore pointed at the *tightest-feasibility* `delta`.
 >
 > None of this is live: the `z_home = z_flat` datum was **dropped 2026-09-04** and
@@ -371,10 +371,10 @@ At `alpha = 0` the arm lies flat at base-plate level — servo mid-travel, and a
 assembly datum checkable by eye. **This is a build-time configuration, not the home
 pose.** *(Clarified 2026-09-04, superseding any reading of the earlier wording that
 put home on this configuration: the identification `z_home = z_flat` was tried on
-2026-09-04 and* **dropped** *the same day. `z_flat` — §8.1 — is an assembly datum
+2026-09-04 and* **dropped** *the same day. `z_flat` — §9 — is an assembly datum
 only, and `z_home` is a swept axis. See the handoff.)*
 
-### 8.1 `z_flat`, the flat-arm assembly height *(derived and verified 2026-09-04)*
+## 9. `z_flat`, the flat-arm assembly height *(derived and verified 2026-09-04)*
 
 `z_flat` is the plate height at which the arms lie flat — `alpha_i = 0` — with the
 rods attached, at `R = I` and no horizontal translation. **It is an assembly datum.
@@ -424,9 +424,9 @@ against `d`. **Worst residual 2.220e-16.**
 
 Run: `stewart/diagnostics/zhome_datum.py`, check A.
 
-### 8.2 `alpha` at home is one scalar, shared by all six legs *(2026-09-04)*
+## 10. `alpha` at home is one scalar, shared by all six legs *(2026-09-04)*
 
-Not a new measurement — it follows from §8.1's two residuals. At home `M_i = g_i·u_i`
+Not a new measurement — it follows from §9's two residuals. At home `M_i = g_i·u_i`
 and `|g_i|²` are leg-independent, and `N_i = z_home - h_p` is common to all six. So
 `C_i`, `P_i` and `phi_i` are common, and hence so is the home angle.
 
@@ -438,6 +438,55 @@ Two uses:
 - **A non-zero home angle is absorbable by horn mounting angle.** Servo mid-travel
   can be bought with the spline instead of with the datum. What it costs depends on
   the horn's spline tooth count, which is on the hardware pull.
+
+## 11. Grubler-Kutzbach degree-of-freedom check *(CC-derived, 2026-09-10 — UNVERIFIED)*
+
+**CC-derived and unverified, per the standing rule** (`docs/session-handoff-
+2026-09-05.md`: "anything the assistant derives is unverified until a diagnostic
+says otherwise, and must be labelled as such when written"). Nothing in the repo
+tests mobility; this is pen-and-paper only, checked against the known result for
+this architecture family and not against a simulation of this one.
+
+**Links, `N = 14`.** One fixed base (ground) plus, per leg: one servo arm and
+one push-rod — `6 x 2 = 12` moving links — plus the platform: `1 + 12 + 1 = 14`.
+
+**Joints, `J = 18`, freedoms `sum f_i = 42`.** Per leg: one **revolute** at the
+base (servo shaft to arm, `f = 1`) and two **spherical** (arm tip to rod, rod to
+platform anchor, `f = 3` each) — matching R-S-S. `6` R `+` `12` S `= 18` joints;
+`6(1) + 12(3) = 6 + 36 = 42`.
+
+**Spatial Grubler-Kutzbach:**
+
+```
+M  =  6(N - 1 - J) + sum f_i
+   =  6(14 - 1 - 18) + 42
+   =  6(-5) + 42
+   =  12
+```
+
+**Raw count is 12, not 6 — the standard S-S-leg artefact, resolved by
+subtracting the idle spins.** Each push-rod is a binary link joined by a
+spherical joint at both ends and nothing else, so it is free to spin about the
+line joining the two joint centres without moving the arm or the platform at
+all — a **passive, kinematically inert** freedom, not a useful one. There are
+six rods, so six such idle freedoms:
+
+```
+M_actual  =  M_raw  -  (idle rod spins)  =  12 - 6  =  6
+```
+
+matching the platform's known mobility. This is the textbook correction for any
+S-S leg (Merlet, *Parallel Robots*; also stated for the general 6-6 Gough-
+Stewart platform), applied here to the R-S-S case rather than re-derived from
+first principles — flagged as such, not claimed as new.
+
+**What this does and does not check.** It counts freedoms; it says nothing about
+**which six** — a rank-6 wrench system at a given pose, which the FK Jacobian
+`J_fk` gate already exercises numerically pose by pose, and which is a different
+(stronger, local) statement than a global mobility count. A mobility count of 6
+does not by itself rule out a special pose where the instantaneous mobility
+rises above 6 (a parallel singularity) or the six freedoms fail to include the
+ones wanted; neither question is asked here.
 
 ---
 

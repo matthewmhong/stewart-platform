@@ -43,7 +43,7 @@ stays exactly as it was - that reporting is the evidence the cap rests on - and
 part (7), which studies the two-term score, carries no cond column at all.
 
 The feasible set is RECOMPUTED here from :mod:`.zhome_bracket` - the same
-540-candidate coarse grid at ``h_p / r_b = 0.1``, the same closed-form ``N > 0``
+540-candidate coarse grid at ``c_p / r_b = 0.1``, the same closed-form ``N > 0``
 floor and the same exact reach test - rather than transcribed.  A count copied
 out of a previous run is a number with no provenance the next time either
 script moves.
@@ -62,23 +62,23 @@ from ..kinematics import (Unreachable, _cond_and_sigma, arm_tips, fk_jacobian,
                           fk_residual, fk_solve, ik, log_so3)
 from .envelope import (AZIMUTH_WINDOW_DEG, N_MAGNITUDE, TILT_LIMIT_DEG,
                        envelope_poses, tilt_R)
-from .zhome_bracket import (A_RB, BETA, BETA_P, D_RB, DELTA_GRID, H_P, R_B,
+from .zhome_bracket import (A_RB, BETA, BETA_P, D_RB, DELTA_GRID, C_P, R_B,
                             RP_RB, Z_GRID, fine_poses, leg_terms,
                             reach_feasible_any_delta, z_lower_closed_form)
 
 # --------------------------------------------------------------------------- #
-# PROVISIONAL LOCAL NAMES
+# NAMES - now official, were provisional here first
 # --------------------------------------------------------------------------- #
-#: ``notation.md`` sec.6 leaves two per-leg quantities **unnamed**, and sec.11
-#: records why each proposal was rejected: the rod vector's ``r_i`` collides
-#: with ``r_b`` and ``r_p`` ("needs a third option"), and the arm tangent's
-#: ``t`` collides with plate thickness ("pick one").  Both are live, and sec.11
-#: says none should be resolved silently.
-#:
-#: So this module uses SPELLED-OUT local names, valid inside this file only.
-#: They are deliberately not single letters: a single letter here would look
-#: like a resolution of the sec.11 clash and would propagate.  ``notation.md``
-#: is NOT edited by this module.
+#: **Named in ``notation.md`` sec.6 as of 2026-09-10** - ``rod_i`` and
+#: ``tangent_i``, adopted from the local names this module coined below and
+#: which ``tilt_authority.py`` reused; sec.11's clash entries for both are
+#: marked resolved, not deleted.  Before that date these were unnamed, sec.11
+#: recorded why each proposal was rejected (the rod vector's ``r_i`` collides
+#: with ``r_b``/``r_p``; the arm tangent's ``t`` collides with plate
+#: thickness), and this module used spelled-out local names rather than
+#: single letters so as not to look like a silent resolution.  This dict and
+#: its report label are kept as the historical record of that provenance, not
+#: revised now that the names are official.
 PROVISIONAL_NAMES = {
     "rod vector  (q_i - h_i, magnitude d)": "rod_i   [local to this module]",
     "arm tangent (-u_i sin alpha + v_i cos alpha)": "tangent_i [local]",
@@ -214,11 +214,11 @@ def feasible_candidates(verbose: bool = True):
     for beta in BETA:
         for beta_p in BETA_P:
             for r_p in RP_RB:
-                floor = z_lower_closed_form(r_p, H_P)
+                floor = z_lower_closed_form(r_p, C_P)
                 for a in A_RB:
                     for d in D_RB:
                         n_total += 1
-                        A, B, G, _ = leg_terms(beta, beta_p, r_p, a, d, H_P,
+                        A, B, G, _ = leg_terms(beta, beta_p, r_p, a, d, C_P,
                                                Z_GRID, az, mg)
                         ok = (reach_feasible_any_delta(A, B, G, deltas_rad)
                               & (Z_GRID > floor))
@@ -234,7 +234,7 @@ def feasible_candidates(verbose: bool = True):
     if verbose:
         print(f"  grid        : {len(BETA)}x{len(BETA_P)}x{len(RP_RB)}x"
               f"{len(A_RB)}x{len(D_RB)} = {n_total} candidates, "
-              f"h_p/r_b = {H_P} fixed")
+              f"c_p/r_b = {C_P} fixed")
         print(f"  feasible    : {len(out)} / {n_total}   "
               f"(recomputed, not transcribed)")
         print(f"  contiguous  : {sum(r['contiguous'] for r in out)} / {len(out)}")
@@ -254,9 +254,9 @@ def _delta_basis(beta, beta_p, r_p, a, d):
     rebuilt so the ring convention has one source.
     """
     g0 = make_geometry(r_b=R_B, beta=beta, delta=0.0, r_p=r_p, beta_p=beta_p,
-                       a=a, d=d, h_p=H_P)
+                       a=a, d=d, c_p=C_P)
     g90 = make_geometry(r_b=R_B, beta=beta, delta=90.0, r_p=r_p, beta_p=beta_p,
-                        a=a, d=d, h_p=H_P)
+                        a=a, d=d, c_p=C_P)
     return g0, g90
 
 
@@ -404,7 +404,7 @@ def verify_jcmd(rows, R, n_cases=6):
     for rec in picks:
         geom = make_geometry(r_b=R_B, beta=rec["beta"], delta=rec["delta"],
                              r_p=rec["r_p"], beta_p=rec["beta_p"],
-                             a=rec["a"], d=rec["d"], h_p=H_P)
+                             a=rec["a"], d=rec["d"], c_p=C_P)
         T0 = np.array([0.0, 0.0, rec["z_home"]])
         for k in (0, R.shape[0] // 2, R.shape[0] - 1):
             try:
@@ -441,10 +441,11 @@ def verify_jcmd(rows, R, n_cases=6):
 def _jacobians_at_pose(geom, R_k, T_k):
     """``(tau, J_fk, D)`` at one pose.  ``D`` is ``df/dalpha``, up to sign.
 
-    Names (PROVISIONAL, local - see :data:`PROVISIONAL_NAMES`)::
+    Names (official in notation.md sec.6 as of 2026-09-10 - see
+    :data:`PROVISIONAL_NAMES` for their provenance as local names first)::
 
-        rod_i     = q_i - h_i,   |rod_i| = d          (notation.md sec.6, unnamed)
-        tangent_i = -u_i sin alpha_i + v_i cos alpha_i (sec.6, unnamed)
+        rod_i     = q_i - h_i,   |rod_i| = d
+        tangent_i = -u_i sin alpha_i + v_i cos alpha_i
 
     ``tau_i = |rod_i . tangent_i| / d`` is sec.8's transmission ratio.  Both
     factors are of known magnitude - ``|rod_i| = d`` at a solution and
@@ -560,7 +561,7 @@ def measure(rec, R, T, char_lens, delta=None):
     geom = make_geometry(r_b=R_B, beta=rec["beta"],
                          delta=rec["delta"] if delta is None else float(delta),
                          r_p=rec["r_p"], beta_p=rec["beta_p"],
-                         a=rec["a"], d=rec["d"], h_p=H_P)
+                         a=rec["a"], d=rec["d"], c_p=C_P)
     cl = char_lengths(rec)
 
     tau_min = np.inf
@@ -1275,7 +1276,7 @@ def _pose_smin(beta, beta_p, r_p, a, d, R, T, delta_deg, char_len):
     with ``e``.
     """
     geom = make_geometry(r_b=R_B, beta=beta, delta=float(delta_deg), r_p=r_p,
-                         beta_p=beta_p, a=a, d=d, h_p=H_P)
+                         beta_p=beta_p, a=a, d=d, c_p=C_P)
     out = []
     for k in range(R.shape[0]):
         try:
@@ -1983,7 +1984,7 @@ def _report_score(rows, R, az, ef_max=None):
 #: World displacement applied to ONE platform anchor in the negative control of
 #: part (8), in units of ``r_b``.  Large enough to be far above the ~1e-15
 #: within-group spread the control has to break, small enough that the candidate
-#: stays the same machine - it is 3% of the base radius, and ``h_p`` itself is
+#: stays the same machine - it is 3% of the base radius, and ``c_p`` itself is
 #: 10%.  It is a control, not a manufacturing tolerance, and nothing downstream
 #: uses it.
 ANCHOR_KICK = 0.03
@@ -2885,9 +2886,8 @@ def main() -> None:
     print("  conditioning number below is quoted at all four candidate lengths")
     print("  and for both Jacobians, and every one is PROVISIONAL.")
     print()
-    print("  PROVISIONAL LOCAL NAMES (notation.md sec.6 leaves both unnamed and")
-    print("  sec.11 says neither may be resolved silently; notation.md is NOT")
-    print("  edited by this module):")
+    print("  NAMES (official in notation.md sec.6 as of 2026-09-10; local here")
+    print("  first, and this table is kept as that provenance record):")
     for meaning, name in PROVISIONAL_NAMES.items():
         print(f"    {meaning:<46} -> {name}")
     print()
@@ -3249,8 +3249,8 @@ def main() -> None:
     print("    p, by identity, to 7e-18.")
     print("  * z_home, which is a swept axis; the bracket midpoint here is a")
     print("    point of evaluation, not a choice.")
-    print("  * the names in notation.md sec.6 / sec.11.  The two used here are")
-    print("    local and provisional and notation.md is unchanged.")
+    print("  * the names in notation.md sec.6 / sec.11.  The two used here,")
+    print("    rod_i and tangent_i, are official as of 2026-09-10.")
     print("  * the cap C.  Four are run side by side; none is preferred, and the")
     print("    unconstrained tune is retained beside every one of them.")
     print("  * whether the inner tune SHOULD be constrained at all.  Parts (2)")

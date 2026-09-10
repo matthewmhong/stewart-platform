@@ -3,7 +3,7 @@
     python -m stewart.diagnostics.zhome_bracket
 
 (b) LOWER, from ``N_i > 0``.  The fixed ``-`` branch rests on ``N_i > 0``, and
-    ``N_i`` at home is ``z_home - h_p`` while tilt drops the low anchors.
+    ``N_i`` at home is ``z_home - c_p`` while tilt drops the low anchors.
 
 (c) UPPER, from reach ``|P_i| <= C_i`` over the envelope.
 
@@ -18,11 +18,11 @@ and ``L_i`` itself contains no ``delta`` (``delta`` enters only ``n_i`` and
 ``M_i`` move with ``delta``.  Therefore:
 
   * the LOWER bracket is delta-free, a-free and d-free - it is a statement
-    about ``r_p``, ``h_p`` and the tilt limit alone, and it has a closed form;
+    about ``r_p``, ``c_p`` and the tilt limit alone, and it has a closed form;
   * the UPPER bracket reduces to ``w_i(delta)^2 <= |L_i|^2 - P_i^2``, since
     ``|P| <= C = sqrt(|L|^2 - w^2)`` squares to exactly that.
 
-The back-of-envelope ``z_home - h_p > r_p sin(10.5) ~ 0.182 r_p`` is **not**
+The back-of-envelope ``z_home - c_p > r_p sin(10.5) ~ 0.182 r_p`` is **not**
 used.  It is computed here as a comparison only, and the closed form it
 approximates is derived and then checked numerically.
 
@@ -46,7 +46,7 @@ RP_RB = [0.6, 0.85, 1.1]
 A_RB = [0.10, 0.20, 0.35]
 D_RB = [0.8, 1.2, 1.6]
 R_B = 1.0
-H_P = 0.10                        # hardware number, not a sweep axis
+C_P = 0.10                        # hardware number, not a sweep axis
 
 #: ``z_home / r_b`` scan, 0.025 steps to 3.0.  Every reported bracket endpoint
 #: is a GRID VALUE and carries that resolution: read ``z_lo`` as "feasible by
@@ -76,50 +76,50 @@ def fine_poses():
 # --------------------------------------------------------------------------- #
 # (b) the lower bracket, in closed form
 # --------------------------------------------------------------------------- #
-def n_min_closed_form(r_p: float, h_p: float, z_home: float,
+def n_min_closed_form(r_p: float, c_p: float, z_home: float,
                       tilt_deg: float = TILT_LIMIT_DEG) -> float:
     """``min_i min_pose N_i`` over the continuous envelope, exactly.
 
-    With ``p_i = (r_p cos phi_i, r_p sin phi_i, -h_p)`` and a tilt of magnitude
+    With ``p_i = (r_p cos phi_i, r_p sin phi_i, -c_p)`` and a tilt of magnitude
     ``th`` about the horizontal axis at azimuth ``psi``, the third row of the
     Rodrigues matrix is ``(-sin th sin psi, sin th cos psi, cos th)``, so
 
-        (R p_i)_z = r_p sin(th) sin(phi_i - psi) - h_p cos(th)
+        (R p_i)_z = r_p sin(th) sin(phi_i - psi) - c_p cos(th)
 
     and ``N_i = z_home + (R p_i)_z`` because ``T = (0, 0, z_home)`` and
     ``dxy = dz = 0``.  ``psi`` is continuous, so ``sin(phi_i - psi)`` attains
     ``-1`` for some azimuth at every ``th``; minimising the remainder over
     ``th`` in ``[0, tilt]`` gives
 
-        min N = z_home - max_th [ r_p sin(th) + h_p cos(th) ]
+        min N = z_home - max_th [ r_p sin(th) + c_p cos(th) ]
 
-    and with ``th + atan2(h_p, r_p) <= 90 deg`` - true for any sane plate at
+    and with ``th + atan2(c_p, r_p) <= 90 deg`` - true for any sane plate at
     this tilt - the maximum sits at ``th = tilt``.
     """
     th = np.deg2rad(tilt_deg)
-    gamma = np.arctan2(h_p, r_p)
+    gamma = np.arctan2(c_p, r_p)
     if th + gamma <= 0.5 * np.pi:
-        drop = r_p * np.sin(th) + h_p * np.cos(th)
+        drop = r_p * np.sin(th) + c_p * np.cos(th)
     else:                                     # interior maximum of the sinusoid
-        drop = float(np.hypot(r_p, h_p))
+        drop = float(np.hypot(r_p, c_p))
     return z_home - drop
 
 
-def z_lower_closed_form(r_p: float, h_p: float,
+def z_lower_closed_form(r_p: float, c_p: float,
                         tilt_deg: float = TILT_LIMIT_DEG) -> float:
     """Infimum of ``z_home`` with ``min N_i > 0``.  Open bound: ``>``, not ``>=``.
 
-    This is ``-n_min_closed_form(r_p, h_p, 0.0, tilt)`` - the drop that
+    This is ``-n_min_closed_form(r_p, c_p, 0.0, tilt)`` - the drop that
     ``z_home`` has to clear.
     """
-    return -n_min_closed_form(r_p, h_p, 0.0, tilt_deg)
+    return -n_min_closed_form(r_p, c_p, 0.0, tilt_deg)
 
 
-def n_min_numeric(r_p: float, beta_p: float, h_p: float, z_home: float,
+def n_min_numeric(r_p: float, beta_p: float, c_p: float, z_home: float,
                   az, mg) -> float:
     """Same quantity, from the library ring and a sampled envelope."""
     g = make_geometry(r_b=R_B, beta=20.0, delta=0.0, r_p=r_p, beta_p=beta_p,
-                      a=0.2, d=1.2, h_p=h_p)
+                      a=0.2, d=1.2, c_p=c_p)
     R = tilt_R(az, mg)
     q = np.einsum("kxy,yi->kxi", R, g.p)
     q[:, 2, :] += z_home
@@ -129,7 +129,7 @@ def n_min_numeric(r_p: float, beta_p: float, h_p: float, z_home: float,
 # --------------------------------------------------------------------------- #
 # (c) reach
 # --------------------------------------------------------------------------- #
-def leg_terms(beta, beta_p, r_p, a, d, h_p, z_grid, az, mg):
+def leg_terms(beta, beta_p, r_p, a, d, c_p, z_grid, az, mg):
     """``(A, B, G)`` per ``(z, pose, leg)``, flattened to ``(nz, npose*6)``.
 
     ``w_i(delta) = A_i cos(delta) + B_i sin(delta)`` and the reach test
@@ -142,9 +142,9 @@ def leg_terms(beta, beta_p, r_p, a, d, h_p, z_grid, az, mg):
     # the ring, take both from the library and form the combination that the
     # parameterisation guarantees.
     g0 = make_geometry(r_b=R_B, beta=beta, delta=0.0, r_p=r_p, beta_p=beta_p,
-                       a=a, d=d, h_p=h_p)
+                       a=a, d=d, c_p=c_p)
     g90 = make_geometry(r_b=R_B, beta=beta, delta=90.0, r_p=r_p, beta_p=beta_p,
-                        a=a, d=d, h_p=h_p)
+                        a=a, d=d, c_p=c_p)
 
     R = tilt_R(az, mg)                                   # (K,3,3)
     qp = np.einsum("kxy,yi->kxi", R, g0.p)               # (K,3,6), T not added
@@ -176,7 +176,7 @@ def reach_feasible_any_delta(A, B, G, deltas_rad):
     return ok
 
 
-def reach_ceiling_bisect(beta, beta_p, r_p, a, d, h_p, lo, hi, az, mg,
+def reach_ceiling_bisect(beta, beta_p, r_p, a, d, c_p, lo, hi, az, mg,
                          deltas_rad, tol=1e-9):
     """Refine the reach ceiling between a feasible ``lo`` and infeasible ``hi``.
 
@@ -188,7 +188,7 @@ def reach_ceiling_bisect(beta, beta_p, r_p, a, d, h_p, lo, hi, az, mg,
         if hi - lo <= tol:
             break
         mid = 0.5 * (lo + hi)
-        A, B, G, _ = leg_terms(beta, beta_p, r_p, a, d, h_p,
+        A, B, G, _ = leg_terms(beta, beta_p, r_p, a, d, c_p,
                                np.array([mid]), az, mg)
         if reach_feasible_any_delta(A, B, G, deltas_rad)[0]:
             lo = mid
@@ -197,10 +197,10 @@ def reach_ceiling_bisect(beta, beta_p, r_p, a, d, h_p, lo, hi, az, mg,
     return lo
 
 
-def check_n_and_v(beta, beta_p, r_p, a, d, h_p):
+def check_n_and_v(beta, beta_p, r_p, a, d, c_p):
     """Assert ``v_i == z`` for this candidate; the whole module rests on it."""
     g = make_geometry(r_b=R_B, beta=beta, delta=0.0, r_p=r_p, beta_p=beta_p,
-                      a=a, d=d, h_p=h_p)
+                      a=a, d=d, c_p=c_p)
     v = np.cross(g.n, g.u, axis=0)
     return float(np.max(np.abs(v - np.array([[0.0], [0.0], [1.0]]))))
 
@@ -219,22 +219,22 @@ def main() -> None:
     print()
     print("N_i is delta-free, a-free and d-free: v_i = z exactly under horizontal")
     print("shafts and b_i . z = 0, so N_i = q_i . z.  The bracket therefore")
-    print("depends on r_p, h_p and the tilt limit ALONE.")
+    print("depends on r_p, c_p and the tilt limit ALONE.")
     print()
-    print("closed form:  z_home > r_p sin(tilt) + h_p cos(tilt)")
-    print("back-of-env:  z_home > r_p sin(tilt) + h_p          [ignores cos]")
+    print("closed form:  z_home > r_p sin(tilt) + c_p cos(tilt)")
+    print("back-of-env:  z_home > r_p sin(tilt) + c_p          [ignores cos]")
     print()
-    print(f"  {'r_p/r_b':>9} {'h_p/r_b':>9} {'closed form':>14} "
+    print(f"  {'r_p/r_b':>9} {'c_p/r_b':>9} {'closed form':>14} "
           f"{'back-of-env':>14} {'difference':>13} {'grid check':>13}")
     worst_cf = 0.0
     for r_p in RP_RB:
-        for h_p in (0.0, 0.05, 0.10, 0.20):
-            cf = z_lower_closed_form(r_p, h_p)
-            boe = r_p * np.sin(np.deg2rad(TILT_LIMIT_DEG)) + h_p
+        for c_p in (0.0, 0.05, 0.10, 0.20):
+            cf = z_lower_closed_form(r_p, c_p)
+            boe = r_p * np.sin(np.deg2rad(TILT_LIMIT_DEG)) + c_p
             # numeric check at z_home = cf : min N should be ~0
-            resid = abs(n_min_numeric(r_p, 40.0, h_p, cf, az, mg))
+            resid = abs(n_min_numeric(r_p, 40.0, c_p, cf, az, mg))
             worst_cf = max(worst_cf, resid)
-            print(f"  {r_p:>9.3f} {h_p:>9.3f} {cf:>14.9f} {boe:>14.9f} "
+            print(f"  {r_p:>9.3f} {c_p:>9.3f} {cf:>14.9f} {boe:>14.9f} "
                   f"{boe - cf:>13.3e} {resid:>13.3e}")
     print()
     print(f"  worst |min N| at z_home = closed form, over the sampled envelope:")
@@ -247,10 +247,10 @@ def main() -> None:
     print("  Grid-vs-continuum, the part that matters for the harness:")
     for beta_p in BETA_P:
         r_p = 0.85
-        cf = z_lower_closed_form(r_p, H_P)
-        gridN = n_min_numeric(r_p, beta_p, H_P, cf, az, mg)
+        cf = z_lower_closed_form(r_p, C_P)
+        gridN = n_min_numeric(r_p, beta_p, C_P, cf, az, mg)
         az_h, mg_h = envelope_poses()
-        gridN_h = n_min_numeric(r_p, beta_p, H_P, cf, az_h, mg_h)
+        gridN_h = n_min_numeric(r_p, beta_p, C_P, cf, az_h, mg_h)
         print(f"    beta_p={beta_p:>5.1f}  min N at the closed-form bound: "
               f"fine grid {gridN:+.3e}   harness grid {gridN_h:+.3e}")
     print("  Both are >= 0 by construction, so a DISCRETE grid reports the")
@@ -260,7 +260,7 @@ def main() -> None:
 
     print()
     print(f"  v_i == z check (max |v - z| over a few candidates): ", end="")
-    print(f"{max(check_n_and_v(b, bp, 0.85, 0.2, 1.2, H_P) for b in BETA for bp in BETA_P):.3e}")
+    print(f"{max(check_n_and_v(b, bp, 0.85, 0.2, 1.2, C_P) for b in BETA for bp in BETA_P):.3e}")
 
     # ------------------------------------------------------------------ #
     print()
@@ -270,7 +270,7 @@ def main() -> None:
     print(f"candidates: {len(BETA)}x{len(BETA_P)}x{len(RP_RB)}x{len(A_RB)}x"
           f"{len(D_RB)} = "
           f"{len(BETA)*len(BETA_P)*len(RP_RB)*len(A_RB)*len(D_RB)}  "
-          f"(h_p/r_b = {H_P} fixed)")
+          f"(c_p/r_b = {C_P} fixed)")
     print(f"z_home/r_b scan: {Z_GRID[0]} .. {Z_GRID[-1]} step "
           f"{Z_GRID[1]-Z_GRID[0]}  ({Z_GRID.size} points)")
     print(f"delta scan     : {DELTA_GRID.size} points over [0, 180)")
@@ -284,10 +284,10 @@ def main() -> None:
             for r_p in RP_RB:
                 for a in A_RB:
                     for d in D_RB:
-                        A, B, G, N = leg_terms(beta, beta_p, r_p, a, d, H_P,
+                        A, B, G, N = leg_terms(beta, beta_p, r_p, a, d, C_P,
                                                Z_GRID, az, mg)
                         reach = reach_feasible_any_delta(A, B, G, deltas_rad)
-                        z_lo_cf = z_lower_closed_form(r_p, H_P)
+                        z_lo_cf = z_lower_closed_form(r_p, C_P)
                         # N_i > 0 from the CLOSED FORM, not from the pose grid:
                         # the grid reports the constraint satisfied before it is
                         # (see check (b) above), so using it here would bias the
@@ -360,7 +360,7 @@ def main() -> None:
     print()
     print("  The two constraints are not the same shape, which decides what the")
     print("  categories can be:")
-    print("    N_i > 0    ONE-SIDED, a FLOOR:  z_home > r_p sin(tilt)+h_p cos(tilt)")
+    print("    N_i > 0    ONE-SIDED, a FLOOR:  z_home > r_p sin(tilt)+c_p cos(tilt)")
     print("    reach      TWO-SIDED, an INTERVAL in z_home (contiguous, measured)")
     print("  N_i > 0 has no ceiling, so 'reach floor above the N ceiling' cannot")
     print("  occur - there is no N ceiling to be above.  Only two cases exist:")
@@ -391,7 +391,7 @@ def main() -> None:
         for e in cat_X:
             step = Z_GRID[1] - Z_GRID[0]
             exact = reach_ceiling_bisect(e["beta"], e["beta_p"], e["r_p"],
-                                         e["a"], e["d"], H_P,
+                                         e["a"], e["d"], C_P,
                                          e["reach_hi"], e["reach_hi"] + step,
                                          az, mg, deltas_rad)
             gap = e["cf"] - exact
@@ -455,7 +455,7 @@ def main() -> None:
               f"{'main component':>18}")
         for r in noncontig_reach:
             A, B, G, _ = leg_terms(r["beta"], r["beta_p"], r["r_p"], r["a"],
-                                   r["d"], H_P, Z_GRID, az, mg)
+                                   r["d"], C_P, Z_GRID, az, mg)
             ri = np.flatnonzero(reach_feasible_any_delta(A, B, G, deltas_rad))
             comps = np.split(ri, np.flatnonzero(np.diff(ri) > 1) + 1)
             lo_c, hi_c = comps[0], comps[-1]
@@ -517,9 +517,9 @@ def main() -> None:
     print("=" * 78)
     print("BRACKET, as it should be written into notation.md sec.12")
     print("=" * 78)
-    print("  LOWER  z_home > r_p sin(tilt) + h_p cos(tilt)")
+    print("  LOWER  z_home > r_p sin(tilt) + c_p cos(tilt)")
     print(f"         = {np.sin(np.deg2rad(TILT_LIMIT_DEG)):.6f} r_p + "
-          f"{np.cos(np.deg2rad(TILT_LIMIT_DEG)):.6f} h_p   at tilt = "
+          f"{np.cos(np.deg2rad(TILT_LIMIT_DEG)):.6f} c_p   at tilt = "
           f"{TILT_LIMIT_DEG:.4f} deg")
     print("         delta-free, a-free, d-free.  Strict, and it is the CONTINUUM")
     print("         bound - do not take it off a pose grid.")

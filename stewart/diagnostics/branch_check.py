@@ -2,7 +2,7 @@
 
 No branch rule is chosen here and no sign vector is written to tracked code.
 Every numeric geometry value below is a FIXTURE, labelled as such, not a design
-decision.  F1 (h_p threaded through platform_ring / make_geometry) has been
+decision.  F1 (c_p threaded through platform_ring / make_geometry) has been
 applied to tracked code; nothing else in stewart/ is touched.
 """
 from __future__ import annotations
@@ -31,9 +31,9 @@ def wrap(a):
     return -((-np.asarray(a, float) + np.pi) % TAU - np.pi)
 
 
-def geom(r_b, beta, delta, r_p, beta_p, h_p):
+def geom(r_b, beta, delta, r_p, beta_p, c_p):
     b, n, u = base_ring(r_b, beta, delta)
-    p = platform_ring(r_p, beta_p, h_p)
+    p = platform_ring(r_p, beta_p, c_p)
     v = np.cross(n, u, axis=0)                 # v_i = n_i x u_i  (== z per sec.8)
     return dict(b=b, n=n, u=u, v=v, p=p)
 
@@ -75,15 +75,15 @@ def legs_L(g, R, T):
     return (R @ g["p"] + np.asarray(T, float).reshape(3, 1)) - g["b"]
 
 
-def solve_z_home(r_b, beta, delta, r_p, beta_p, h_p, a, d):
-    """Upper root of (z_home - h_p)^2 = d^2 - |q_i^flat - h_i^flat|^2 at
+def solve_z_home(r_b, beta, delta, r_p, beta_p, c_p, a, d):
+    """Upper root of (z_home - c_p)^2 = d^2 - |q_i^flat - h_i^flat|^2 at
     R = I, alpha_i = 0  (h_i = b_i + a u_i).  Returns (z_home, rhs_per_leg)."""
-    g = geom(r_b, beta, delta, r_p, beta_p, h_p)
+    g = geom(r_b, beta, delta, r_p, beta_p, c_p)
     q_flat = g["p"][:2]                                   # R=I, T_xy=0
     h_flat = (g["b"] + a * g["u"])[:2]
     rhs = d * d - np.sum((q_flat - h_flat) ** 2, axis=0)  # (6,)
     m = float(np.mean(rhs))
-    z = h_p + np.sqrt(m) if m >= 0.0 else np.nan          # upper root
+    z = c_p + np.sqrt(m) if m >= 0.0 else np.nan          # upper root
     return z, rhs, g
 
 
@@ -95,7 +95,7 @@ def d15(x):
 # PART 1
 # ========================================================================= #
 # ---- fixtures (NOT decisions) -------------------------------------------- #
-FIX_A = dict(r_b=1.0, beta=20.0, delta=40.0, r_p=0.85, beta_p=40.0, h_p=0.10)
+FIX_A = dict(r_b=1.0, beta=20.0, delta=40.0, r_p=0.85, beta_p=40.0, c_p=0.10)
 FIX_A_AD = dict(a=0.20, d=1.20)          # a/r_b, d/r_b : fixture, mid-grid pick
 DELTA_1C = 40.0                          # fixture: delta held at fixture-A value
 
@@ -117,7 +117,7 @@ def part1():
     print("     rhs_i =", d15(rhs))
     print(f"     spread max-min = {rhs.max() - rhs.min():.3e}   "
           f"(mean {rhs.mean():.15e})")
-    print(f"     -> z_home (upper root) = h_p + sqrt(mean) = {z:.15e}   (z_home/r_b = {z/FIX_A['r_b']:.15e})")
+    print(f"     -> z_home (upper root) = c_p + sqrt(mean) = {z:.15e}   (z_home/r_b = {z/FIX_A['r_b']:.15e})")
 
     # 1b --------------------------------------------------------------------
     print("\n[1b] feed z_home back; every alpha_i must be 0 on one branch")
@@ -144,13 +144,13 @@ def part1():
 
     # 1c --------------------------------------------------------------------
     print("\n[1c] discriminant  disc = d^2 - |q^flat - h^flat|^2  over the grid")
-    print(f"     held fixture: delta = {DELTA_1C} deg,  h_p/r_b = 0.1,  r_b = 1")
+    print(f"     held fixture: delta = {DELTA_1C} deg,  c_p/r_b = 0.1,  r_b = 1")
     betas = [10, 20, 30, 40]
     beta_ps = [10, 25, 40, 55]
     rps = [0.6, 0.85, 1.2]
     a_s = [0.10, 0.20, 0.35]
     d_s = [0.8, 1.2, 1.6]
-    h_p = 0.1
+    c_p = 0.1
     neg = []
     pos_z = []
     max_leg_spread = 0.0
@@ -162,7 +162,7 @@ def part1():
                     for dd in d_s:
                         total += 1
                         try:
-                            _, rhs, _ = solve_z_home(1.0, be, DELTA_1C, rp, bp, h_p, aa, dd)
+                            _, rhs, _ = solve_z_home(1.0, be, DELTA_1C, rp, bp, c_p, aa, dd)
                         except Exception as exc:
                             print(f"     build failed be={be} bp={bp} rp={rp} a={aa} d={dd}: {exc!r}")
                             continue
@@ -171,7 +171,7 @@ def part1():
                         if disc < 0.0:
                             neg.append((be, bp, rp, aa, dd, disc))
                         else:
-                            pos_z.append(h_p + np.sqrt(disc))
+                            pos_z.append(c_p + np.sqrt(disc))
     print(f"     grid size = {total}   (4 x 4 x 3 x 3 x 3)")
     print(f"     max per-leg rhs spread over the whole grid = {max_leg_spread:.3e}  (D3 holds)")
     print(f"     combos with disc < 0 (no valid z_home): {len(neg)}")

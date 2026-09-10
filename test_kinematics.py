@@ -24,7 +24,7 @@ TOL = 1e-12
 
 # ---- FIXTURES (not decisions) -------------------------------------------- #
 FIX = dict(r_b=1.0, beta=20.0, delta=40.0, r_p=0.85, beta_p=40.0,
-           h_p=0.10, a=0.20, d=1.20)
+           c_p=0.10, a=0.20, d=1.20)
 
 
 def rot_z(deg):
@@ -36,7 +36,7 @@ def rot_z(deg):
 def fixture_geom():
     return make_geometry(FIX["r_b"], FIX["beta"], FIX["delta"],
                          FIX["r_p"], FIX["beta_p"],
-                         FIX["a"], FIX["d"], h_p=FIX["h_p"])
+                         FIX["a"], FIX["d"], c_p=FIX["c_p"])
 
 
 ROWS = []

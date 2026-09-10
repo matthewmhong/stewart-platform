@@ -78,7 +78,7 @@ extrapolated from the existing probes**, and the difference between the direct
 evaluation and a linear extrapolation off ``sens`` is reported rather than
 assumed small.
 
-WHAT IS RUN.  The 540-candidate coarse grid at ``h_p/r_b = 0.1`` exactly as
+WHAT IS RUN.  The 540-candidate coarse grid at ``c_p/r_b = 0.1`` exactly as
 :mod:`.zhome_bracket` builds it, plus the four boundary rays of
 :mod:`.box_boundary`, so the runaway region is covered rather than inferred.
 Both come through :meth:`.box_boundary.Box.add_slice`, which is itself
@@ -120,7 +120,7 @@ from . import score_discriminators as SD
 from .envelope import TILT_LIMIT_DEG
 from .score_discriminators import _five_number, _spearman
 from .tilt_bracket import CAP, _key
-from .zhome_bracket import A_RB, BETA, BETA_P, D_RB, DELTA_GRID, H_P, R_B, RP_RB
+from .zhome_bracket import A_RB, BETA, BETA_P, D_RB, DELTA_GRID, C_P, R_B, RP_RB
 
 # --------------------------------------------------------------------------- #
 # the score, at the value now in force
@@ -166,7 +166,7 @@ def alpha_span_via_ik(rec, delta_deg, R, T):
     """
     geom = make_geometry(r_b=R_B, beta=rec["beta"], delta=float(delta_deg),
                          r_p=rec["r_p"], beta_p=rec["beta_p"],
-                         a=rec["a"], d=rec["d"], h_p=H_P)
+                         a=rec["a"], d=rec["d"], c_p=C_P)
     out = np.empty((R.shape[0], 6), dtype=float)
     for k in range(R.shape[0]):
         try:
@@ -725,7 +725,7 @@ def build_sets():
     print(f"  grid        : {len(BETA)}x{len(BETA_P)}x{len(RP_RB)}x{len(A_RB)}x"
           f"{len(D_RB)} = "
           f"{len(BETA)*len(BETA_P)*len(RP_RB)*len(A_RB)*len(D_RB)} candidates, "
-          f"h_p/r_b = {H_P}")
+          f"c_p/r_b = {C_P}")
     print(f"  cap         : cond(J_fk) <= {CAP:.0e} at char_len = "
           f"{SD.CONSTRAINT_CHAR_LEN}  (PROVISIONAL in that length)")
     print(f"  score probe : p = {P_SCORE}  (fixed 2026-09-08, ASSERTED)")

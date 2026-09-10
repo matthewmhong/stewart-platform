@@ -8,7 +8,7 @@ Newtons, against the 2fee8b0 shortlist.
 
 Against the two shortlist members - `a = 60.40 mm`, `d = 126 mm`, `beta = 5 /
 55 deg`, `beta_p = 52.5 / 7.5 deg`, `z_home = 95.625 mm`, at `r_b = 90 mm`,
-`r_p = 80 mm`, `h_p/r_b = 0.1`, tilt limit `6.5580 deg` - and at the next few
+`r_p = 80 mm`, `c_p/r_b = 0.1`, tilt limit `6.5580 deg` - and at the next few
 candidates below them, so it is clear whether a result is a property of the
 winner or of the region.
 
@@ -61,7 +61,7 @@ from .tilt_bracket import at_tilt
 # fixed, real millimetres throughout - not the normalised r_b = 1 convention
 # the rest of the sweep infrastructure uses
 # --------------------------------------------------------------------------- #
-R_B_MM, R_P_MM, H_P_MM = 90.0, 80.0, 9.0
+R_B_MM, R_P_MM, C_P_MM = 90.0, 80.0, 9.0
 
 #: The two shortlist members, `2fee8b0`.  `a`, `d` identical; `beta`/`beta_p`
 #: are the mirror pair; `delta_con` and `z_home` transcribed from the cached
@@ -97,9 +97,9 @@ def reach_margin_mm(beta, beta_p, a, d, z_home, delta_con, R, T):
     ``scan_delta``/``measure`` are built on, unmodified.
     """
     g0 = make_geometry(r_b=R_B_MM, beta=beta, delta=0.0, r_p=R_P_MM,
-                       beta_p=beta_p, a=a, d=d, h_p=H_P_MM)
+                       beta_p=beta_p, a=a, d=d, c_p=C_P_MM)
     g90 = make_geometry(r_b=R_B_MM, beta=beta, delta=90.0, r_p=R_P_MM,
-                        beta_p=beta_p, a=a, d=d, h_p=H_P_MM)
+                        beta_p=beta_p, a=a, d=d, c_p=C_P_MM)
     LL, P, A, B = SD._invariants(g0, g90, R, T)
     dr = np.deg2rad(delta_con)
     w = A * np.cos(dr) + B * np.sin(dr)
@@ -119,9 +119,9 @@ def _reach_margin_mm_uv(beta, beta_p, a, d, delta_con, R, T):
     own.
     """
     g0 = make_geometry(r_b=R_B_MM, beta=beta, delta=0.0, r_p=R_P_MM,
-                       beta_p=beta_p, a=a, d=d, h_p=H_P_MM)
+                       beta_p=beta_p, a=a, d=d, c_p=C_P_MM)
     g90 = make_geometry(r_b=R_B_MM, beta=beta, delta=90.0, r_p=R_P_MM,
-                        beta_p=beta_p, a=a, d=d, h_p=H_P_MM)
+                        beta_p=beta_p, a=a, d=d, c_p=C_P_MM)
     dr = np.deg2rad(delta_con)
     n_d = np.cos(dr) * g0.n + np.sin(dr) * g90.n
     u_d = np.cos(dr) * g0.u + np.sin(dr) * g90.u
@@ -259,7 +259,7 @@ def worst_leg_force_n(beta, beta_p, a, d, z_home, delta_con, R, T):
     search, for a 2.7 g ball's weight alone.  Returns ``(worst_N, info)``.
     """
     g = make_geometry(r_b=R_B_MM, beta=beta, delta=delta_con, r_p=R_P_MM,
-                      beta_p=beta_p, a=a, d=d, h_p=H_P_MM)
+                      beta_p=beta_p, a=a, d=d, c_p=C_P_MM)
     worst = 0.0
     info = None
     for k in range(R.shape[0]):
@@ -458,7 +458,7 @@ def part_leg_force(R, T):
     print()
     g0 = make_geometry(r_b=R_B_MM, beta=SHORTLIST[0]["beta"], delta=40.0,
                        r_p=R_P_MM, beta_p=SHORTLIST[0]["beta_p"],
-                       a=SHORTLIST[0]["a"], d=SHORTLIST[0]["d"], h_p=H_P_MM)
+                       a=SHORTLIST[0]["a"], d=SHORTLIST[0]["d"], c_p=C_P_MM)
     resid = verify_statics(g0, R[4], T[4])
     print(f"  GATE: leg-force statics reproduce an independent random wrench "
           f"via")
@@ -578,7 +578,7 @@ def main() -> None:
     print("  2fee8b0 shortlist: a = 60.40 mm, d = 126 mm, beta = 5 / 55 deg, "
           "beta_p =")
     print("  52.5 / 7.5 deg, z_home = 95.625 mm, at r_b = 90 mm, r_p = "
-          "80 mm, h_p/r_b =")
+          "80 mm, c_p/r_b =")
     print(f"  0.1, tilt limit {tilt:.4f} deg.  Both mirror members.  No "
           "rod, joint or servo")
     print("  is chosen here.  notation.md is not touched.")

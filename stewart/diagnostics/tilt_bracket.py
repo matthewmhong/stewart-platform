@@ -39,7 +39,7 @@ modules already define, called unchanged.
 
 WHAT IS MEASURED, at each of the three limits:
 
-  * the 540-candidate coarse grid at ``h_p / r_b = 0.1``, exactly as
+  * the 540-candidate coarse grid at ``c_p / r_b = 0.1``, exactly as
     :mod:`.zhome_bracket` builds it - the same exact reach test over the same
     1-degree ``delta`` scan and the same 366-pose fine envelope, intersected
     with the same CLOSED-FORM ``N_i > 0`` floor;
@@ -77,7 +77,7 @@ from . import envelope as ENV
 from . import score_discriminators as SD
 from . import zhome_bracket as ZB
 from .score_discriminators import _five_number, _spearman
-from .zhome_bracket import (A_RB, BETA, BETA_P, D_RB, DELTA_GRID, H_P, R_B,
+from .zhome_bracket import (A_RB, BETA, BETA_P, D_RB, DELTA_GRID, C_P, R_B,
                             RP_RB, Z_GRID, leg_terms, reach_ceiling_bisect,
                             reach_feasible_any_delta)
 
@@ -140,7 +140,7 @@ def at_tilt(tilt_deg: float):
         the module global that :func:`.zhome_bracket.fine_poses` reads at call
         time (the 366-pose screen envelope), plus the bound defaults of
         ``n_min_closed_form`` and ``z_lower_closed_form`` - the ``N_i > 0``
-        floor, which is a statement about ``r_p``, ``h_p`` and the tilt limit
+        floor, which is a statement about ``r_p``, ``c_p`` and the tilt limit
         alone and moves with all three.
     ``score_discriminators``
         the module global, read by ``_pose_grid`` for its fine-azimuth variant
@@ -194,10 +194,10 @@ def screen(beta_vals=BETA, beta_p_vals=BETA_P, rp_vals=RP_RB,
     for beta in beta_vals:
         for beta_p in beta_p_vals:
             for r_p in rp_vals:
-                floor = ZB.z_lower_closed_form(r_p, H_P)
+                floor = ZB.z_lower_closed_form(r_p, C_P)
                 for a in a_vals:
                     for d in d_vals:
-                        A, B, G, _ = leg_terms(beta, beta_p, r_p, a, d, H_P,
+                        A, B, G, _ = leg_terms(beta, beta_p, r_p, a, d, C_P,
                                                Z_GRID, az, mg)
                         reach = reach_feasible_any_delta(A, B, G, deltas_rad)
                         ok = reach & (Z_GRID > floor)
@@ -247,7 +247,7 @@ def attribute(rows, az, mg):
             cat_R.append(e)
             continue
         exact = reach_ceiling_bisect(e["beta"], e["beta_p"], e["r_p"], e["a"],
-                                     e["d"], H_P, e["reach_hi"],
+                                     e["d"], C_P, e["reach_hi"],
                                      e["reach_hi"] + step, az, mg, deltas_rad)
         e["ceil_exact"] = exact
         e["gap"] = e["cf"] - exact
@@ -398,7 +398,7 @@ def main() -> None:
     print(f"  grid        : {len(BETA)}x{len(BETA_P)}x{len(RP_RB)}x{len(A_RB)}x"
           f"{len(D_RB)} = "
           f"{len(BETA)*len(BETA_P)*len(RP_RB)*len(A_RB)*len(D_RB)} candidates, "
-          f"h_p/r_b = {H_P} fixed")
+          f"c_p/r_b = {C_P} fixed")
     print(f"  z_home scan : {Z_GRID[0]} .. {Z_GRID[-1]} step "
           f"{Z_GRID[1]-Z_GRID[0]} r_b  ({Z_GRID.size} points)")
     print(f"  delta scan  : {DELTA_GRID.size} points over [0, 180)")
@@ -444,7 +444,7 @@ def main() -> None:
          [f"{r['checks']['floor_tilt']:.4f}" for r in res])
     print()
     print("  The third row inverts the closed form z_home > r_p sin(tilt) +")
-    print("  h_p cos(tilt) at r_p = 1, h_p = 0, so it reads the tilt back OUT of")
+    print("  c_p cos(tilt) at r_p = 1, c_p = 0, so it reads the tilt back OUT of")
     print("  the floor itself.  All three rows agreeing with the column heading")
     print("  is what says the screen envelope, the harness grid and the floor all")
     print("  moved, and moved together.")
@@ -562,7 +562,7 @@ def main() -> None:
           for r in res])
     print()
     print("  Both ends move UP with the tilt limit, and for different reasons:")
-    print("  the lower end because the N>0 floor r_p sin(tilt) + h_p cos(tilt)")
+    print("  the lower end because the N>0 floor r_p sin(tilt) + c_p cos(tilt)")
     print("  rises directly with tilt, the upper end because a bigger tilt swings")
     print("  the platform anchors further and reach fails sooner.")
 

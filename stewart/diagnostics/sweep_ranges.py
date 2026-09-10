@@ -67,7 +67,7 @@ from . import score_discriminators as SD
 from . import tilt_bracket as TB
 from .score_discriminators import TIE_TOL, _abs_e_groups, _five_number
 from .tilt_bracket import CAP
-from .zhome_bracket import BETA, BETA_P, D_RB, H_P
+from .zhome_bracket import BETA, BETA_P, D_RB, C_P
 
 # --------------------------------------------------------------------------- #
 # (1) the discrete a set - hardware-pull sec.1.1, hole by hole
@@ -528,7 +528,7 @@ def part_survivors(slc, subs):
     print("=" * 78)
     print(f"  At tilt = {slc['tilt']:.4f} deg, r_p/r_b = {FR.R_P_RB:.6f} "
           f"(r_b = {FR.R_B_MM:.0f}, r_p = {FR.R_P_MM:.0f} mm),")
-    print(f"  h_p/r_b = {H_P}, cap cond(J_fk) <= {CAP:.0e} at char_len = "
+    print(f"  c_p/r_b = {C_P}, cap cond(J_fk) <= {CAP:.0e} at char_len = "
           f"{SD.CONSTRAINT_CHAR_LEN}.")
     print()
     print(f"    {'housing OD':>11} {'beta_p range [deg]':>21} {'cand':>6} "

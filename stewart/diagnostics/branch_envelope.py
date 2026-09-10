@@ -36,7 +36,7 @@ from .envelope import (AZIMUTH_WINDOW_DEG, TILT_LIMIT_DEG, envelope_poses,
 # fixture A, verbatim from branch_check.py - this is what -5.7e-3 was measured
 # on, so recomputing on anything else would not be a recomputation.
 # --------------------------------------------------------------------------- #
-FIX_A = dict(r_b=1.0, beta=20.0, delta=40.0, r_p=0.85, beta_p=40.0, h_p=0.10)
+FIX_A = dict(r_b=1.0, beta=20.0, delta=40.0, r_p=0.85, beta_p=40.0, c_p=0.10)
 FIX_A_AD = dict(a=0.20, d=1.20)
 #: ``z_home`` the flat-arm datum gave for fixture A.  Recorded so the "same
 #: geometry, same height, new envelope" row is exactly that.  Recomputed below
@@ -59,7 +59,7 @@ def geom_A(delta=None):
     return make_geometry(a=FIX_A_AD["a"], d=FIX_A_AD["d"], **kw)
 
 
-def z_flat_closed_form(r_b, beta, delta, r_p, beta_p, h_p, a, d):
+def z_flat_closed_form(r_b, beta, delta, r_p, beta_p, c_p, a, d):
     """Derivation sec.8.1, the flat-arm assembly height.  Datum only."""
     A = np.deg2rad(beta_p - beta)
     G = r_p * np.exp(1j * A) - r_b
@@ -69,7 +69,7 @@ def z_flat_closed_form(r_b, beta, delta, r_p, beta_p, h_p, a, d):
     disc = d * d - gg - a * a - 2 * a * np.sqrt(gg) * np.cos(dr - delta_G)
     if disc < 0:
         return float("nan")
-    return h_p + float(np.sqrt(disc))
+    return c_p + float(np.sqrt(disc))
 
 
 # --------------------------------------------------------------------------- #
@@ -159,7 +159,7 @@ def main() -> None:
     print(f"    min over the whole scan : {allN.min():+.6f}  "
           f"{'PASSES' if allN.min() > 0 else 'FAILS'}")
     print(f"    N>0 closed-form bound   : "
-          f"{FIX_A['r_p']*np.sin(np.deg2rad(TILT_LIMIT_DEG)) + FIX_A['h_p']*np.cos(np.deg2rad(TILT_LIMIT_DEG)):.6f} r_b")
+          f"{FIX_A['r_p']*np.sin(np.deg2rad(TILT_LIMIT_DEG)) + FIX_A['c_p']*np.cos(np.deg2rad(TILT_LIMIT_DEG)):.6f} r_b")
     print(f"    margin above it         : {allN.min():+.6f} r_b")
     print("    (min N == z_home - bound identically, since N_i = q_i . z and")
     print("     the bound is exactly the worst-case anchor drop - the two")

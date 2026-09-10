@@ -12,7 +12,7 @@ WHAT IS FIXED AND IS NOT AN AXIS.  ``notation.md`` sec.9/12, all ASSERTED
 2026-09-08 and read from :mod:`.fixed_ratio` rather than restated::
 
     r_b = 90 mm, r_p = 80 mm   so r_p/r_b = 80/90 is NOT a sweep axis
-    h_p / r_b = 0.1            hardware number
+    c_p / r_b = 0.1            hardware number
     tilt limit                 envelope.tilt_for(X0_WORKING, TAU), PRINTED,
                                never hardcoded - tau_L is DROPPED
     p = 0.003849 r_b           the score probe, from the three build-error
@@ -138,7 +138,7 @@ from . import sweep_ranges as SR
 from . import zhome_bracket as ZB
 from .score_discriminators import _five_number
 from .tilt_bracket import CAP, at_tilt
-from .zhome_bracket import DELTA_GRID, H_P, R_B, Z_GRID
+from .zhome_bracket import DELTA_GRID, C_P, R_B, Z_GRID
 
 # --------------------------------------------------------------------------- #
 # fixed, not swept
@@ -416,7 +416,7 @@ def verify_bracket(az, mg, deltas_rad, n=24, seed=0):
         beta_p = float(rng.choice(bps))
         a = float(rng.choice(a_s))
         d = float(rng.choice(ds))
-        A, B, G, _ = ZB.leg_terms(beta, beta_p, R_P_RB, a, d, H_P,
+        A, B, G, _ = ZB.leg_terms(beta, beta_p, R_P_RB, a, d, C_P,
                                   Z_GRID, az, mg)
         got, _, _, _ = reach_bracket(A, B, G, deltas_rad)
         want = ZB.reach_feasible_any_delta(A, B, G, deltas_rad)
@@ -475,7 +475,7 @@ def report_ledger(lg, tilt, checks):
     print(f"              printed and not hardcoded.  tau_L DROPPED.")
     print(f"  r_b = {R_B_MM:.0f} mm, r_p = {R_P_MM:.0f} mm, r_p/r_b = "
           f"{R_P_RB:.6f} - FIXED, not an axis.")
-    print(f"  h_p/r_b = {H_P}.  p = {P_SCORE:.6f} r_b "
+    print(f"  c_p/r_b = {C_P}.  p = {P_SCORE:.6f} r_b "
           f"(quoted {FR.P_SCORE_QUOTED:.6f}, agrees: "
           f"{abs(P_SCORE - FR.P_SCORE_QUOTED) < 5e-7}).")
     print()
@@ -603,7 +603,7 @@ def screen_one(beta, beta_p, a, d, az, mg, deltas_rad, floor):
     The ``N_i > 0`` floor is the CLOSED FORM passed in as ``floor``, never the
     pose grid.
     """
-    A, B, G, _ = ZB.leg_terms(beta, beta_p, R_P_RB, a, d, H_P, Z_GRID, az, mg)
+    A, B, G, _ = ZB.leg_terms(beta, beta_p, R_P_RB, a, d, C_P, Z_GRID, az, mg)
     reach, n_dead, n_admit, n_scan = reach_bracket(A, B, G, deltas_rad)
     ok = reach & (Z_GRID > floor)
     ridx = np.flatnonzero(reach)
@@ -623,7 +623,7 @@ def screen_one(beta, beta_p, a, d, az, mg, deltas_rad, floor):
             rec["gap"] = np.nan
         else:
             step = float(Z_GRID[1] - Z_GRID[0])
-            exact = ZB.reach_ceiling_bisect(beta, beta_p, R_P_RB, a, d, H_P,
+            exact = ZB.reach_ceiling_bisect(beta, beta_p, R_P_RB, a, d, C_P,
                                             rec["reach_hi"],
                                             rec["reach_hi"] + step,
                                             az, mg, deltas_rad)
@@ -803,14 +803,14 @@ def calibrate(az, mg, deltas_rad, n_probe=16, seed=3):
     """
     rng = np.random.default_rng(seed)
     betas, bps, a_s, ds = beta_axis(), beta_p_axis(), a_axis(), d_axis()
-    floor = ZB.z_lower_closed_form(R_P_RB, H_P)
+    floor = ZB.z_lower_closed_form(R_P_RB, C_P)
     picks = [(float(rng.choice(betas)), float(rng.choice(bps)),
               float(rng.choice(a_s)), float(rng.choice(ds)))
              for _ in range(n_probe)]
     dead = admit = scan = 0
     t0 = time.perf_counter()
     for beta, bp, a, d in picks:
-        A, B, G, _ = ZB.leg_terms(beta, bp, R_P_RB, a, d, H_P, Z_GRID, az, mg)
+        A, B, G, _ = ZB.leg_terms(beta, bp, R_P_RB, a, d, C_P, Z_GRID, az, mg)
         _, nd, na, ns = reach_bracket(A, B, G, deltas_rad)
         dead += nd
         admit += na
@@ -849,7 +849,7 @@ def run(az, mg, verbose=True):
     """
     betas, bps, a_s, ds = beta_axis(), beta_p_axis(), a_axis(), d_axis()
     deltas_rad = np.deg2rad(DELTA_GRID)
-    floor = ZB.z_lower_closed_form(R_P_RB, H_P)
+    floor = ZB.z_lower_closed_form(R_P_RB, C_P)
     R29, az29, _ = SD._pose_grid(None)
 
     todo = [(b, bp, a, d) for b in betas for bp in bps for a in a_s for d in ds]
@@ -1399,9 +1399,9 @@ def part_mirror(subs, n_worst=3):
     for beta, bp, dl in ((7.5, 52.5, 40.0), (12.5, 15.0, 165.0),
                          (5.0, 52.5, 121.0)):
         gA = _mk(r_b=R_B, beta=beta, delta=dl, r_p=R_P_RB, beta_p=bp,
-                 a=a_t, d=d_t, h_p=H_P)
+                 a=a_t, d=d_t, c_p=C_P)
         gB = _mk(r_b=R_B, beta=60.0 - beta, delta=(180.0 - dl) % 180.0,
-                 r_p=R_P_RB, beta_p=60.0 - bp, a=a_t, d=d_t, h_p=H_P)
+                 r_p=R_P_RB, beta_p=60.0 - bp, a=a_t, d=d_t, c_p=C_P)
         for i in range(6):
             wb = max(wb, np.abs((Q @ gA.b)[:, i] - gB.b[:, perm[i]]).max())
             wp = max(wp, np.abs((Q @ gA.p)[:, i] - gB.p[:, perm[i]]).max())
@@ -1624,7 +1624,7 @@ def part_moved(res, subs):
     print("=" * 78)
     print("  e12235c is the same sweep with beta swept UNBOUNDED over the open")
     print("  (0, 60).  Everything else is unchanged: r_b = 90, r_p = 80,")
-    print(f"  h_p/r_b = {H_P}, tilt from envelope, p = {P_SCORE:.6f} evaluated")
+    print(f"  c_p/r_b = {C_P}, tilt from envelope, p = {P_SCORE:.6f} evaluated")
     print(f"  directly, four feasibility tests, cap {CAP:.0e} at char_len = "
           f"{CHAR_LEN},")
     print(f"  TIE_TOL = {TIE_TOL:.1e}, both housing bounds in parallel.")
@@ -1830,8 +1830,8 @@ def _run_and_report(tilt) -> None:
               f"tilt_for(X0_WORKING) = {tilt:.4f} deg: "
               f"{'MATCHES' if agrees else 'DOES NOT MATCH'}")
         print(f"  N_i > 0 floor (CLOSED FORM, never the pose grid): z_home > "
-              f"{ZB.z_lower_closed_form(R_P_RB, H_P):.6f} r_b = "
-              f"{ZB.z_lower_closed_form(R_P_RB, H_P)*R_B_MM:.3f} mm")
+              f"{ZB.z_lower_closed_form(R_P_RB, C_P):.6f} r_b = "
+              f"{ZB.z_lower_closed_form(R_P_RB, C_P)*R_B_MM:.3f} mm")
         print()
         lg = ledger(az, mg)
         checks = calibrate(az, mg, np.deg2rad(DELTA_GRID))

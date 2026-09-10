@@ -566,7 +566,7 @@ than by a per-leg construction.
 > *why*, and that explanation is not written yet. Nothing here is in his voice, and
 > nothing here should be read as his account of the session until he replaces it.
 >
-> Sources: `docs/session-handoff-2026-09-04.md`, `stewart-ik-derivation.md` §8/§8.1/§8.2,
+> Sources: `docs/session-handoff-2026-09-04.md`, `stewart-ik-derivation.md` §8/§9/§10,
 > `stewart/diagnostics/zhome_datum.py`, `stewart/diagnostics/branch_check.py`.
 >
 > **Note on ordering.** Several results below reverse other results from the *same
@@ -576,7 +576,7 @@ than by a per-leg construction.
 ### Implemented
 
 - `stage1`, `legs`, `arm_tips`, `w`, `ik`, `Unreachable` in `stewart/kinematics.py`.
-  `h_p` threaded through `platform_ring` and `make_geometry`.
+  `c_p` threaded through `platform_ring` and `make_geometry`.
 - §7 verification table re-established in `test_kinematics.py`, exit 0. Residuals:
   `stage1(R=I,T=0) == p` → 0; `Rz(90)` on `(10,0,0)` → 6.1e-16;
   `|arm_tips(0) - b| == a` → 5.6e-17; `arm_tips(0) == b + a·u` → 0; control row
@@ -594,11 +594,11 @@ than by a per-leg construction.
   the 720-step precession loop — ran at a **single** `z_home`, and that basis is now
   narrower than it was when the branch was fixed (see *Reopened*).
   `TODO(him): reasoning`
-- **`z_flat` closed form** (derivation §8.1), with `g_i = q_i^{xy} - b_i`,
+- **`z_flat` closed form** (derivation §9), with `g_i = q_i^{xy} - b_i`,
   `A = beta_p - beta`, `G = r_p e^{iA} - r_b`, `delta_G = arg G`:
   `|g|² = r_p² + r_b² - 2 r_p r_b cos A`,
   `g·u = r_b cos delta - r_p cos(A - delta)`,
-  `(z_flat - h_p)² = d² - |g|² - a² - 2 a |g| cos(delta - delta_G)`, positive root.
+  `(z_flat - c_p)² = d² - |g|² - a² - 2 a |g| cos(delta - delta_G)`, positive root.
   **Leg-independence is algebraic** — neither `|g|²` nor `g·u` contains `s_i` — and
   needs no D₃ argument. Verified against `make_geometry`, not a rebuilt ring, over
   540 grid points: leg-independence `max_i - min_i` ≤ **9.948e-14** (1.501e-15
@@ -606,7 +606,7 @@ than by a per-leg construction.
   `max|u_i·z| = 0` exactly. Round-trip confirmation at the derived height with
   `alpha = 0`, `|q_i - arm_tips(0)_i|` against `d`: worst residual **2.220e-16**.
   `TODO(him): reasoning` — including why the D₃ route was not taken.
-- **`alpha` at home is one scalar shared by all six legs** (derivation §8.2). Follows
+- **`alpha` at home is one scalar shared by all six legs** (derivation §10). Follows
   from the two residuals above, not a new measurement. Two consequences recorded: all
   six servos read the same angle at home, a by-eye build check; and a non-zero home
   angle is absorbable by horn mounting angle. `TODO(him): reasoning`
@@ -679,7 +679,7 @@ than by a per-leg construction.
   corner (`beta` min, `beta_p` max, `r_p/r_b` max, `d/r_b` min), **so the boundary
   lies outside the sampled region and its extent is unknown**.
 - Also: **`delta*` reduced mod 180 returns to `delta_G`**, which is where
-  `(z_flat - h_p)²` is **minimised** — under the datum the closed-form seed pointed at
+  `(z_flat - c_p)²` is **minimised** — under the datum the closed-form seed pointed at
   the tightest-feasibility `delta`.
 - `TODO(him): reasoning` — why this is written down at all: the datum is
   algebraically tempting and will be proposed again.
@@ -690,7 +690,7 @@ than by a per-leg construction.
   — was gathered at **one** `z_home` and must be re-run across the restored axis. The
   branch conclusion is not withdrawn; its evidence base is narrower than it read.
 - `N_i > 0` now sets the **lower bracket of the `z_home` axis**, not merely a
-  docstring-to-test upgrade. `N_i` at home is `z_home - h_p`; tilt drops the low
+  docstring-to-test upgrade. `N_i` at home is `z_home - c_p`; tilt drops the low
   anchors by roughly `r_p sin(tilt)`.
 - `z_home`'s range: lower from `N_i > 0`, upper from reach `|P| ≤ C`. `z_flat(delta)`
   remains the natural reference for setting the bracket even though home no longer
@@ -780,14 +780,14 @@ about its own centre and misses the orbit `{75, 105}` entirely.
 `notation.md` sec.9's `3^6 = 729` / `4374` and 2026-09-04's 81 / 486.
 `TODO(him): reasoning`
 
-**`z_home` lower bracket, closed form.** `z_home > r_p sin(tilt) + h_p cos(tilt)`
-`= 0.182733 r_p + 0.983163 h_p` at 10.529 deg. `delta`-free, `a`-free, `d`-free,
+**`z_home` lower bracket, closed form.** `z_home > r_p sin(tilt) + c_p cos(tilt)`
+`= 0.182733 r_p + 0.983163 c_p` at 10.529 deg. `delta`-free, `a`-free, `d`-free,
 because `v_i = z` exactly and `b_i . z = 0` give `N_i = q_i . z`. Verified against
 `make_geometry`: `min N_i` at the bound is 0 to **5.551e-17**; `max |v_i - z|`
 **1.110e-16**. `TODO(him): reasoning`
 
-- The back-of-envelope `z_home - h_p > r_p sin(tilt)` drops the `cos(tilt)` and
-  overstates by `h_p(1 - cos tilt)` = **1.684e-3** at `h_p = 0.1 r_b`.
+- The back-of-envelope `z_home - c_p > r_p sin(tilt)` drops the `cos(tilt)` and
+  overstates by `c_p(1 - cos tilt)` = **1.684e-3** at `c_p = 0.1 r_b`.
   Conservative, so it errs safe; not the bound. `TODO(him): reasoning`
 - It is a **continuum** bound. A discrete pose grid reports it satisfied before it
   is - **+5.911e-4** on the 29-pose grid at `beta_p = 25`. The harness must take it
@@ -795,7 +795,7 @@ because `v_i = z` exactly and `b_i . z = 0` give `N_i = q_i . z`. Verified again
 
 **`z_home` upper bracket, per candidate, from `|P| <= C`.** No closed form. Over
 540 candidates (5 `beta` x 4 `beta_p` x 3 `r_p/r_b` x 3 `a/r_b` x 3 `d/r_b`,
-`h_p/r_b = 0.1`), `z_home/r_b` scanned 0.025..3.0 at 0.025, `delta` at 1 deg:
+`c_p/r_b = 0.1`), `z_home/r_b` scanned 0.025..3.0 at 0.025, `delta` at 1 deg:
 
 - **363 of 540** have a non-empty bracket; 177 empty; **0 non-contiguous**.
 - lower ends `[0.225, 1.650]`, upper ends `[0.425, 1.875]`, widest 0.825.
@@ -962,7 +962,7 @@ case, unavoidable because home is both the seed and a member of the envelope.
 homogeneous of degree one and the envelope is purely angular, so this is a change
 of units and `100 mm` remains the 2026-09-03 placeholder, not a decision.
 
-| | β | β_p | δ | r_p | a | d | h_p | bracket (mm) |
+| | β | β_p | δ | r_p | a | d | c_p | bracket (mm) |
 |---|---|---|---|---|---|---|---|---|
 | A | 20 | 40 | 40 | 85 | 20 | 120 | 10 | `[120.000, 129.000]` |
 | C | 10 | 55 | 137 | 60 | 35 | 110 | 20 | `[57.500, 134.750]` |
@@ -1294,7 +1294,7 @@ Recorded in `notation.md` sec.12.
   anchor ring. **Plate radius therefore does not bound `r_p`**, and **`x0 = 80
   mm` survives a bed that could not carry a printed plate of the required
   radius.** `TODO(him): reasoning`
-- **`h_p` change from the hub-and-sheet arrangement judged negligible; leg forces
+- **`c_p` change from the hub-and-sheet arrangement judged negligible; leg forces
   re-ruled-out with the bought sheet in mind.** The **20 August force ruling
   predates the sheet**, so this is a **fresh judgement, not that one carrying**.
   `TODO(him): reasoning`
@@ -1781,16 +1781,23 @@ ledger in `2fee8b0`.
   normalised ranking.~~ **DONE, below - PASS.** `TODO(him): decision`
 - ~~The `126 mm` rod against stock diameter and straightness, both cells NOT
   RETRIEVED.~~ **DONE, below - PASS.** `TODO(him): decision`
-- The document batch: pairing argument, `h_p -> c_p`, Grubler, derivation
+- ~~The document batch: pairing argument, `h_p -> c_p`, Grubler, derivation
   renumber, the `arccos` metric floor, `fk()`'s `(R, T)` convention into
-  `notation.md`. `TODO(him): decision`
+  `notation.md`.~~ **DONE 2026-09-10, below.** `h_p -> c_p` renamed at every
+  call site, `test_kinematics.py` and `demo.py` both re-run and passing;
+  Grubler-Kutzbach added to the derivation as §11, CC-derived and unverified;
+  the derivation renumbered contiguous, 1-11 then Appendix, every citing
+  cross-reference updated; the `arccos` floor and the `(R, T)` convention
+  were BOTH found already fixed (2026-09-07) and are confirmed closed, not
+  redone; the pairing argument could not be honestly restated and is left
+  flagged, not guessed. `TODO(him): decision`
 
 ### Continued 2026-09-10 - two checks the normalised score cannot see, closed
 
 Source: `stewart/diagnostics/build_margin.py`. Recorded against the
 `2fee8b0` shortlist: `a = 60.40 mm`, `d = 126 mm`, `beta = 5 / 55 deg`,
 `beta_p = 52.5 / 7.5 deg`, `z_home = 95.625 mm`, at `r_b = 90 mm`,
-`r_p = 80 mm`, `h_p/r_b = 0.1`, tilt limit `6.5580 deg`. Both mirror
+`r_p = 80 mm`, `c_p/r_b = 0.1`, tilt limit `6.5580 deg`. Both mirror
 members. Neither check is a ranking; both are PASS/FAIL. No rod, joint or
 servo chosen; `notation.md` not touched.
 
@@ -1860,6 +1867,16 @@ recomputation, not by re-checking the linear solve, worst residual
   general. `TODO(him): decision`
 
 ---
+
+**Superseded — 2026-09-10.** Flagged stale once already, above (the entry
+between the 5 and 7 September sections): the branch rule this names as the
+immediate open question was fixed 2026-09-04, and the numerical FK and passing
+round-trip test it lists as remaining are both done. That flag did not say
+where to look instead; this does. The sweep has since run twice (`e12235c`,
+`2fee8b0`) and returned a shortlist, tau_min has been checked against it, two
+build-margin checks have passed, and the document batch above is closed. Read
+the 9 September entry above for the current state; this section is left
+exactly as written, in his voice, per `TODO(him): rewrite`.
 
 ## Where Phase 0 stands
 

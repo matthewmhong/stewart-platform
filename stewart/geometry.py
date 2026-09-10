@@ -200,7 +200,7 @@ def base_ring(r_b: float, beta: float, delta: float):
 # --------------------------------------------------------------------------- #
 # platform ring
 # --------------------------------------------------------------------------- #
-def platform_ring(r_p: float, beta_p: float, h_p: float = 0.0):
+def platform_ring(r_p: float, beta_p: float, c_p: float = 0.0):
     """The six platform-frame anchor points.
 
     Same generating skeleton as :func:`base_ring`, with its own radius and pair
@@ -209,7 +209,7 @@ def platform_ring(r_p: float, beta_p: float, h_p: float = 0.0):
 
         s       = (-1, +1, -1, +1, -1, +1)
         phi_i   = 120 * floor(i / 2) + s_i * beta_p        # degrees, i = 0..5
-        p_i     = (r_p cos phi_i, r_p sin phi_i, -h_p)
+        p_i     = (r_p cos phi_i, r_p sin phi_i, -c_p)
 
     Parameters
     ----------
@@ -218,9 +218,9 @@ def platform_ring(r_p: float, beta_p: float, h_p: float = 0.0):
     beta_p : float
         Pair half-split, **degrees**, in the open interval ``(0, 60)``.
         ``beta_p == 30`` reproduces a regular hexagon.
-    h_p : float, default 0.0
+    c_p : float, default 0.0
         Distance the anchor plane sits **below** ``{P}``'s origin, mm; every
-        anchor gets ``z = -h_p``.  ``h_p = 0`` puts the origin in the anchor
+        anchor gets ``z = -c_p``.  ``c_p = 0`` puts the origin in the anchor
         plane.  Not range-checked.
 
     Returns
@@ -253,7 +253,7 @@ def platform_ring(r_p: float, beta_p: float, h_p: float = 0.0):
     """
     r_p = float(r_p)
     beta_p = float(beta_p)
-    h_p = float(h_p)
+    c_p = float(c_p)
     if not r_p > 0.0:
         raise ValueError(f"r_p must be > 0; got {r_p}")
     # The open interval is a HARDWARE exclusion, not a degeneracy one.  Both
@@ -273,14 +273,14 @@ def platform_ring(r_p: float, beta_p: float, h_p: float = 0.0):
     phi_deg = 120.0 * np.floor(i / 2.0) + s * beta_p
     phi = np.deg2rad(phi_deg)
 
-    # z = -h_p: the anchors are coplanar, a distance h_p below {P}'s origin
-    # (h_p = 0 puts the origin in the anchor plane).  Both are design
+    # z = -c_p: the anchors are coplanar, a distance c_p below {P}'s origin
+    # (c_p = 0 puts the origin in the anchor plane).  Both are design
     # decisions - see make_geometry's Notes.
-    p = np.vstack((r_p * np.cos(phi), r_p * np.sin(phi), np.full(6, -h_p)))
+    p = np.vstack((r_p * np.cos(phi), r_p * np.sin(phi), np.full(6, -c_p)))
 
     assert p.shape == (3, 6)
     assert np.allclose(np.hypot(p[0], p[1]), r_p), "p columns are off the ring"
-    assert np.allclose(p[2], -h_p), "p columns are off the anchor plane"
+    assert np.allclose(p[2], -c_p), "p columns are off the anchor plane"
  
     if abs(beta_p - 30.0) < 1e-9:
         ang = np.sort(np.mod(phi_deg, 360.0))
@@ -298,7 +298,7 @@ def platform_ring(r_p: float, beta_p: float, h_p: float = 0.0):
 # --------------------------------------------------------------------------- #
 def make_geometry(r_b: float, beta: float, delta: float,
                   r_p: float, beta_p: float,
-                  a: float, d: float, h_p: float = 0.0) -> "Geometry":
+                  a: float, d: float, c_p: float = 0.0) -> "Geometry":
     """Compose a base ring and a platform ring with given ``a`` and ``d``.
 
     Plumbing only: calls :func:`base_ring` and :func:`platform_ring`, passes
@@ -313,7 +313,7 @@ def make_geometry(r_b: float, beta: float, delta: float,
         Passed to :func:`platform_ring`, which validates them.
     a, d : float
         Servo-arm and push-rod lengths, mm.  **Required.**  See Notes.
-    h_p : float, default 0.0
+    c_p : float, default 0.0
         Anchor-plane drop below ``{P}``'s origin, mm; passed to
         :func:`platform_ring`.  ``0.0`` keeps the origin in the anchor plane.
  
@@ -331,15 +331,15 @@ def make_geometry(r_b: float, beta: float, delta: float,
     -----
     **Two assumptions are baked in and neither is derived.**
  
-    First, ``p`` has ``z = -h_p`` throughout, which bundles two decisions: the
+    First, ``p`` has ``z = -c_p`` throughout, which bundles two decisions: the
     six anchors are coplanar (a flat plate rather than a dished or stepped
-    one), and ``{P}``'s origin sits a fixed ``h_p`` above that plane (``h_p``
+    one), and ``{P}``'s origin sits a fixed ``c_p`` above that plane (``c_p``
     is a parameter now, but a single scalar - the plate is still flat).  The
     offset is the one with teeth, because the commanded ``T`` is the position
     of ``{P}``'s origin.  If the ball rolls on a surface above the anchor
     plane, ``T`` is not the position of the rolling surface and every
     commanded height is offset by the remaining gap.  Anchor plane, plate top
-    and ball centre are three different origins and ``h_p`` only reconciles the
+    and ball centre are three different origins and ``c_p`` only reconciles the
     first with ``{P}``.
  
     Second, nothing enforces ``d > a``.  An earlier version raised on it with
@@ -391,11 +391,11 @@ def make_geometry(r_b: float, beta: float, delta: float,
     ``c = r_p / r_b``, so at ``R = I``, ``T = (0, 0, z_home)`` the proxy line
     through ``b_i`` is::
 
-        X_i(t) = b_i [1 + t(c - 1)] + t (0, 0, z_home - h_p)
+        X_i(t) = b_i [1 + t(c - 1)] + t (0, 0, z_home - c_p)
 
     whose ``b_i`` coefficient vanishes at ``t = 1 / (1 - c)``, leaving::
 
-        X = (0, 0, -(z_home - h_p) / (c - 1))        independent of i
+        X = (0, 0, -(z_home - c_p) / (c - 1))        independent of i
 
     All six proxy lines pass through that one point - verified concurrent to
     5e-16 - and six concurrent lines span only three dimensions.  The rank
@@ -421,7 +421,7 @@ def make_geometry(r_b: float, beta: float, delta: float,
     decision in any case.
     """
     b, n, u = base_ring(r_b, beta, delta)
-    p = platform_ring(r_p, beta_p, h_p)
+    p = platform_ring(r_p, beta_p, c_p)
     return Geometry(p=p, b=b, n=n, u=u, a=a, d=d)
 
 # --------------------------------------------------------------------------- #

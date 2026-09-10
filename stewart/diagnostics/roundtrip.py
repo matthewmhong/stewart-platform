@@ -72,27 +72,27 @@ from .envelope import AZIMUTH_WINDOW_DEG, TILT_LIMIT_DEG, tilt_R
 #      0.17, and the widest bracket found on zhome_bracket.py's grid;
 #   F  r_p > r_b, a platform ring wider than the base, with the narrowest
 #      non-empty bracket found (10 mm).
-# Both come off zhome_bracket.py's candidate grid at h_p tweaked to keep the
+# Both come off zhome_bracket.py's candidate grid at c_p tweaked to keep the
 # set spread; a diagnostic sweep at 5-degree delta resolution found them.
 FIXTURES = [
     ("A  beta=20 beta_p=40 delta=40",
      dict(r_b=100.0, beta=20.0, delta=40.0, r_p=85.0, beta_p=40.0,
-          a=20.0, d=120.0, h_p=10.0)),
+          a=20.0, d=120.0, c_p=10.0)),
     ("B  beta=30 beta_p=30 delta=0",
      dict(r_b=100.0, beta=30.0, delta=0.0, r_p=100.0, beta_p=30.0,
-          a=15.0, d=130.0, h_p=5.0)),
+          a=15.0, d=130.0, c_p=5.0)),
     ("C  beta=10 beta_p=55 delta=137",
      dict(r_b=100.0, beta=10.0, delta=137.0, r_p=60.0, beta_p=55.0,
-          a=35.0, d=110.0, h_p=20.0)),
+          a=35.0, d=110.0, c_p=20.0)),
     ("D  beta=48 beta_p=8 delta=90",
      dict(r_b=100.0, beta=48.0, delta=90.0, r_p=120.0, beta_p=8.0,
-          a=10.0, d=155.0, h_p=0.0)),
+          a=10.0, d=155.0, c_p=0.0)),
     ("E  beta=50 beta_p=25 delta=30",
      dict(r_b=100.0, beta=50.0, delta=30.0, r_p=60.0, beta_p=25.0,
-          a=35.0, d=80.0, h_p=10.0)),
+          a=35.0, d=80.0, c_p=10.0)),
     ("F  beta=45 beta_p=15 delta=20",
      dict(r_b=100.0, beta=45.0, delta=20.0, r_p=110.0, beta_p=15.0,
-          a=25.0, d=140.0, h_p=5.0)),
+          a=25.0, d=140.0, c_p=5.0)),
 ]
 
 # --------------------------------------------------------------------------- #

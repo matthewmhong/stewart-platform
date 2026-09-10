@@ -38,21 +38,21 @@ from .envelope import TILT_LIMIT_DEG, tilt_R
 # fixtures - geometries, not decisions
 # --------------------------------------------------------------------------- #
 # Each entry is (label, kwargs for make_geometry, z_home).  Spread over beta,
-# beta_p, delta, r_p/r_b, a/r_b, d/r_b and h_p so a symmetry that held only at
+# beta_p, delta, r_p/r_b, a/r_b, d/r_b and c_p so a symmetry that held only at
 # a symmetric point would show up.  r_b = 1 throughout; everything normalised.
 FIXTURES = [
     ("A  beta=20 beta_p=40 delta=40",
      dict(r_b=1.0, beta=20.0, delta=40.0, r_p=0.85, beta_p=40.0,
-          a=0.20, d=1.20, h_p=0.10), 0.95),
+          a=0.20, d=1.20, c_p=0.10), 0.95),
     ("B  beta=30 beta_p=30 delta=0   (beta_p == beta, delta at the endpoint)",
      dict(r_b=1.0, beta=30.0, delta=0.0, r_p=1.00, beta_p=30.0,
-          a=0.15, d=1.30, h_p=0.05), 1.05),
+          a=0.15, d=1.30, c_p=0.05), 1.05),
     ("C  beta=10 beta_p=55 delta=137 (both rings far from regular)",
      dict(r_b=1.0, beta=10.0, delta=137.0, r_p=0.60, beta_p=55.0,
-          a=0.35, d=1.10, h_p=0.20), 0.90),
+          a=0.35, d=1.10, c_p=0.20), 0.90),
     ("D  beta=48 beta_p=8  delta=90  (delta on a mirror-fixed value)",
      dict(r_b=1.0, beta=48.0, delta=90.0, r_p=1.20, beta_p=8.0,
-          a=0.10, d=1.55, h_p=0.00), 1.00),
+          a=0.10, d=1.55, c_p=0.00), 1.00),
 ]
 
 #: Azimuth resolution for the sweep.  0.25 deg over the full circle = 1440

@@ -351,7 +351,7 @@ def part_shortlist_members(res, R29, az29):
     from . import zhome_bracket as ZB
     az_fine, mg_fine = ZB.fine_poses()
     dr = np.deg2rad(S.DELTA_GRID)
-    floor = ZB.z_lower_closed_form(S.R_P_RB, S.H_P)
+    floor = ZB.z_lower_closed_form(S.R_P_RB, S.C_P)
 
     groups, tie = S.tie_groups(res["scored"])
     if not tie:
