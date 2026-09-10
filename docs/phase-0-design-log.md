@@ -1571,6 +1571,130 @@ Source: `docs/hardware-pull.md`; `stewart/diagnostics/sweep_ranges.py`,
   proxy; the quantity the range actually needs is not published.
   `TODO(him): reasoning`
 
+## 9-10 September
+
+### The sweep harness runs
+
+Source: `stewart/diagnostics/sweep.py`. `python -m stewart.diagnostics.sweep`
+to run; `--report [path]` regenerates the report from the saved run without
+re-running. **`notation.md` is not touched by this entry.**
+
+**368,000 candidates screened, 327,604 feasible (89%), all 327,604 scored.**
+Screen 1,547 s, tune + score 4,295 s. Axes: `beta` 23 points on the open
+`(0, 60)` at 2.5 deg, `beta_p` 25 over the union of both housing-OD bounds at
+2.5 deg plus all four bound endpoints, `a` the 32 published holes, `d` 20
+points at 0.1 to the asserted 2.0 cap, `z_home` a per-candidate bracket.
+`r_p/r_b = 80/90` fixed. Tilt 6.5580 deg, printed from `envelope.tilt_for`.
+`TODO(him): reasoning`
+
+**THE RESULT IS NOT EMPTY, and the tie set is the same at both housing bounds:**
+one group, six candidates — `a = 60.40 mm`, `d = 126 mm`, `|e| = 47.5 deg`,
+`z_home = 95.62 mm`, `margin(p) = 0.874876` at the leader against a tie floor
+of `0.874726`. Members are three mirror pairs: `(5, 52.5)`, `(7.5, 55)`,
+`(2.5, 50)` and their mirrors. Every member clears the whole published
+9.0–13.0 mm housing range (`sep` 13.94–27.78 mm). `TODO(him): decision`
+
+#### `a`'s optimum is NOT interior on this grid — the 2026-09-09 finding does not survive
+
+The tie set sits at **`a = 60.40 mm`, the hardware ceiling**, not at the
+`47.63 mm` recorded in `notation.md` sec.12 as "the first axis to come out
+clean end to end". That result was measured with `d` at three values
+`[0.8, 1.2, 1.6]` and `beta`/`beta_p` at 10/15 deg; with `d` open to 2.0 at
+0.1 and both angles at 2.5 deg, the optimum moves to the ceiling.
+**`notation.md` sec.12's `a` bullet is stale and is NOT edited here.**
+`TODO(him): decision`
+
+- The pairwise line count still turns over, at `45.40` vs `47.63 mm`, so the
+  *typical* candidate still prefers a mid-range hole while the *best* one sits
+  at the ceiling. Both are printed and neither is chosen — a majority on lines
+  is a lean, not a wall. `TODO(him): reasoning`
+- `d = 126 mm` is interior; the asserted `2.0` cap is not touched by the
+  optimum, though the line count leans to larger `d` throughout (73%).
+  `TODO(him): reasoning`
+
+#### `(a, d, |e|)` is not a complete invariant, and the leading group is not a tie
+
+The shortlist is grouped by the key `score_discriminators` part (8) reports,
+**used unchanged**. Measured on the field it produced, the key **over-groups**:
+
+- **The mirror half is sound.** `(beta, beta_p) -> (60 - beta, 60 - beta_p)`
+  sends `e -> -e`; 161,958 of 163,511 mirror pairs agree to `1e-12`, median
+  spread `0`, p95 `9.4e-16`. `TODO(him): reasoning`
+- **`|e|` alone is not.** Worst within-group spread `3.74e-2`, and **10,781 of
+  37,692 multi-member groups (28.6%) spread wider than `TIE_TOL = 1.5e-4`**.
+  The leading group's own spread is `2.2e-4`, above `TIE_TOL`, so **it is an
+  upper bound on the tie rather than a tie**; its members are listed
+  individually with their own margins for that reason. The absolute `beta`
+  enters the score at `dxy = p`, not only the difference. Part (8) established
+  the key at 10/15 deg sampling; 2.5 deg is the first grid fine enough to
+  separate same-`|e|` non-mirrors. **NOT acted on** — changing the key would
+  change the deliverable on a measurement taken in the same run.
+  `TODO(him): decision`
+
+#### Fifth instance of a discrete grid reporting what the continuum does not — the `delta` grid
+
+The 1,553 mirror pairs that are *not* exact are a **`DELTA_GRID` quantisation
+artefact, not geometry**. The mirror of `delta` is `180 - delta`, which a
+1-degree grid can only represent when the maximin optimum lands on a grid
+point; where it falls between two, the mirrors tune to deltas summing to
+**181**, not 180. Re-evaluated at the exact mirror `delta` the worst pairs
+collapse from `1.617e-4`, `7.385e-5`, `7.282e-5` to `1.7e-16`, `1.5e-16`, `0`.
+`TODO(him): reasoning`
+
+- The four already on record (`notation.md` sec.12) are the `N_i > 0` bound on
+  the pose grid, the tilt-azimuth grid, `box_boundary`'s stepping rule, and the
+  zero-width `z_home` brackets. **None of them is the `delta` grid.**
+  `TODO(him): reasoning`
+
+#### The tie set is pressed against the one axis that cannot be bounded
+
+Every tie member sits at `beta <= 7.5` or `>= 52.5 deg`. Required servo
+mounting-arc spacing at `r_b = 90`: **7.85 to 23.56 mm**. Published servo body
+width is `11.4`–`13.0 mm` (pull sec.5), so the `beta = 2.5 / 57.5` member
+**does not admit any servo body on the pull** — and body width is only a proxy
+for the installed-arc clearance, which is among the 39 unpublished cells. The
+optimiser walks into the wall that cannot be set. **Reported post-hoc; it
+filtered nothing, exactly as specified.** `TODO(him): decision`
+
+#### What the four feasibility tests actually removed
+
+`R` 25,499 / `X` 2,819 / `W` 12,078 of 368,000 at the 9.0 mm bound.
+
+- **`X = 2,819`** answers the question `notation.md` sec.12 left open: the
+  crossing category *does* reappear at 6.558 deg on a grid this wide. The
+  2026-09-05 correction rested on **one** such candidate at one provisional
+  tilt. Crossing gaps run `1.7e-4` to `7.7e-2 r_b`. `TODO(him): reasoning`
+- **`W = 12,078`**, and **all 12,078 have width exactly `0.000 r_b`**. The
+  asserted 2 mm floor removed precisely the single-grid-point artefacts it was
+  asserted for and **nothing else** — the "floor, not a discriminating filter"
+  reading is confirmed rather than assumed. `TODO(him): reasoning`
+- **89% feasible means the screen is barely discriminating and the ranking is
+  doing nearly all the work.** This is **not** the coarse grid's 67% improved
+  upon: that grid swept `r_p/r_b` to 1.1 and most of its empties were there.
+  The two rates are not comparable and are not a trend. `TODO(him): reasoning`
+
+#### Compute ledger, recounted
+
+The old figure (~2.7M full, ~4.9e8 cheap, ~3.9 GB) was six axes at 5 points
+with `r_p/r_b` in and `a` continuous. Recounted: 368,000 candidates,
+`8.1e10` delta-free screen evaluations, `1.46e13` if every `z` row were
+scanned. **The exact delta-free bracket leaves 6.6 of 120 `z` rows undecided
+(5.5%)**, cutting the scan to `8.0e11`; it is gated against
+`zhome_bracket.reach_feasible_any_delta` before the sweep runs — 24 sampled
+candidates, 0 disagreements. Holding the cheap array at once would be
+**92.2 GB** — *larger* than the old 3.9 GB, not smaller — so the sweep chunks
+over candidates at a 12.3 MB peak. `TODO(him): reasoning`
+
+- **One pre-run projection was wrong and is corrected on the record:**
+  tune + score was projected at 3.8 ms/survivor and ran at **13.1 ms**. The
+  calibration sampled random axis draws, where most candidates have no
+  admissible `delta` and never pay for `probe_margin`; at 89% feasibility
+  nearly every survivor pays it. The *counts* in the ledger were right.
+  `cond` at every `delta` step measures **70 us/step** here against the
+  61 us/step the projection was made at, so **no banding heuristic** is built.
+  `TODO(him): reasoning`
+
+
 ---
 
 ## Where Phase 0 stands
