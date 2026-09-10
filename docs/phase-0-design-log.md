@@ -1782,6 +1782,59 @@ Chunked peak 12.3 MB. Bracket gate: 24 candidates, 0 disagreements.
 `TODO(him): reasoning`
 
 
+### Does any kinematic quantity bound `a` from above?  Measured: no
+
+Source: `stewart/diagnostics/tau_transmission.py`, over the 2fee8b0 cache
+(`sweep-run.npz`, 327,780 feasible candidates, all scored). `TODO(him):
+reasoning`
+
+**Question posed:** the 2fee8b0 sweep returns `a = 60.40 mm`, the ProModeler
+ceiling, with `beta` bounded — the catalogue sets `a`, not the analysis, the
+third axis (after `r_p`, `beta`) where the recorded objective incompleteness
+surfaces. `tau_i = |rod_i . tangent_i| / d` is the natural transmission-
+degradation candidate; `score_discriminators` part (b) measured `rho = +0.835`
+against `margin` but over `A_RB <= 0.35`, and the sweep now sits at `0.6711`.
+
+**Gate:** `tau_min_at`, a from-scratch vectorized closed form (no scan, no
+SVD), verified against `score_discriminators.measure` on 200 REAL feasible
+candidates drawn from the cache — 0 disagreements. A first pass gated on 30
+random axis draws found only 4 reachable and was judged too thin to cite;
+replaced before the number below was taken as final.
+
+**1. `tau_min` over the whole feasible set:** min `0.218`, median `0.869`,
+max `0.992`. Per `a`: median `RISES` from `0.60` at `9.00 mm` to a peak
+`0.912` around `40 mm`, then eases to `0.899` at the `60.40 mm` ceiling — a
+1.3% give-back from the peak, not a collapse. `TODO(him): reasoning`
+
+**2. `rho(tau_min, margin(dxy=p))` overall `+0.626`. At the top of the range
+(`a >= 45 mm`) it runs `+0.485` to `+0.526` — POSITIVE, not reversed.** Note:
+this correlates against `margin(dxy=p)` at `delta_con` (the CONSTRAINED tune),
+not the original measurement's `margin(dxy=0)` at the unconstrained delta —
+stated so the two numbers are never read as the same quantity. `TODO(him):
+reasoning`
+
+**3. Pinned at the leader's own `(beta, beta_p, d, z_home) = (5, 52.5, 126 mm,
+95.62 mm)`, varying only `a` with `delta` re-tuned:** 12 of 32 rungs are
+UNREACHABLE at any `delta` (the bottom of the ladder, below the reach ceiling
+at this fixed `z_home`). Over the 20 reachable rungs, `tau_min` is **MONOTONE
+RISING**, `0.189` at `23.00 mm` to `0.815` at `60.40 mm`, `+0.0168` per mm —
+the OPPOSITE of the hypothesis under test. `margin(0)` rises alongside it.
+`TODO(him): decision`
+
+**4. The two shortlist members, `a` swept down with `z_home` and `delta`
+RE-DERIVED at each rung (screen_one + tune_and_score unchanged):** `tau_min`
+is NOT monotone — it peaks `0.914` near `32.54 mm` and eases to `0.815` at the
+actual `60.40 mm` horn, never dropping below `0.526` anywhere on either
+member's path. `rho` along the path `+0.354`. `TODO(him): reasoning`
+
+**Plainly: `tau_min` does not oppose `margin` anywhere the sweep actually
+occupies, and it does not bound `a` from above.** It tracks `margin` loosely
+positive throughout, including at the ceiling, and never approaches the zero
+that would signal lost transmission. The catalogue — not any measured
+kinematic quantity — is what is setting `a = 60.40 mm`. No weight, score, or
+bound on `a` is proposed; the objective stays open; `notation.md` untouched.
+
+
 ---
 
 ## Where Phase 0 stands
