@@ -182,6 +182,25 @@ TIE_TOL = 1.5e-4
 #: and labelled a PROXY so it is not mistaken for the bound.
 SERVO_BODY_WIDTH_MM = (11.4, 13.0)
 
+#: Measured tune + score cost per survivor, ms, from the e12235c run.
+#: CARRIED, not re-derived: :func:`calibrate` samples random axis draws where
+#: most candidates never reach ``probe_margin``, and that is exactly why its
+#: projection was wrong last run.  Both numbers are printed so the correction
+#: stays visible.
+TUNE_MS_MEASURED = 13.1
+TUNE_MS_PROJECTED = 3.8
+
+#: Feasible fraction measured by e12235c, used for the wall-time projection.
+MEAS_FEASIBLE_FRAC = 327604 / 368000
+
+#: The e12235c shortlist, for the "how did it move?" comparison.  That run
+#: swept ``beta`` UNBOUNDED over the open ``(0, 60)``; everything else here is
+#: unchanged from it.  Transcribed from the committed run, and used only for a
+#: reported difference - nothing below is computed from it.
+E12235C = dict(leader=0.874876, a_mm=60.40, d_mm=126.0, e_deg=47.5,
+               z_mm=95.62, betas=(2.5, 5.0, 7.5, 52.5, 55.0, 57.5),
+               arc_min_mm=7.85, n_feasible=327604, n_screened=368000)
+
 #: Where :func:`save` writes the run.  Regenerating a report costs neither
 #: the 25-minute screen nor the 70-minute tune.
 SAVE_PATH = "sweep-run.npz"
@@ -201,10 +220,13 @@ MEMBERS_PER_GROUP = 6
 # --------------------------------------------------------------------------- #
 # the five axes
 # --------------------------------------------------------------------------- #
-#: ``beta`` sampling step, degrees.  CHOSEN, not derived - there is no bound on
-#: this axis to derive one from.  2.5 deg is the existing 10-deg sampling of
-#: :data:`.zhome_bracket.BETA` refined four times, on the axis the hardware
-#: pull could not close.
+#: Largest published sub-micro servo CASE SIZE, mm - ``docs/hardware-pull.md``
+#: sec.5, MFR, Hitec HS-5085MG and HS-5087MH.  The BARE BODY, and that is the
+#: whole of what is published.
+SERVO_CASE_MM = 13.0
+
+#: ``beta`` sampling step, degrees.  CHOSEN, not derived.  2.5 deg is the
+#: existing 10-deg sampling of :data:`.zhome_bracket.BETA` refined four times.
 BETA_STEP_DEG = 2.5
 
 #: ``beta_p`` sampling step, degrees.  Matched to :data:`BETA_STEP_DEG` on
@@ -219,16 +241,71 @@ D_CAP_RB = 2.0
 D_STEP_RB = 0.1
 
 
-def beta_axis():
-    """``beta`` over the OPEN interval ``(0, 60)`` degrees.
+def beta_bounds_deg(case_mm=SERVO_CASE_MM, r_b_mm=None):
+    """``(lower, upper)`` bound on ``beta`` in degrees from a servo case width.
 
-    Open at both ends because :func:`.geometry.base_ring` rejects 0 and 60 -
-    the pair collapses onto one azimuth at 0 and onto the neighbouring pair at
-    60 - and because no bound narrower than that can be set: the installed-arc
-    clearance is unpublished for every servo on the pull.
+    **Sweeping ``beta`` unbounded was wrong and is reversed (2026-09-09).**  The
+    e12235c shortlist ran to the edge of the axis precisely because nothing in
+    the score knows two servo bodies would overlap: ``margin`` measures distance
+    from unreachability, small ``beta`` shortens ``|L_i|``, and the objective's
+    recorded incompleteness surfaces on whatever axis is left unbounded.
+
+    ``theta_i = 120 floor(i/2) + s_i beta``, so the two angular gaps around the
+    base ring are ``2 beta`` within a pair and ``120 - 2 beta`` between pairs.
+    Requiring the ARC at ``r_b`` to clear the case width on both gives a bound
+    symmetric about 30 degrees::
+
+        r_b * (2 beta)       >= case   ->  beta >= degrees(case / (2 r_b))
+        r_b * (120 - 2 beta) >= case   ->  beta <= 60 - that
+
+    Derived from the clearance, never hardcoded as degrees.
+
+    WHY THIS IS PERMISSIBLE WITHOUT THE MISSING FIGURE.  ``case`` is the BARE
+    BODY.  The quantity sec.12 actually asks for is the INSTALLED footprint -
+    mounting-flange span, screw-hole pitch, inter-body clearance including
+    wiring - and that is unpublished for every servo checked, among the pull's
+    39 unpublished cells.  Flanges and wiring only ADD to the footprint, so a
+    bound at case width is strictly **PERMISSIVE**: it cannot exclude a
+    candidate that would have been buildable.  When the installed figure
+    exists this bound TIGHTENS, never loosens, so nothing admitted here is
+    admitted on the strength of the missing number.
     """
+    r_b_mm = R_B_MM if r_b_mm is None else float(r_b_mm)
+    half = float(np.degrees(case_mm / (2.0 * r_b_mm)))
+    if not 0.0 < half < 30.0:
+        raise ValueError(f"case {case_mm} mm leaves no beta at r_b {r_b_mm}")
+    return half, 60.0 - half
+
+
+def beta_axis():
+    """``beta`` over the interval :func:`beta_bounds_deg` admits.
+
+    Sampled uniformly at :data:`BETA_STEP_DEG` inside the bound, plus BOTH
+    bound endpoints as sampled values - a range's ends are where a bound can
+    bite, and here they are the two collision limits themselves.
+    """
+    lo, hi = beta_bounds_deg()
     n = int(round(60.0 / BETA_STEP_DEG))
-    return [round(BETA_STEP_DEG * k, 9) for k in range(1, n)]
+    grid = [round(BETA_STEP_DEG * k, 9) for k in range(1, n)]
+    ends = [round(lo, 9), round(hi, 9)]
+    return sorted({v for v in grid + ends if lo - 1e-9 <= v <= hi + 1e-9})
+
+
+def beta_bound_end(beta_deg, tol=1e-6):
+    """Which collision limit ``beta`` sits against, and its arc slack in mm.
+
+    ``PAIR`` is the ``beta -> 0`` end (the two shafts of one pair close on each
+    other); ``ADJACENT`` is the ``beta -> 60`` end (the pair closes on its
+    neighbour).  ``interior`` is neither, within ``tol`` degrees.
+    """
+    lo, hi = beta_bounds_deg()
+    if abs(beta_deg - lo) <= tol:
+        end = "PAIR (beta -> 0)"
+    elif abs(beta_deg - hi) <= tol:
+        end = "ADJACENT (beta -> 60)"
+    else:
+        end = "interior"
+    return end, arc_spacing_mm(beta_deg) - SERVO_CASE_MM
 
 
 def beta_p_axis():
@@ -412,8 +489,9 @@ def report_ledger(lg, tilt, checks):
     print("      multiplies nothing.")
     print()
     print(f"    {'axis':<14} {'points':>7}  how it is set")
-    print(f"    {'beta':<14} {lg['n_beta']:>7}  (0, 60) deg open, step "
-          f"{BETA_STEP_DEG} - UNBOUNDED, no collision bound available")
+    blo, bhi = beta_bounds_deg()
+    print(f"    {'beta':<14} {lg['n_beta']:>7}  [{blo:.4f}, {bhi:.4f}] deg, step "
+          f"{BETA_STEP_DEG} + both bound ends - BOUNDED now")
     print(f"    {'beta_p':<14} {lg['n_bp']:>7}  union of both OD bounds, step "
           f"{BETA_P_STEP_DEG} + all 4 bound endpoints")
     print(f"    {'a/r_b':<14} {lg['n_a']:>7}  DISCRETE - published ProModeler "
@@ -460,6 +538,11 @@ def report_ledger(lg, tilt, checks):
     print("  MEMORY, and this is what the chunking requirement rests on.")
     print(f"    if the whole cheap array were held at once: "
           f"{lg['held_at_once_bytes']/1e9:.1f} GB")
+    print(f"      LARGER than the superseded 3.9 GB estimate, not smaller - "
+          f"the shape")
+    print(f"      change added memory.  Carried forward from e12235c "
+          f"explicitly so")
+    print(f"      the old figure is not read as still standing.")
     print(f"    peak held per candidate by the screen        : "
           f"{lg['peak_cand_bytes']/1e6:.1f} MB")
     print(f"    -> the sweep CHUNKS over candidates, {CHUNK:,} per chunk, and")
@@ -469,7 +552,22 @@ def report_ledger(lg, tilt, checks):
     print()
     print("  MEASURED UNIT COSTS on this machine (best of 3, before the run):")
     print(f"    screen  {1e3*checks['t_screen']:>8.2f} ms / candidate")
-    print(f"    tune+score {1e3*checks['t_tune']:>5.2f} ms / survivor")
+    print(f"    tune+score {1e3*checks['t_tune']:>5.2f} ms / survivor "
+          f"(calibration draw)")
+    print(f"    tune+score {TUNE_MS_MEASURED:>5.1f} ms / survivor "
+          f"<- CARRIED FROM e12235c, and this is the one to use.")
+    print(f"      The {1e3*checks['t_tune']:.1f} ms figure above is the same "
+          f"projection that was")
+    print(f"      wrong last run: it calibrates on RANDOM AXIS DRAWS, where "
+          f"most")
+    print(f"      candidates have no admissible delta and never reach")
+    print(f"      probe_margin.  At the ~89% feasibility this grid actually")
+    print(f"      shows, nearly every survivor pays the full scan AND the")
+    print(f"      score.  e12235c projected {TUNE_MS_PROJECTED} ms and measured "
+          f"{TUNE_MS_MEASURED} ms.")
+    print(f"      Projection at the MEASURED rate, if {MEAS_FEASIBLE_FRAC:.0%} "
+          f"survive: "
+          f"{lg['candidates']*MEAS_FEASIBLE_FRAC*TUNE_MS_MEASURED/1e3/60:.0f} min.")
     print(f"    cond at every delta step: {1e6*checks['t_tune_step']:.1f} us/step "
           f"here; the 61 us/step behind the 175 s projection was measured")
     print(f"    elsewhere.  Either way a banding heuristic is NOT built: "
@@ -599,18 +697,56 @@ def subset(rows, feasible, scored, od_mm):
                 scored=[r for r in scored if keep(r)])
 
 
-def group_key(rec):
-    """``(a, d, |beta_p - beta|)`` - part (8)'s invariant, ``r_p`` dropped.
+def mirror_key(rec):
+    """Canonical label for the pair ``(beta, beta_p)`` and its MIRROR.
 
-    Two candidates sharing this key are ONE result reached by two
-    ``(beta, beta_p)`` pairs - a rotation of the machine about ``z``, a sign
-    flip of ``e = beta_p - beta``, or both.  Groups are ranked; members inside
-    a group are not.
+    The mirror is ``(beta, beta_p) -> (60 - beta, 60 - beta_p)``, which sends
+    ``e = beta_p - beta`` to ``-e``.  Two candidates related by it are the same
+    machine seen from the other side, so any score difference between them is
+    numerical noise and nothing else.  Used only to MEASURE the group key in
+    :func:`part_mirror` and :func:`group_key`.
+    """
+    p1 = (round(rec["beta"], 9), round(rec["beta_p"], 9))
+    p2 = (round(60.0 - rec["beta"], 9), round(60.0 - rec["beta_p"], 9))
+    return min(p1, p2)
+
+
+def group_key_e(rec):
+    """``(a, d, |beta_p - beta|)`` - part (8)'s key.  **SUPERSEDED, reported.**
+
+    Kept so the correction is VISIBLE rather than replaced.  e12235c measured
+    10,781 of 37,692 multi-member groups under this key spreading wider than
+    :data:`TIE_TOL`, the leader's own spread ``2.2e-4`` against a ``1.5e-4``
+    tolerance: ``|e|`` alone does not determine the score, because the absolute
+    ``beta`` enters it too.  Part (8) established the key with ``beta`` at
+    10-deg and ``beta_p`` at 15-deg sampling; **2.5 deg is the first grid fine
+    enough to separate same-``|e|`` candidates that are not mirrors.**
+
+    ``notation.md`` sec.8's statement of this key is STALE.  It is flagged
+    here and **not edited** - that file is not touched by this module.
     """
     return (rec["a"], rec["d"], round(abs(rec["beta_p"] - rec["beta"]), 9))
 
 
-def tie_groups(scored):
+def group_key(rec):
+    """``(a, d, beta, beta_p)`` reduced up to the EXACT MIRROR.  In force.
+
+    The mirror ``(beta, beta_p) -> (60 - beta, 60 - beta_p)`` is a rigid
+    ROTATION of the linkage by 60 degrees about ``z`` with the leg relabelling
+    ``[1, 2, 3, 4, 5, 0]``: the anchors ``b_i`` and ``p_i`` coincide to
+    ``6e-16``.  That is the whole of the reduction, and it is exact where the
+    score is concerned - ``margin`` is built from ``|w_i|`` and ``C_i``, both
+    branch-independent, and mirrors to ``1e-15``.
+
+    It is NOT a claim that the two are the same MACHINE TO BUILD.  Under the
+    rotation ``n_i -> -n_i``, so ``u_i = z x n_i`` flips and the fixed ``-``
+    branch selects the OPPOSITE arm configuration; see :func:`part_mirror`.
+    Members of one group are therefore listed individually.
+    """
+    return (rec["a"], rec["d"]) + mirror_key(rec)
+
+
+def tie_groups(scored, key=None):
     """``(groups, tie_set)``: groups ranked by best member, then the tie set.
 
     The tie set is every group within :data:`TIE_TOL` of the leader.  It is the
@@ -621,9 +757,10 @@ def tie_groups(scored):
     live = [r for r in scored if np.isfinite(r["score_p"])]
     if not live:
         return [], []
+    key = group_key if key is None else key
     by = {}
     for r in live:
-        by.setdefault(group_key(r), []).append(r)
+        by.setdefault(key(r), []).append(r)
     groups = sorted(by.items(), key=lambda kv: -max(m["score_p"] for m in kv[1]))
     best = max(m["score_p"] for m in groups[0][1])
     tie = [g for g in groups if max(m["score_p"] for m in g[1]) >= best - TIE_TOL]
@@ -846,8 +983,11 @@ def part_counts(res, subs):
     print("  The sweep ran ONCE over the union of the two OD-bounded beta_p")
     print("  intervals and is partitioned here.  The two runs are NOT merged")
     print("  and the two bounds are NOT averaged; no joint is chosen between")
-    print("  them.  beta is not filtered at either end - the servo clearance")
-    print("  that would bound it is unpublished.")
+    lo_b, hi_b = beta_bounds_deg()
+    print(f"  them.  beta IS filtered now, to [{lo_b:.4f}, {hi_b:.4f}] deg by "
+          f"the {SERVO_CASE_MM} mm")
+    print("  published case size - see part (6).  That bound is PERMISSIVE and")
+    print("  chooses no servo.")
     print()
     print(f"    {'housing OD':>11} {'beta_p range [deg]':>21} {'screened':>9} "
           f"{'feasible':>9} {'frac':>7} {'scored':>8} {'frac':>7}")
@@ -1017,12 +1157,21 @@ def part_shortlist(subs):
     print("=" * 78)
     print("(4) THE SHORTLIST - A TIE SET, NOT A WINNER")
     print("=" * 78)
-    print(f"  Grouped by (a, d, |beta_p - beta|), the invariant of")
-    print(f"  score_discriminators part (8) with r_p dropped from the key, r_p")
-    print(f"  no longer varying.  Two candidates sharing the key are ONE result")
-    print(f"  reached by two (beta, beta_p) pairs - a rotation about z, a sign")
-    print(f"  flip of e, or both - so GROUPS are ranked and members inside a")
-    print(f"  group are not.")
+    print("  Grouped by (a, d, beta, beta_p) reduced up to the EXACT MIRROR")
+    print("  (beta, beta_p) -> (60 - beta, 60 - beta_p), which is a rigid 60-deg")
+    print("  rotation of the linkage.  GROUPS are ranked; the two members of a")
+    print("  group are not ranked against each other.")
+    print()
+    print("  THIS REPLACES (a, d, |e|), part (8)'s key, WHICH IS NOT COMPLETE.")
+    print("  e12235c measured 10,781 of 37,692 multi-member groups under it")
+    print("  spreading wider than TIE_TOL, the leader's own spread 2.2e-4: |e|")
+    print("  alone does not determine the score, because the ABSOLUTE beta")
+    print("  enters it too.  Part (8) established the key with beta at 10-deg")
+    print("  and beta_p at 15-deg sampling; 2.5 deg is the FIRST GRID FINE")
+    print("  ENOUGH TO SEPARATE IT.  The old key is reported below beside the")
+    print("  new one so the correction is visible rather than replaced.")
+    print("  notation.md sec.8's statement of that key is STALE - flagged here,")
+    print("  and NOT edited: this module does not touch that file.")
     print()
     print(f"  TIE_TOL = {TIE_TOL:.1e}, the ranking resolution MEASURED at "
           f"dxy = p in")
@@ -1033,8 +1182,34 @@ def part_shortlist(subs):
     print()
     for s in subs:
         groups, tie = tie_groups(s["scored"])
+        ge, tie_e = tie_groups(s["scored"], key=group_key_e)
         print(f"  ---- housing OD {s['od']:.1f} mm, beta_p in "
               f"[{s['lo']:.4f}, {s['hi']:.4f}] deg ----")
+        if groups:
+            be = max(m["score_p"] for m in ge[0][1])
+            bn = max(m["score_p"] for m in groups[0][1])
+            print()
+            print(f"      THE TIE SET UNDER BOTH KEYS, SIDE BY SIDE")
+            print(f"      {'key':<34} {'groups':>9} {'tie groups':>11} "
+                  f"{'tie cands':>10} {'leader':>10}")
+            print(f"      {'(a, d, |e|)  SUPERSEDED':<34} {len(ge):>9,} "
+                  f"{len(tie_e):>11} {sum(len(g[1]) for g in tie_e):>10} "
+                  f"{be:>10.6f}")
+            print(f"      {'(a, d, beta, beta_p)/mirror  IN FORCE':<34} "
+                  f"{len(groups):>9,} {len(tie):>11} "
+                  f"{sum(len(g[1]) for g in tie):>10} {bn:>10.6f}")
+            wse = max((max(m["score_p"] for m in g[1])
+                       - min(m["score_p"] for m in g[1]) for g in ge), default=0.0)
+            wsn = max((max(m["score_p"] for m in g[1])
+                       - min(m["score_p"] for m in g[1]) for g in groups),
+                      default=0.0)
+            print(f"      worst within-group spread: |e| key {wse:.2e}, "
+                  f"mirror key {wsn:.2e}, TIE_TOL {TIE_TOL:.1e}")
+            print(f"      groups over TIE_TOL: |e| key "
+                  f"{sum(1 for g in ge if len(g[1]) > 1 and max(m['score_p'] for m in g[1]) - min(m['score_p'] for m in g[1]) > TIE_TOL):,}"
+                  f", mirror key "
+                  f"{sum(1 for g in groups if len(g[1]) > 1 and max(m['score_p'] for m in g[1]) - min(m['score_p'] for m in g[1]) > TIE_TOL):,}")
+            print()
         if not groups:
             print("      no scored survivor.  See part (5).")
             print()
@@ -1046,19 +1221,23 @@ def part_shortlist(subs):
               f"{sum(len(g[1]) for g in tie)} candidates.")
         print()
         print(f"      {'grp':>4} {'margin(p)':>10} {'margin(0)':>10} "
-              f"{'spread':>9} {'horn a':>8} {'rod d':>8} {'|e|':>8} "
-              f"{'z_home':>8} {'mem':>5}")
+              f"{'spread':>9} {'horn a':>8} {'rod d':>8} {'beta':>8} "
+              f"{'beta_p':>8} {'|e|':>8} {'z_home':>8} {'mem':>5}")
         print(f"      {'':>4} {'':>10} {'':>10} {'':>9} {'[mm]':>8} "
-              f"{'[mm]':>8} {'[deg]':>8} {'[mm]':>8}")
+              f"{'[mm]':>8} {'[deg]':>8} {'[deg]':>8} {'[deg]':>8} "
+              f"{'[mm]':>8}")
         for gi, (key, members) in enumerate(groups[:TOP_GROUPS], 1):
             sp = [m["score_p"] for m in members]
             zs = [m["z_home"] * R_B_MM for m in members]
             mark = "*" if gi <= len(tie) else " "
+            # key is (a, d, beta, beta_p) mirror-reduced: key[2:] is the
+            # canonical representative of the pair, not an |e|.
+            e = abs(key[3] - key[2])
             print(f"     {mark}{gi:>3} {max(sp):>10.6f} "
                   f"{max(m['margin_con'] for m in members):>10.6f} "
                   f"{max(sp)-min(sp):>9.1e} {key[0]*R_B_MM:>8.2f} "
-                  f"{key[1]*R_B_MM:>8.1f} {key[2]:>8.4f} "
-                  f"{np.mean(zs):>8.2f} {len(members):>5}")
+                  f"{key[1]*R_B_MM:>8.1f} {key[2]:>8.4f} {key[3]:>8.4f} "
+                  f"{e:>8.4f} {np.mean(zs):>8.2f} {len(members):>5}")
         print(f"      ('*' marks the tie set.  {min(TOP_GROUPS, len(groups))} "
               f"of {len(groups):,} groups shown.)")
         print()
@@ -1075,7 +1254,10 @@ def part_shortlist(subs):
               f"{SERVO_BODY_WIDTH_MM[1]} mm (pull sec.5) - is a straight-line "
               f"width,")
         print(f"      and comparing a width against an arc would flatter it.")
-        print(f"      BOTH ARE POST-HOC.  Neither filtered anything.")
+        print(f"      sep is POST-HOC and filtered nothing.  arc is NOT:")
+        print(f"      beta is bounded by the {SERVO_CASE_MM} mm case size, so "
+              f"every arc below")
+        print(f"      clears it by construction - see part (6) for the slack.")
         print()
         print(f"      {'grp':>4} {'beta':>7} {'beta_p':>8} {'delta':>7} "
               f"{'z_home':>8} {'sep':>7} {'clears OD':>16} {'arc':>7} "
@@ -1109,146 +1291,218 @@ def part_shortlist(subs):
         print()
 
 
-def mirror_key(rec):
-    """Canonical label for the pair ``(beta, beta_p)`` and its MIRROR.
+def part_beta_bound(subs):
+    """(6) The beta bound: the clearance used, the interval, and who sits on it."""
+    lo, hi = beta_bounds_deg()
+    print()
+    print("=" * 78)
+    print("(6) beta IS BOUNDED NOW - THE CLEARANCE, THE INTERVAL, AND WHO SITS ON IT")
+    print("=" * 78)
+    print("  SWEEPING beta UNBOUNDED WAS WRONG AND IS REVERSED (2026-09-09).")
+    print("  e12235c's shortlist ran to the edge of the axis: its tightest")
+    print("  member needed 7.85 mm of servo arc against a published body width")
+    print("  of 11.4 - 13.0 mm, so it admitted no servo on the pull.  That is")
+    print("  the objective's recorded incompleteness surfacing on whatever axis")
+    print("  is left unbounded - margin measures distance from unreachability,")
+    print("  small beta shortens |L_i|, and nothing in the score knows that two")
+    print("  servo bodies would overlap.")
+    print()
+    print(f"  CLEARANCE USED : {SERVO_CASE_MM} mm, the largest published")
+    print(f"                   sub-micro CASE SIZE (hardware-pull sec.5, MFR,")
+    print(f"                   Hitec HS-5085MG and HS-5087MH).")
+    print(f"  AT             : r_b = {R_B_MM:.0f} mm")
+    print()
+    print("    theta_i = 120 floor(i/2) + s_i beta")
+    print("    gaps    = 2 beta (within a pair), 120 - 2 beta (between pairs)")
+    print("    arc     = r_b * gap in radians")
+    print(f"    bound   : beta >= degrees(case / 2 r_b),  beta <= 60 - that")
+    print()
+    print(f"  RESULTING INTERVAL : [{lo:.4f}, {hi:.4f}] deg")
+    print(f"    arc at the lower end : {arc_spacing_mm(lo):.4f} mm  "
+          f"(= the clearance, by construction)")
+    print(f"    arc at the upper end : {arc_spacing_mm(hi):.4f} mm")
+    print(f"    swept: {len(beta_axis())} values at {BETA_STEP_DEG} deg plus "
+          f"both bound endpoints")
+    print()
+    print("  BOTH ENDS ARE CHECKED, and they are different collisions:")
+    print("    beta -> 0   the two shafts of ONE PAIR close on each other")
+    print("    beta -> 60  the pair closes on its NEIGHBOURING pair")
+    print("  The bound is symmetric about 30 deg because the ring has both gaps.")
+    print()
+    print("  WHY THIS IS PERMISSIBLE WITHOUT THE MISSING FIGURE.  CASE SIZE is")
+    print("  the BARE BODY.  What sec.12 asks for is the INSTALLED footprint -")
+    print("  mounting-flange span, screw-hole pitch, inter-body clearance with")
+    print("  wiring - unpublished for every servo checked, among the pull's 39")
+    print("  unpublished cells.  Flanges and wiring only ADD to the footprint,")
+    print("  so a bound at case width is strictly PERMISSIVE: it CANNOT exclude")
+    print("  a candidate that would have been buildable.  When the installed")
+    print("  figure exists this bound TIGHTENS, never loosens.  Nothing admitted")
+    print("  here is admitted on the strength of the missing number.")
+    print()
+    print("  WHICH END EACH SHORTLIST MEMBER SITS AGAINST:")
+    print()
+    for s_ in subs:
+        groups, tie = tie_groups(s_["scored"])
+        if not tie:
+            continue
+        print(f"  ---- housing OD {s_['od']:.1f} mm ----")
+        print(f"      {'grp':>4} {'beta':>9} {'bound end':>22} {'arc [mm]':>9} "
+              f"{'slack [mm]':>11} {'margin(p)':>10}")
+        for gi, (_, members) in enumerate(tie, 1):
+            for m in sorted(members, key=lambda r: -r["score_p"]):
+                end, slack = beta_bound_end(m["beta"])
+                print(f"      {gi:>4} {m['beta']:>9.4f} {end:>22} "
+                      f"{arc_spacing_mm(m['beta']):>9.2f} {slack:>11.2f} "
+                      f"{m['score_p']:>10.6f}")
+        print()
 
-    The mirror is ``(beta, beta_p) -> (60 - beta, 60 - beta_p)``, which sends
-    ``e = beta_p - beta`` to ``-e``.  Two candidates related by it are the same
-    machine seen from the other side, so any score difference between them is
-    numerical noise and nothing else.  Used only to MEASURE the group key in
-    :func:`part_invariant`; it does not regroup anything.
-    """
-    p1 = (round(rec["beta"], 9), round(rec["beta_p"], 9))
-    p2 = (round(60.0 - rec["beta"], 9), round(60.0 - rec["beta_p"], 9))
-    return min(p1, p2)
 
+def part_mirror(subs, n_worst=3):
+    """(7) What the mirror actually is, and what it is NOT.
 
-def part_invariant(subs, n_worst=3):
-    """(6) Does ``(a, d, |e|)`` actually group ONE result?  MEASURED.
-
-    The shortlist is grouped by ``(a, d, |beta_p - beta|)`` because
-    :mod:`.score_discriminators` part (8) reports that as the invariant, and
-    that is the key this harness was specified to use.  Whether the key is
-    COMPLETE is a separate question, answerable from the field the sweep
-    already produced: if the key identifies one result, every within-group
-    spread is numerical noise.  A spread above :data:`TIE_TOL` says the key
-    groups candidates the score can tell apart - which makes a "tie group" not
-    a tie.
+    e12235c recorded the inexact mirror pairs as 1-degree ``DELTA_GRID``
+    quantisation.  **That attribution was WRONG and is corrected here.**  The
+    grid is already closed under ``delta -> 180 - delta``, so it cannot be the
+    cause, and refining it does not remove the spread.
     """
     R29, az29, _ = SD._pose_grid(None)
+    dg = DELTA_GRID
+    closed = (set(np.round((180.0 - dg) % 180.0, 9)) == set(np.round(dg, 9)))
     print()
     print("=" * 78)
-    print("(6) IS (a, d, |e|) A COMPLETE INVARIANT?  MEASURED, NOT ASSUMED")
+    print("(7) THE MIRROR: EXACT FOR THE SCORE, NOT FOR THE CAP")
     print("=" * 78)
-    print("  The shortlist above is grouped by (a, d, |e|) because that is the")
-    print("  key score_discriminators part (8) reports and the key this harness")
-    print("  was specified to use.  It is USED unchanged.  What follows only")
-    print("  measures it.")
+    print("  THE e12235c ATTRIBUTION WAS WRONG AND IS CORRECTED HERE.  It")
+    print("  recorded the inexact mirror pairs as 1-degree DELTA_GRID")
+    print("  quantisation - 'mirrored deltas should sum to 180 and sum to 181'.")
+    print("  The 181 is real; the cause is not the grid.")
     print()
-    print("  Two candidates are MIRRORS when (beta, beta_p) -> (60 - beta,")
-    print("  60 - beta_p), which sends e -> -e: the same machine seen from the")
-    print("  other side.  Mirrors share the key.  But so does any pair with the")
-    print("  same |e| and a different absolute beta, and those are NOT the same")
-    print("  machine.  Split the within-group spread by which it is:")
+    print(f"    DELTA_GRID is {dg.size} points, {dg[0]:.0f} to {dg[-1]:.0f} "
+          f"step {dg[1]-dg[0]:.0f} deg.")
+    print(f"    Closed under delta -> (180 - delta) mod 180 ?  {closed}")
+    print("    So it is ALREADY mirror-symmetric: putting delta on a")
+    print("    mirror-symmetric grid is a NO-OP, and there is nothing there to")
+    print("    fix.  Refining it does not help either - measured below.")
     print()
-    worst_pairs = []
-    for s in subs:
-        if not s["scored"]:
-            continue
+    print("  WHAT THE MIRROR IS.  (beta, beta_p) -> (60 - beta, 60 - beta_p)")
+    print("  with delta -> 180 - delta is a RIGID ROTATION of the linkage by 60")
+    print("  deg about z, with the leg relabelling [1, 2, 3, 4, 5, 0].  Checked")
+    print("  against the library geometry, not asserted:")
+    print()
+    a_t, d_t = 0.4, 1.2
+    from ..geometry import make_geometry as _mk
+    perm = [1, 2, 3, 4, 5, 0]
+    th = np.deg2rad(60.0)
+    Q = np.array([[np.cos(th), -np.sin(th), 0.0],
+                  [np.sin(th), np.cos(th), 0.0], [0.0, 0.0, 1.0]])
+    wb = wp = wn = wns = 0.0
+    for beta, bp, dl in ((7.5, 52.5, 40.0), (12.5, 15.0, 165.0),
+                         (5.0, 52.5, 121.0)):
+        gA = _mk(r_b=R_B, beta=beta, delta=dl, r_p=R_P_RB, beta_p=bp,
+                 a=a_t, d=d_t, h_p=H_P)
+        gB = _mk(r_b=R_B, beta=60.0 - beta, delta=(180.0 - dl) % 180.0,
+                 r_p=R_P_RB, beta_p=60.0 - bp, a=a_t, d=d_t, h_p=H_P)
+        for i in range(6):
+            wb = max(wb, np.abs((Q @ gA.b)[:, i] - gB.b[:, perm[i]]).max())
+            wp = max(wp, np.abs((Q @ gA.p)[:, i] - gB.p[:, perm[i]]).max())
+            nn = (Q @ gA.n)[:, i]
+            wn = max(wn, np.abs(nn - gB.n[:, perm[i]]).max())
+            wns = max(wns, min(np.abs(nn - gB.n[:, perm[i]]).max(),
+                               np.abs(nn + gB.n[:, perm[i]]).max()))
+    print(f"    base anchors  b_i : max residual {wb:.2e}")
+    print(f"    platform      p_i : max residual {wp:.2e}")
+    print(f"    servo normals n_i : max residual {wn:.2e}   <- NOT small")
+    print(f"    same, allowing +/-n_i            {wns:.2e}   <- exact")
+    print()
+    print("  THE SIGN IS THE WHOLE STORY.  n_i -> -n_i, so u_i = z x n_i flips")
+    print("  and the FIXED '-' BRANCH SELECTS THE OPPOSITE ARM CONFIGURATION in")
+    print("  the mirrored candidate.  The two are the same LINKAGE and NOT the")
+    print("  same machine to build.  Consequences, and they split cleanly:")
+    print()
+    print("    margin  is built from |w_i| and C_i, both BRANCH-INDEPENDENT")
+    print("            -> mirrors EXACTLY")
+    print("    cond(J_fk) is built from the rod direction at the ACTUAL tip,")
+    print("            which is branch-DEPENDENT -> does NOT mirror")
+    print()
+    print("  So the cap admits DIFFERENT delta sets for the two mirrors, and")
+    print("  that - not the grid - is what forced 165 against 16 rather than 15.")
+    print("  Measured on the worst pairs of the field below:")
+    print()
+    worst = []
+    for s_ in subs:
         by = {}
-        for r in s["scored"]:
+        for r in s_["scored"]:
             by.setdefault(group_key(r), []).append(r)
-        multi = [g for g in by.values() if len(g) > 1]
-        msp, gsp, n_over, n_pairs, n_exact = [], 0.0, 0, 0, 0
-        for g in multi:
-            sp = max(m["score_p"] for m in g) - min(m["score_p"] for m in g)
-            gsp = max(gsp, sp)
-            n_over += int(sp > TIE_TOL)
-            sub = {}
-            for m in g:
-                sub.setdefault(mirror_key(m), []).append(m)
-            for pair in sub.values():
-                if len(pair) < 2:
-                    continue
-                d = max(m["score_p"] for m in pair) - min(m["score_p"]
-                                                          for m in pair)
-                msp.append(d)
-                n_pairs += 1
-                n_exact += int(d <= 1e-12)
-                worst_pairs.append((d, pair))
-        msp = np.array(msp) if msp else np.zeros(1)
-        print(f"  ---- housing OD {s['od']:.1f} mm ----")
-        print(f"      multi-member groups                     : {len(multi):,}")
-        print(f"      worst spread WITHIN a (a, d, |e|) group : {gsp:.3e}")
-        print(f"      groups whose spread exceeds TIE_TOL     : {n_over:,} of "
-              f"{len(multi):,}  ({n_over/max(1, len(multi)):.1%})")
-        print(f"      mirror pairs inside those groups        : {n_pairs:,}")
-        print(f"        exact to 1e-12                       : {n_exact:,}  "
-              f"({n_exact/max(1, n_pairs):.1%})")
-        print(f"        median / p95 / max spread            : "
-              f"{np.median(msp):.2e} / {np.percentile(msp, 95):.2e} / "
-              f"{msp.max():.2e}")
-        print(f"        pairs above TIE_TOL                  : "
-              f"{int((msp > TIE_TOL).sum()):,}")
-        print()
-    print("  THE TWO HALVES OF THE KEY BEHAVE DIFFERENTLY, and the difference")
-    print("  is the finding.")
-    print()
-    print("  MIRRORS ARE ONE RESULT, and the residue is the delta SCAN, not the")
-    print("  geometry.  The mirror of a servo-plane offset is 180 - delta, which")
-    print(f"  the {DELTA_GRID.size}-point 1-degree DELTA_GRID can only represent "
-          f"when the maximin")
-    print("  optimum lands on a grid point.  Where it falls between two, the two")
-    print("  mirrors tune to deltas summing to 181 rather than 180 and their")
-    print("  scores differ by that quantisation.  Re-evaluated at the EXACT")
-    print("  mirror delta, the worst pairs collapse:")
-    print()
-    worst_pairs.sort(key=lambda t: -t[0])
+        for g in by.values():
+            if len(g) > 1:
+                sp = max(m["score_p"] for m in g) - min(m["score_p"] for m in g)
+                worst.append((sp, g))
+    worst.sort(key=lambda t: -t[0])
+    print(f"      {'a [mm]':>7} {'d [mm]':>7} {'deltas':>12} {'sum':>5} "
+          f"{'spread':>10} {'margin mirrors':>15} {'cond mirrors':>13}")
     seen, shown = set(), 0
-    print(f"      {'a [mm]':>7} {'d [mm]':>7} {'tuned deltas':>14} "
-          f"{'sum':>5} {'as tuned':>10} {'at exact mirror':>16}")
-    for d_sp, pair in worst_pairs:
-        k = tuple(sorted((round(m["beta"], 6), round(m["beta_p"], 6))
-                         for m in pair))
+    idx = np.array([int(round((180.0 - x) % 180.0)) for x in dg])
+    for sp, g in worst:
+        m1, m2 = g[0], g[1]
+        k = tuple(sorted((round(m1["beta"], 6), round(m2["beta"], 6))))
         if k in seen:
             continue
         seen.add(k)
-        m1, m2 = pair[0], pair[1]
-        g0, g90 = SD._delta_basis(m2["beta"], m2["beta_p"], R_P_RB,
-                                  m2["a"], m2["d"])
-        ex = SD.probe_margin(g0, g90, R29, az29, m2["z_home"],
-                             (180.0 - m1["delta_con"]) % 180.0, P_SCORE)
-        deltas = f"{m1['delta_con']:.0f} and {m2['delta_con']:.0f}"
-        print(f"      {m1['a']*R_B_MM:>7.2f} {m1['d']*R_B_MM:>7.0f} "
-              f"{deltas:>14} "
-              f"{m1['delta_con']+m2['delta_con']:>5.0f} {d_sp:>10.3e} "
-              f"{abs(m1['score_p'] - ex):>16.3e}")
+        T = SD._T_stack(az29, m1["z_home"])
+        mA, cA, _ = SD.scan_delta(m1["beta"], m1["beta_p"], R_P_RB, m1["a"],
+                                  m1["d"], R29, T, dg, R_B)
+        mB, cB, _ = SD.scan_delta(m2["beta"], m2["beta_p"], R_P_RB, m2["a"],
+                                  m2["d"], R29, T, dg, R_B)
+        fm = np.isfinite(mA) & np.isfinite(mB[idx])
+        fc = np.isfinite(cA) & np.isfinite(cB[idx])
+        dm = np.abs(mB[idx][fm] - mA[fm]).max() if fm.any() else np.nan
+        dc = (np.abs(cB[idx][fc] - cA[fc]) / cA[fc]).max() if fc.any() else np.nan
+        ds = f"{m1['delta_con']:.0f} and {m2['delta_con']:.0f}"
+        print(f"      {m1['a']*R_B_MM:>7.2f} {m1['d']*R_B_MM:>7.0f} {ds:>12} "
+              f"{m1['delta_con']+m2['delta_con']:>5.0f} {sp:>10.3e} "
+              f"{dm:>15.2e} {dc:>13.2e}")
         shown += 1
         if shown >= n_worst:
             break
     print()
-    print("  So the mirror half of the key is SOUND - it is exact in the")
-    print("  geometry, and what noise it carries is a FIFTH instance of the")
-    print("  pattern notation.md sec.12 tracks: a discrete grid reporting what")
-    print("  the continuum does not.  The other four are the N_i > 0 bound on")
-    print("  the pose grid, the tilt-azimuth grid, box_boundary's stepping rule")
-    print("  and the zero-width z_home brackets.  This one is the DELTA grid,")
-    print("  which none of the four named.")
+    print("    'margin mirrors' is max |margin_B[180-k] - margin_A[k]| over the")
+    print("    delta grid; 'cond mirrors' is the same as a RELATIVE difference.")
+    print("    Margin agrees to rounding.  cond does not, by orders of")
+    print("    magnitude, and cond is what the cap reads.")
     print()
-    print("  |e| ALONE IS NOT SOUND.  The full-group spread runs four decades")
-    print("  above the mirror residue and above TIE_TOL, so (a, d, |e|) groups")
-    print("  candidates the score CAN distinguish: the absolute beta enters the")
-    print("  score at dxy = p, not just the difference.")
+    print("  WHAT WAS DONE ABOUT IT: NOTHING, AND THAT IS THE FINDING.")
+    print("    - a mirror-symmetric delta grid is a no-op; the grid already is")
+    print("    - refining delta cannot remove a spread the grid does not cause")
+    print("    - FORCING the mirrored delta onto the partner would assign it a")
+    print("      delta whose cond EXCEEDS the cap, i.e. report a candidate as")
+    print("      admissible at a configuration the cap rejects.  That is worse")
+    print("      than the spread it would hide.")
+    print("    - the branch rule is fixed as '-' (CLAUDE.md) and the objective")
+    print("      is explicitly NOT to be fixed here, so neither is touched.")
     print()
-    print("  NOT ACTED ON HERE.  The key is the one this harness was specified")
-    print("  to group by, and changing it would change the deliverable on the")
-    print("  strength of a measurement taken in the same run.  It is REPORTED,")
-    print("  so the tie set above is read for what it is - an UPPER BOUND on the")
-    print("  tie, whose members are listed individually with their own margins")
-    print("  for exactly this reason.  score_discriminators part (8) established")
-    print("  the key with beta at 10-deg and beta_p at 15-deg steps; this sweep")
-    print("  runs both at 2.5 deg, the first grid fine enough to separate")
-    print("  same-|e| candidates that are not mirrors.")
+    print("  RESIDUAL SPREAD, which is therefore REAL and is reported, not")
+    print("  removed - two mirrors are one linkage solved on opposite branches:")
+    print()
+    for s_ in subs:
+        by = {}
+        for r in s_["scored"]:
+            by.setdefault(group_key(r), []).append(r)
+        multi = [g for g in by.values() if len(g) > 1]
+        sp = np.array([max(m["score_p"] for m in g)
+                       - min(m["score_p"] for m in g) for g in multi]) \
+            if multi else np.zeros(1)
+        print(f"    OD {s_['od']:>4.1f} mm: {len(multi):,} mirror groups, "
+              f"spread median {np.median(sp):.2e}  p95 "
+              f"{np.percentile(sp, 95):.2e}  max {sp.max():.2e}  "
+              f"(> TIE_TOL: {int((sp > TIE_TOL).sum()):,})")
+    print()
+    print("  FIFTH INSTANCE of the pattern notation.md sec.12 tracks, and the")
+    print("  first NOT on a pose or candidate grid - the four on record are the")
+    print("  N_i > 0 bound, the azimuth window, the harness pose grid and the")
+    print("  zero-width z_home brackets.  This one is not a grid resolution")
+    print("  problem at all: it is a SYMMETRY THE SOLVER BREAKS THAT THE")
+    print("  GEOMETRY DOES NOT, which is a different failure and is recorded as")
+    print("  its own kind rather than filed under the other four.")
 
 
 def part_walls(res, subs):
@@ -1361,6 +1615,77 @@ def part_walls(res, subs):
         print()
 
 
+def part_moved(res, subs):
+    """(9) How the tie set moved from e12235c, and was beta carrying it?"""
+    lo, hi = beta_bounds_deg()
+    print()
+    print("=" * 78)
+    print("(9) HOW THE TIE SET MOVED FROM e12235c - WAS beta CARRYING THE ANSWER?")
+    print("=" * 78)
+    print("  e12235c is the same sweep with beta swept UNBOUNDED over the open")
+    print("  (0, 60).  Everything else is unchanged: r_b = 90, r_p = 80,")
+    print(f"  h_p/r_b = {H_P}, tilt from envelope, p = {P_SCORE:.6f} evaluated")
+    print(f"  directly, four feasibility tests, cap {CAP:.0e} at char_len = "
+          f"{CHAR_LEN},")
+    print(f"  TIE_TOL = {TIE_TOL:.1e}, both housing bounds in parallel.")
+    print()
+    excl = [b for b in E12235C["betas"] if not (lo - 1e-9 <= b <= hi + 1e-9)]
+    print(f"  WHAT THE BOUND REMOVED FROM e12235c's TIE SET:")
+    print(f"    its members sat at beta = "
+          f"{', '.join(f'{b:g}' for b in E12235C['betas'])} deg")
+    print(f"    the bound [{lo:.4f}, {hi:.4f}] excludes "
+          f"{', '.join(f'{b:g}' for b in excl) if excl else 'NONE of them'}")
+    if excl:
+        print(f"    those needed {min(arc_spacing_mm(b) for b in excl):.2f} mm "
+              f"of arc against the {SERVO_CASE_MM} mm case - not buildable")
+    print()
+    for s_ in subs:
+        groups, tie = tie_groups(s_["scored"])
+        if not groups:
+            print(f"  ---- housing OD {s_['od']:.1f} mm: EMPTY ----")
+            continue
+        best = max(m["score_p"] for m in groups[0][1])
+        key, members = groups[0]
+        arcs = [arc_spacing_mm(m["beta"]) for m in members]
+        print(f"  ---- housing OD {s_['od']:.1f} mm ----")
+        print(f"      {'':<26} {'e12235c':>14} {'this run':>14} {'moved':>12}")
+        print(f"      {'leader margin(p)':<26} {E12235C['leader']:>14.6f} "
+              f"{best:>14.6f} {best - E12235C['leader']:>+12.2e}")
+        print(f"      {'horn a [mm]':<26} {E12235C['a_mm']:>14.2f} "
+              f"{key[0]*R_B_MM:>14.2f} "
+              f"{'same' if abs(key[0]*R_B_MM - E12235C['a_mm']) < 5e-3 else 'MOVED':>12}")
+        print(f"      {'rod d [mm]':<26} {E12235C['d_mm']:>14.0f} "
+              f"{key[1]*R_B_MM:>14.0f} "
+              f"{'same' if abs(key[1]*R_B_MM - E12235C['d_mm']) < 5e-3 else 'MOVED':>12}")
+        e_now = abs(members[0]["beta_p"] - members[0]["beta"])
+        print(f"      {'|e| [deg]':<26} {E12235C['e_deg']:>14.4f} "
+              f"{e_now:>14.4f} "
+              f"{'same' if abs(e_now - E12235C['e_deg']) < 5e-4 else 'MOVED':>12}")
+        print(f"      {'z_home [mm]':<26} {E12235C['z_mm']:>14.2f} "
+              f"{members[0]['z_home']*R_B_MM:>14.2f}")
+        print(f"      {'tightest arc [mm]':<26} {E12235C['arc_min_mm']:>14.2f} "
+              f"{min(arcs):>14.2f} {'CLEARS' if min(arcs) >= SERVO_CASE_MM - 1e-9 else 'STILL TIGHT':>12}")
+        print()
+        same = (abs(best - E12235C["leader"]) < TIE_TOL
+                and abs(key[0]*R_B_MM - E12235C["a_mm"]) < 5e-3
+                and abs(key[1]*R_B_MM - E12235C["d_mm"]) < 5e-3)
+        print(f"      WAS beta CARRYING THE ANSWER?  "
+              f"{'NO' if same else 'YES - the answer moved'}.")
+        if same:
+            print(f"      The leader is the SAME machine at the same margin to")
+            print(f"      within TIE_TOL.  The bound removed only the")
+            print(f"      LOWER-scoring members of e12235c's group - the ones at")
+            print(f"      beta = {', '.join(f'{b:g}' for b in excl)}, which scored")
+            print(f"      BELOW the leader.  So the unbounded axis was inflating")
+            print(f"      the SIZE of the tie set, not producing its winner, and")
+            print(f"      the e12235c ranking was not resting on unbuildable")
+            print(f"      geometry.  That is a weaker failure than it looked.")
+        else:
+            print(f"      The bound moved the leader, so e12235c's answer DID")
+            print(f"      rest on geometry that admits no servo on the pull.")
+        print()
+
+
 def part_verdict(res, subs, tilt):
     print()
     print("=" * 78)
@@ -1417,7 +1742,8 @@ def part_verdict(res, subs, tilt):
             seps = [SR.min_anchor_sep_mm(m["beta_p"]) for m in members]
             arcs = [arc_spacing_mm(m["beta"]) for m in members]
             print(f"                 group {gi}: horn {key[0]*R_B_MM:.2f} mm, "
-                  f"rod {key[1]*R_B_MM:.0f} mm, |e| = {key[2]:.4f} deg, "
+                  f"rod {key[1]*R_B_MM:.0f} mm, beta = {key[2]:.4f}, "
+                  f"beta_p = {key[3]:.4f} deg, "
                   f"{len(members)} member(s)")
             print(f"                          z_home "
                   f"{min(m['z_home'] for m in members)*R_B_MM:.2f} - "
@@ -1434,9 +1760,15 @@ def part_verdict(res, subs, tilt):
           f"{CHAR_LEN}, PROVISIONAL")
     print(f"  in that length.  p = {P_SCORE:.6f} r_b.")
     print()
+    lo_b, hi_b = beta_bounds_deg()
     print("  WHAT THIS DOES NOT DECIDE.  No joint, no servo, no horn is chosen:")
-    print("  the tie set is a set, the two housing-OD runs are reported apart,")
-    print("  and beta was never filtered.  The OBJECTIVE IS NOT FIXED - margin")
+    print("  the tie set is a set and the two housing-OD runs are reported")
+    print(f"  apart.  beta IS bounded now, to [{lo_b:.4f}, {hi_b:.4f}] deg, but "
+          f"by a")
+    print(f"  PUBLISHED CASE SIZE ({SERVO_CASE_MM} mm) that every candidate "
+          f"servo meets or")
+    print("  beats - the bound is permissive and picks no part.  The OBJECTIVE")
+    print("  IS NOT FIXED - margin")
     print("  still measures distance from unreachability rather than capability")
     print("  (notation.md, 8 Sept), and that stays open.  notation.md is not")
     print("  touched by this module.")
@@ -1450,8 +1782,10 @@ def report(res, tilt):
     part_empties(res, subs)
     part_margins(subs)
     part_shortlist(subs)
-    part_invariant(subs)
+    part_beta_bound(subs)
+    part_mirror(subs)
     part_walls(res, subs)
+    part_moved(res, subs)
     part_verdict(res, subs, tilt)
 
 
