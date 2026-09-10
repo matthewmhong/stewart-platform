@@ -1553,6 +1553,14 @@ Source: `docs/hardware-pull.md`; `stewart/diagnostics/sweep_ranges.py`,
   `margin(dxy = p) = 0.847657` at `47.63 mm` (`0.5292 r_b`), holes on both
   sides. `box_boundary`'s `a/r_b = 0.60` pointed at a gap in the ladder, not a
   wall. `TODO(him): reasoning`
+
+  **STALE 2026-09-10, flagged, not rewritten.** This was measured with `d` at
+  three values and `beta`/`beta_p` at `10°`/`15°` sampling. With `d` open to
+  `2.0` at `0.1` steps and both angles at `2.5°`, the optimum moves to the
+  `60.40 mm` hardware ceiling — see the 9 September entry. The pairwise line
+  count still turns over near `45.40` vs `47.63 mm`, so this bullet's claim
+  about the typical candidate's lean is not itself wrong; only "the optimum"
+  moved.
 - **`beta_p` bounded both ends of the published `9.0`–`13.0 mm` housing-OD
   range**: `[3.2246°, 56.7754°]` at `9.0 mm`, `[4.6604°, 55.3396°]` at
   `13.0 mm`. No joint chosen. Closes the 2026-09-05 "needs a ball-joint
@@ -1571,269 +1579,211 @@ Source: `docs/hardware-pull.md`; `stewart/diagnostics/sweep_ranges.py`,
   proxy; the quantity the range actually needs is not published.
   `TODO(him): reasoning`
 
-## 9-10 September
+---
 
-### The sweep harness runs
+## 9 September
 
-Source: `stewart/diagnostics/sweep.py`. `python -m stewart.diagnostics.sweep`
-to run; `--report [path]` regenerates the report from the saved run without
-re-running. **`notation.md` is not touched by this entry.**
+> Skeleton only, same terms as the 4, 5, 7 and 8 September entries: facts and
+> residuals, no prose, nothing in his voice, `TODO(him): reasoning` against
+> each.
+>
+> **Read the ASSERTED and PERMISSIVE marks.** Several entries below are
+> decisions taken without the figure a full derivation would need, and are
+> marked as such. None is invented support; each states what it substitutes
+> for and which direction it can be wrong in.
+>
+> Sources: `stewart/diagnostics/sweep.py` (`e12235c`, `2fee8b0`);
+> `stewart/diagnostics/tau_transmission.py` (`227927d`); `docs/notation.md`
+> sec.8, sec.12.
 
-**368,000 candidates screened, 327,604 feasible (89%), all 327,604 scored.**
-Screen 1,547 s, tune + score 4,295 s. Axes: `beta` 23 points on the open
-`(0, 60)` at 2.5 deg, `beta_p` 25 over the union of both housing-OD bounds at
-2.5 deg plus all four bound endpoints, `a` the 32 published holes, `d` 20
-points at 0.1 to the asserted 2.0 cap, `z_home` a per-candidate bracket.
-`r_p/r_b = 80/90` fixed. Tilt 6.5580 deg, printed from `envelope.tilt_for`.
+### THE SWEEP RAN AND RETURNED A SHORTLIST — the `[CC]` item Phase 0 was built for
+
+Two runs.
+
+**`e12235c` — `beta` unbounded.** `368,000` screened, `327,604` feasible
+(`89%`), all scored. Screen `1,449 s`, tune + score `4,295 s`. Tie set of six
+on the `(a, d, |e|)` key. `TODO(him): reasoning`
+
+**`2fee8b0` — `beta` bounded** (below). `368,000` screened, `327,780`
+feasible (`89.1%`), all scored. `TODO(him): reasoning`
+
+**THE RESULT, from `2fee8b0`:**
+
+```
+a       60.40 mm  (0.6711 r_b)   — PDRS60-25T outermost hole
+d       126 mm    (1.40 r_b)
+beta    5 deg,  beta_p  52.5 deg
+z_home  95.62 mm
+margin(dxy = 0.003849) = 0.874876,  tie floor 0.874726
+```
+
+Two candidates, a mirror pair, identical at **both** housing bounds. Platform
+anchor separation clears the full published `9`–`13 mm` housing range. Both
+members interior in `beta` with `2.71 mm` of arc slack. `TODO(him): decision`
+
+- **Screen statistics.** `X = 2,819` (reach ceiling below the `N_i > 0`
+  floor), answering the sec.12 question left open at `6.558°`. `W = 12,078`,
+  **all** at exactly zero width, so the asserted `2 mm` floor removed
+  precisely the artefacts it was asserted for and nothing else.
+  `TODO(him): reasoning`
+- **`89%` feasible is not comparable to the coarse grid's `67%`** — that grid
+  swept `r_p/r_b` to `1.1` and most old empties were there. `TODO(him):
+  reasoning`
+
+### `beta` WAS BOUNDED, REVERSING THE 8 SEPTEMBER DECISION TO SWEEP IT UNBOUNDED
+
+Source: `stewart/diagnostics/sweep.py`, `2fee8b0`. Recorded in `docs/notation.md`
+sec.12, the "`beta`'s usable range" entry.
+
+**Bound `[4.1380°, 55.8620°]`, derived from `arc = r_b * gap` against the
+largest published sub-micro CASE SIZE, `13.0 mm`** (hardware-pull sec.5,
+MFR, Hitec HS-5085MG / HS-5087MH). Both endpoints land at exactly `13.00 mm`
+of arc; both collision ends — `beta -> 0` closing a pair on itself,
+`beta -> 60` closing it on its neighbour — checked separately.
 `TODO(him): reasoning`
 
-**THE RESULT IS NOT EMPTY, and the tie set is the same at both housing bounds:**
-one group, six candidates — `a = 60.40 mm`, `d = 126 mm`, `|e| = 47.5 deg`,
-`z_home = 95.62 mm`, `margin(p) = 0.874876` at the leader against a tie floor
-of `0.874726`. Members are three mirror pairs: `(5, 52.5)`, `(7.5, 55)`,
-`(2.5, 50)` and their mirrors. Every member clears the whole published
-9.0–13.0 mm housing range (`sep` 13.94–27.78 mm). `TODO(him): decision`
+- **PERMISSIVE, and this is why.** Case size is the bare body; the installed
+  footprint — flange span, screw pitch, inter-body clearance including
+  wiring — is unpublished for every servo checked and is among the pull's 39.
+  Flanges and wiring only ADD, so the bound **cannot have excluded anything
+  buildable**, and it **tightens, never loosens**, when the missing figure
+  exists. `TODO(him): reasoning`
+- **`beta` was NOT carrying the answer.** The leader moved `+4.9e-7`; the
+  excluded `beta = 2.5 / 57.5` members had already scored below it. The open
+  axis was inflating the tie set's SIZE, not producing its winner. **The
+  `e12235c` failure was weaker than it read at the time.** `TODO(him):
+  reasoning`
+- **Amend `notation.md` sec.12** — done, below: "`beta`'s usable range" is
+  bounded permissively at case width, not closed.
 
-#### `a`'s optimum is NOT interior on this grid — the 2026-09-09 finding does not survive
+### THE GROUPING KEY WAS WRONG AND IS CORRECTED
 
-The tie set sits at **`a = 60.40 mm`, the hardware ceiling**, not at the
-`47.63 mm` recorded in `notation.md` sec.12 as "the first axis to come out
-clean end to end". That result was measured with `d` at three values
-`[0.8, 1.2, 1.6]` and `beta`/`beta_p` at 10/15 deg; with `d` open to 2.0 at
-0.1 and both angles at 2.5 deg, the optimum moves to the ceiling.
-**`notation.md` sec.12's `a` bullet is stale and is NOT edited here.**
-`TODO(him): decision`
+Source: `stewart/diagnostics/sweep.py`, `2fee8b0`. Recorded in `docs/notation.md`
+sec.8, the `(r_p, a, d, |e|)` collapse bullet.
 
-- The pairwise line count still turns over, at `45.40` vs `47.63 mm`, so the
-  *typical* candidate still prefers a mid-range hole while the *best* one sits
-  at the ceiling. Both are printed and neither is chosen — a majority on lines
-  is a lean, not a wall. `TODO(him): reasoning`
-- `d = 126 mm` is interior; the asserted `2.0` cap is not touched by the
-  optimum, though the line count leans to larger `d` throughout (73%).
-  `TODO(him): reasoning`
+**`(a, d, |e|)` is not a complete invariant.** Measured on the sweep:
+`48,930` groups, worst spread `3.74e-2`, `10,338` over `TIE_TOL`. The MIRROR
+half is exact (`(beta, beta_p) -> (60-beta, 60-beta_p)`); `|e|` alone is not,
+because the absolute `beta` enters the score. `TODO(him): reasoning`
 
-#### `(a, d, |e|)` is not a complete invariant, and the leading group is not a tie
+- **Corrected key `(a, d, beta, beta_p)` reduced up to the exact mirror:**
+  `164,181` groups, worst spread `1.62e-4`, ONE group over `TIE_TOL`. Tie set
+  `2` rather than `4`. `TODO(him): reasoning`
+- **Part (8)'s key was established at `10°`/`15°` sampling; `2.5°` is the
+  first grid fine enough to separate it.** A better measurement correcting
+  an earlier one, not a reversal. `TODO(him): reasoning`
+- **Amend `notation.md` sec.8** — done, below: the `(r_p, a, d, |e|)` key is
+  marked superseded, not deleted.
 
-The shortlist is grouped by the key `score_discriminators` part (8) reports,
-**used unchanged**. Measured on the field it produced, the key **over-groups**:
+### THE MIRROR/BRANCH FINDING — its own item, not a grid artefact
 
-- **The mirror half is sound.** `(beta, beta_p) -> (60 - beta, 60 - beta_p)`
-  sends `e -> -e`; 161,958 of 163,511 mirror pairs agree to `1e-12`, median
-  spread `0`, p95 `9.4e-16`. `TODO(him): reasoning`
-- **`|e|` alone is not.** Worst within-group spread `3.74e-2`, and **10,781 of
-  37,692 multi-member groups (28.6%) spread wider than `TIE_TOL = 1.5e-4`**.
-  The leading group's own spread is `2.2e-4`, above `TIE_TOL`, so **it is an
-  upper bound on the tie rather than a tie**; its members are listed
-  individually with their own margins for that reason. The absolute `beta`
-  enters the score at `dxy = p`, not only the difference. Part (8) established
-  the key at 10/15 deg sampling; 2.5 deg is the first grid fine enough to
-  separate same-`|e|` non-mirrors. **NOT acted on** — changing the key would
-  change the deliverable on a measurement taken in the same run.
-  `TODO(him): decision`
+Source: `stewart/diagnostics/sweep.py`, `2fee8b0`. Recorded beside the
+4 September branch decision and in `notation.md` sec.12's discrete-grid list.
 
-#### Fifth instance of a discrete grid reporting what the continuum does not — the `delta` grid
+**The one remaining over-`TIE_TOL` group was first attributed by CC to
+1-degree `delta` quantisation. THAT ATTRIBUTION WAS WRONG, and CC withdrew
+it:** `DELTA_GRID` is `{0..179}`, already closed under
+`delta -> 180 - delta`, so a mirror-symmetric grid is a no-op and refinement
+cannot remove a spread the grid never caused. `TODO(him): reasoning`
 
-The 1,553 mirror pairs that are *not* exact are a **`DELTA_GRID` quantisation
-artefact, not geometry**. The mirror of `delta` is `180 - delta`, which a
-1-degree grid can only represent when the maximin optimum lands on a grid
-point; where it falls between two, the mirrors tune to deltas summing to
-**181**, not 180. Re-evaluated at the exact mirror `delta` the worst pairs
-collapse from `1.617e-4`, `7.385e-5`, `7.282e-5` to `1.7e-16`, `1.5e-16`, `0`.
+- **The actual mechanism.** The mirror is a rigid `60°` rotation (`b_i`,
+  `p_i` match to `6e-16`) but `n_i -> -n_i`, which flips `u = z x n`, so the
+  fixed MINUS branch selects the **opposite arm configuration** — arm-tip
+  residual `~1.0`. `margin` is branch-independent and mirrors to `1e-15`;
+  `cond(J_fk)` is branch-DEPENDENT and mismatches by up to `9.6e3` relative,
+  so the cap admits different deltas on the two mirrors. `TODO(him):
+  reasoning`
+- **Residual: median `0`, p95 `9.4e-16`, max `1.62e-4`, `1` group of
+  `163,599`.** CC deliberately did not force the mirrored delta onto its
+  partner, because doing so would report a candidate admissible at a
+  configuration whose `cond` exceeds the cap — worse than the spread it
+  hides. `TODO(him): decision`
+- **TWO MIRRORS ARE ONE LINKAGE AND ONE SCORE BUT NOT ONE MACHINE TO BUILD.**
+  The arms sit on opposite sides. **The branch rule was fixed as MINUS on
+  4 September without this in view.** `TODO(him): decision`
+- **Filed as its own kind, NOT a fifth instance of the sec.12 discrete-grid
+  pattern.** The other four are resolution problems in a derived quantity on
+  a grid too coarse to see an interval. This is a symmetry the solver breaks
+  that the geometry does not — a different failure. `TODO(him): reasoning`
+
+### `tau_min` DOES NOT BOUND `a` FROM ABOVE
+
+Source: `stewart/diagnostics/tau_transmission.py`, `227927d`, over the
+`2fee8b0` feasible set (`327,780` candidates).
+
+**Whole set:** min `0.218`, median `0.869`, max `0.992`. Per `a`, the median
+RISES from `0.60` at `9.00 mm` to a peak `0.912` near `40 mm`, then eases to
+`0.899` at the `60.40 mm` ceiling — a `1.3%` give-back, not a collapse.
 `TODO(him): reasoning`
 
-- The four already on record (`notation.md` sec.12) are the `N_i > 0` bound on
-  the pose grid, the tilt-azimuth grid, `box_boundary`'s stepping rule, and the
-  zero-width `z_home` brackets. **None of them is the `delta` grid.**
+- **`rho(tau_min, margin(p)) = +0.626` overall, `+0.485` to `+0.526` at
+  `a >= 45 mm`.** Positive throughout, NOT reversed at the top of the range.
+  Weaker than the `+0.835` recorded at the old `a <= 0.35` ceiling, same
+  sign. `TODO(him): reasoning`
+- **At the leader's own geometry with `delta` re-tuned, `tau_min` is
+  monotone RISING with `a`, `0.189 -> 0.815` over the `20` reachable rungs**
+  — the OPPOSITE of the transmission-degradation hypothesis that motivated
+  the check. `12` of `32` rungs are unreachable at that fixed `z_home`.
+  `TODO(him): reasoning`
+- **With `z_home` and `delta` fully re-derived it is not monotone at all:**
+  peaks `0.914` near `32.54 mm`, eases to `0.815` at `60.40 mm`, never below
+  `0.526`. `TODO(him): reasoning`
+- **Methodology note.** The first verification gate sampled `30` random axis
+  draws and found `4` reachable. CC judged that too thin, replaced it with a
+  gate drawn from `200` real feasible candidates (`0` disagreements), and
+  discarded the weak gate's report rather than letting it stand.
   `TODO(him): reasoning`
 
-#### The tie set is pressed against the one axis that cannot be bounded
+### `a` IS ON THE HARDWARE CEILING, AND THAT IS NOW THE STANDING STATE OF THE RESULT
 
-Every tie member sits at `beta <= 7.5` or `>= 52.5 deg`. Required servo
-mounting-arc spacing at `r_b = 90`: **7.85 to 23.56 mm**. Published servo body
-width is `11.4`–`13.0 mm` (pull sec.5), so the `beta = 2.5 / 57.5` member
-**does not admit any servo body on the pull** — and body width is only a proxy
-for the installed-arc clearance, which is among the 39 unpublished cells. The
-optimiser walks into the wall that cannot be set. **Reported post-hoc; it
-filtered nothing, exactly as specified.** `TODO(him): decision`
+`60.40 mm` is the top of the published ProModeler ladder. **It is not an
+artefact of the unbounded `beta` — it survives the bound.** `TODO(him):
+decision`
 
-#### What the four feasibility tests actually removed
+- **`notation.md` sec.12's "`a`'s optimum is INTERIOR ... the first axis to
+  come out clean end to end" is STALE** and is marked so below: that was
+  measured with `d` at three values and the angles at `10°`/`15°`; at `0.1`
+  in `d` and `2.5°` in both angles the optimum moves to the ceiling. The
+  pairwise line count still turns over at `45.40` vs `47.63 mm`, so the
+  typical candidate still prefers a mid-range hole — the lean and the best
+  candidate now disagree, and both stand. `TODO(him): reasoning`
 
-`R` 25,499 / `X` 2,819 / `W` 12,078 of 368,000 at the 9.0 mm bound.
+**THE GENERALISATION, and it is the entry's second most important line
+after the result itself.** Three axes have now had their limit set by
+hardware or by decision and never by the objective:
 
-- **`X = 2,819`** answers the question `notation.md` sec.12 left open: the
-  crossing category *does* reappear at 6.558 deg on a grid this wide. The
-  2026-09-05 correction rested on **one** such candidate at one provisional
-  tilt. Crossing gaps run `1.7e-4` to `7.7e-2 r_b`. `TODO(him): reasoning`
-- **`W = 12,078`**, and **all 12,078 have width exactly `0.000 r_b`**. The
-  asserted 2 mm floor removed precisely the single-grid-point artefacts it was
-  asserted for and **nothing else** — the "floor, not a discriminating filter"
-  reading is confirmed rather than assumed. `TODO(him): reasoning`
-- **89% feasible means the screen is barely discriminating and the ranking is
-  doing nearly all the work.** This is **not** the coarse grid's 67% improved
-  upon: that grid swept `r_p/r_b` to 1.1 and most of its empties were there.
-  The two rates are not comparable and are not a trend. `TODO(him): reasoning`
+- `r_p` — no kinematic quantity bounds it under a purely angular envelope
+  (8 September).
+- `beta` — servo bodies (above).
+- `a` — the catalogue, with `tau_min` checked and found not to bound it
+  (above).
 
-#### Compute ledger, recounted
+**That is not three findings. It is one property of reach margin, measured
+three times. The objective stays OPEN, and this is the strongest statement
+of it yet.** `TODO(him): decision`
 
-The old figure (~2.7M full, ~4.9e8 cheap, ~3.9 GB) was six axes at 5 points
-with `r_p/r_b` in and `a` continuous. Recounted: 368,000 candidates,
-`8.1e10` delta-free screen evaluations, `1.46e13` if every `z` row were
-scanned. **The exact delta-free bracket leaves 6.6 of 120 `z` rows undecided
-(5.5%)**, cutting the scan to `8.0e11`; it is gated against
-`zhome_bracket.reach_feasible_any_delta` before the sweep runs — 24 sampled
-candidates, 0 disagreements. Holding the cheap array at once would be
-**92.2 GB** — *larger* than the old 3.9 GB, not smaller — so the sweep chunks
-over candidates at a 12.3 MB peak. `TODO(him): reasoning`
+### LEDGER CORRECTIONS, both wrong in the direction that would have hurt
 
-- **One pre-run projection was wrong and is corrected on the record:**
-  tune + score was projected at 3.8 ms/survivor and ran at **13.1 ms**. The
-  calibration sampled random axis draws, where most candidates have no
-  admissible `delta` and never pay for `probe_margin`; at 89% feasibility
-  nearly every survivor pays it. The *counts* in the ledger were right.
-  `cond` at every `delta` step measures **70 us/step** here against the
-  61 us/step the projection was made at, so **no banding heuristic** is built.
+Source: measured live during `e12235c`'s run; carried into the printed
+ledger in `2fee8b0`.
+
+- **Tune + score timing: `13.1 ms` per survivor measured against `3.8 ms`
+  projected**, because the projection calibrated on random axis draws where
+  most candidates never reach `probe_margin`. Counts were right.
   `TODO(him): reasoning`
+- **Memory recount `92.2 GB`, LARGER than the old `3.9 GB` estimate, not
+  smaller.** `TODO(him): reasoning`
 
+### STILL OWED — recorded as such, not done here
 
-### The sweep, re-run with beta bounded — and the mirror is not what e12235c said
-
-Source: `stewart/diagnostics/sweep.py`, superseding the e12235c run. Three
-changes; everything else unchanged. **`notation.md` is not touched.**
-
-**368,000 screened, 327,780 feasible (89.1%), all scored.** Screen 1,452 s,
-tune + score 4,642 s. `TODO(him): reasoning`
-
-#### 1. `beta` is bounded, and sweeping it unbounded was wrong
-
-**`beta` in `[4.1380, 55.8620]` deg**, derived from the clearance rather than
-hardcoded: `arc = r_b * gap`, `gap = 2 beta` within a pair and `120 - 2 beta`
-between pairs, required to clear **13.0 mm** — the largest published sub-micro
-**CASE SIZE** (pull sec.5, MFR, Hitec HS-5085MG / HS-5087MH). Both endpoints
-give exactly 13.00 mm of arc. `TODO(him): reasoning`
-
-- **Permissible without the missing figure, and this is the argument.** Case
-  size is the **bare body**; the installed footprint — flange span, screw
-  pitch, inter-body clearance with wiring — is unpublished for every servo
-  checked and is among the 39. Flanges and wiring only **ADD**, so a bound at
-  case width is strictly **PERMISSIVE**: it cannot exclude a candidate that
-  would have been buildable, and when the installed figure exists the bound
-  **tightens, never loosens**. `TODO(him): reasoning`
-- Both ends are different collisions and both are checked: `beta -> 0` closes
-  a pair on itself, `beta -> 60` closes a pair on its neighbour.
-
-#### `beta` was NOT carrying the answer — a weaker failure than it looked
-
-The leader is **unchanged**: `a = 60.40 mm`, `d = 126 mm`, `beta = 5`,
-`beta_p = 52.5`, `z_home = 95.62 mm`, `margin(p) = 0.874876` (moved `+4.9e-7`).
-The bound excluded `beta = 2.5 / 57.5`, which needed **7.85 mm** of arc — but
-those members scored **below** the leader. So the unbounded axis was inflating
-the **size** of the tie set, not producing its winner, and e12235c's ranking was
-not resting on unbuildable geometry. Both shortlist members now sit **interior**
-to the bound with **2.71 mm of arc slack**. `TODO(him): decision`
-
-- **`a` is still on the hardware ceiling** (60.40 mm) with `beta` bounded, so
-  that is not an artefact of the unbounded axis either. `notation.md` sec.12's
-  "`a`'s optimum is INTERIOR" bullet remains **stale**, and is still not edited.
-  `TODO(him): decision`
-
-#### 2. The grouping key is `(a, d, beta, beta_p)` up to the exact mirror
-
-Old `(a, d, |e|)` kept and reported alongside. At OD 9.0 mm: **48,930 groups
-under the old key against 164,181 under the new**, worst within-group spread
-**3.74e-2 vs 1.62e-4**, groups exceeding `TIE_TOL` **10,338 vs 1**. The tie set
-narrows from 4 candidates to **2** — one mirror pair. `notation.md` sec.8's key
-is **stale**; flagged, not edited. `TODO(him): decision`
-
-#### 3. The delta-grid diagnosis in e12235c was WRONG, and is corrected
-
-**`DELTA_GRID` is `{0..179}`, already closed under `delta -> 180 - delta`.** A
-mirror-symmetric grid is a **no-op** and refining cannot remove the spread,
-because the grid never caused it. What does: `TODO(him): reasoning`
-
-- The mirror is a **rigid 60-deg rotation** of the linkage with leg relabelling
-  `[1,2,3,4,5,0]` — `b_i` and `p_i` match to **6e-16** — but **`n_i -> -n_i`**,
-  so `u_i = z x n_i` flips and the fixed `-` branch selects the **OPPOSITE ARM
-  CONFIGURATION**. Arm-tip residual ~**1.0**, not 1e-15.
-- `margin` is built from `|w_i|` and `C_i`, both **branch-independent** →
-  mirrors to **1e-15**. `cond(J_fk)` uses the rod direction at the actual tip,
-  **branch-dependent** → relative mismatch up to **9.6e3**. The cap therefore
-  admits **different delta sets**, and that is what forced `165` against `16`.
-- **Two mirrors are one linkage and one score, but NOT one machine to build.**
-- **Nothing was done about it, and that is the finding.** Forcing the mirrored
-  delta would assign a partner a delta whose `cond` **exceeds the cap** —
-  reporting a candidate admissible at a configuration the cap rejects. The
-  branch rule is fixed as `-` and the objective is not to be fixed here.
-  Residual spread is REAL and reported: median `0`, p95 `9.4e-16`, max
-  `1.62e-4`, **1 group of 163,599 above `TIE_TOL`**. `TODO(him): decision`
-- **Fifth instance of the sec.12 pattern, and the first that is NOT a grid
-  resolution problem at all** — it is a **symmetry the solver breaks that the
-  geometry does not**, recorded as its own kind rather than filed with the four
-  (the `N_i > 0` bound, the azimuth window, the harness pose grid, the
-  zero-width `z_home` brackets). `TODO(him): reasoning`
-
-#### Ledger, with both corrections carried
-
-Same 368,000 candidates. Carried explicitly so the superseded figures are not
-read as standing: **13.1 ms per survivor measured, not the 3.8 ms projected**
-— `calibrate` samples random axis draws where most candidates never reach
-`probe_margin`, and at 89% feasibility nearly every survivor pays the full scan
-and the score — and **92.2 GB**, *larger* than the old 3.9 GB, not smaller.
-Chunked peak 12.3 MB. Bracket gate: 24 candidates, 0 disagreements.
-`TODO(him): reasoning`
-
-
-### Does any kinematic quantity bound `a` from above?  Measured: no
-
-Source: `stewart/diagnostics/tau_transmission.py`, over the 2fee8b0 cache
-(`sweep-run.npz`, 327,780 feasible candidates, all scored). `TODO(him):
-reasoning`
-
-**Question posed:** the 2fee8b0 sweep returns `a = 60.40 mm`, the ProModeler
-ceiling, with `beta` bounded — the catalogue sets `a`, not the analysis, the
-third axis (after `r_p`, `beta`) where the recorded objective incompleteness
-surfaces. `tau_i = |rod_i . tangent_i| / d` is the natural transmission-
-degradation candidate; `score_discriminators` part (b) measured `rho = +0.835`
-against `margin` but over `A_RB <= 0.35`, and the sweep now sits at `0.6711`.
-
-**Gate:** `tau_min_at`, a from-scratch vectorized closed form (no scan, no
-SVD), verified against `score_discriminators.measure` on 200 REAL feasible
-candidates drawn from the cache — 0 disagreements. A first pass gated on 30
-random axis draws found only 4 reachable and was judged too thin to cite;
-replaced before the number below was taken as final.
-
-**1. `tau_min` over the whole feasible set:** min `0.218`, median `0.869`,
-max `0.992`. Per `a`: median `RISES` from `0.60` at `9.00 mm` to a peak
-`0.912` around `40 mm`, then eases to `0.899` at the `60.40 mm` ceiling — a
-1.3% give-back from the peak, not a collapse. `TODO(him): reasoning`
-
-**2. `rho(tau_min, margin(dxy=p))` overall `+0.626`. At the top of the range
-(`a >= 45 mm`) it runs `+0.485` to `+0.526` — POSITIVE, not reversed.** Note:
-this correlates against `margin(dxy=p)` at `delta_con` (the CONSTRAINED tune),
-not the original measurement's `margin(dxy=0)` at the unconstrained delta —
-stated so the two numbers are never read as the same quantity. `TODO(him):
-reasoning`
-
-**3. Pinned at the leader's own `(beta, beta_p, d, z_home) = (5, 52.5, 126 mm,
-95.62 mm)`, varying only `a` with `delta` re-tuned:** 12 of 32 rungs are
-UNREACHABLE at any `delta` (the bottom of the ladder, below the reach ceiling
-at this fixed `z_home`). Over the 20 reachable rungs, `tau_min` is **MONOTONE
-RISING**, `0.189` at `23.00 mm` to `0.815` at `60.40 mm`, `+0.0168` per mm —
-the OPPOSITE of the hypothesis under test. `margin(0)` rises alongside it.
-`TODO(him): decision`
-
-**4. The two shortlist members, `a` swept down with `z_home` and `delta`
-RE-DERIVED at each rung (screen_one + tune_and_score unchanged):** `tau_min`
-is NOT monotone — it peaks `0.914` near `32.54 mm` and eases to `0.815` at the
-actual `60.40 mm` horn, never dropping below `0.526` anywhere on either
-member's path. `rho` along the path `+0.354`. `TODO(him): reasoning`
-
-**Plainly: `tau_min` does not oppose `margin` anywhere the sweep actually
-occupies, and it does not bound `a` from above.** It tracks `margin` loosely
-positive throughout, including at the ceiling, and never approaches the zero
-that would signal lost transmission. The catalogue — not any measured
-kinematic quantity — is what is setting `a = 60.40 mm`. No weight, score, or
-bound on `a` is proposed; the objective stays open; `notation.md` untouched.
-
+- `min(C_i - |P_i|)` in millimetres against the build stack, pass/fail,
+  owed since the score was fixed in normalised units and unreachable by a
+  normalised ranking. `TODO(him): decision`
+- The `126 mm` rod against stock diameter and straightness, both cells NOT
+  RETRIEVED. `TODO(him): decision`
+- The document batch: pairing argument, `h_p -> c_p`, Grubler, derivation
+  renumber, the `arccos` metric floor, `fk()`'s `(R, T)` convention into
+  `notation.md`. `TODO(him): decision`
 
 ---
 

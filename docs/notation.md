@@ -244,6 +244,19 @@ Two instances are on record:
   six axes" when this was measured 2026-09-07; the sweep is **five** axes as of
   2026-09-08/09 — `r_p/r_b` fixed, §12. The finding does not change: it was
   never about the count.)*
+
+  **SUPERSEDED 2026-09-10, not deleted — the key is not complete.** Measured
+  on the `2fee8b0` sweep at `beta` and `beta_p` sampled at `2.5°` — finer than
+  the `10°`/`15°` this bullet was established at — `(a, d, |e|)` (`r_p` now
+  fixed, dropped from the tuple) produces `48,930` groups with worst
+  within-group spread `3.74e-2` and `10,338` groups exceeding `TIE_TOL`
+  measured at `dxy = p` (`1.5e-4`, this section below). The MIRROR half of
+  what this bullet found is exact — `(beta, beta_p) -> (60-beta, 60-beta_p)`
+  reduces to `164,181` groups with worst spread `1.62e-4`, one group over
+  `TIE_TOL` — but `|e|` alone is not a complete invariant: the absolute
+  `beta` enters the tuned score, not only its difference from `beta_p`. The
+  `10°`/`15°` sampling this bullet ran at was too coarse to see that. See the
+  9 September entry, `docs/phase-0-design-log.md`.
 - **Ties below `2.88e-3` are not an ordering.** That is the ranking grid's own
   resolution — what the 10° azimuth grid overstates a margin by against 0.25°
   (§9). Candidates closer together than it are ties the grid cannot separate.
@@ -653,12 +666,19 @@ Listed so nothing in this file is mistaken for a settled value.
   not a sampling wall; the Thingiverse 44–92 mm "extension arms" are a 3D
   print, not stock, and are excluded.
 
-  **`a`'s optimum is INTERIOR**, and it is the first axis to come out clean end
+  ~~**`a`'s optimum is INTERIOR**, and it is the first axis to come out clean end
   to end: best `margin(dxy = p) = 0.847657` at `a = 47.63 mm` (`0.5292 r_b`),
-  with published holes on both sides of it. The earlier reading —
-  `box_boundary`'s `a/r_b = 0.60` pairwise-favoured direction — pointed at a
-  **gap in the hole ladder**, not a wall: `54 mm` is not a hole on any
-  published arm.
+  with published holes on both sides of it.~~ **STALE 2026-09-10.** That was
+  measured with `d` at three values (`0.8`/`1.2`/`1.6 r_b`) and `beta`/`beta_p`
+  at `10°`/`15°` sampling. On the `2fee8b0` sweep — `d` open to `2.0` at `0.1`
+  steps, both angles at `2.5°` — the optimum sits at the `60.40 mm` hardware
+  ceiling instead. The earlier reading — `box_boundary`'s `a/r_b = 0.60`
+  pairwise-favoured direction — pointed at a **gap in the hole ladder**, not a
+  wall: `54 mm` is not a hole on any published arm; that reading still stands,
+  and the pairwise line count on the finer grid still turns over near `45.40`
+  vs `47.63 mm` — the typical candidate still leans toward a mid-range hole.
+  Only *the optimum* moved to the ceiling. See the 9 September entry,
+  `docs/phase-0-design-log.md`.
 
   **`beta_p` is bounded by ball-joint housing OD**, published range
   `9.0`–`13.0 mm` across twelve M3-class parts. Computed at **both** ends:
@@ -687,6 +707,23 @@ Listed so nothing in this file is mistaken for a settled value.
   **among the 39**, listed under §5 as unpublished for every servo checked.
   Body width is a proxy, on record; the clearance the bullet below asks for is
   not.
+
+  **`beta` is bounded, PERMISSIVELY, not closed — 2026-09-10.** The
+  installed-arc clearance above is still not published; nothing here supplies
+  it. What is used instead is the largest published sub-micro **CASE SIZE**,
+  `13.0 mm` (§5, MFR, Hitec HS-5085MG / HS-5087MH) — the bare body, not the
+  installed footprint. Requiring the arc at `r_b = 90` to clear it on both
+  gaps (`2 beta` within a pair, `120 - 2 beta` between pairs) gives
+  `beta` in `[4.1380°, 55.8620°]`, derived from the clearance rather than
+  chosen as degrees; both endpoints give exactly `13.00 mm` of arc, and both
+  collision ends (`beta -> 0` a pair closing on itself, `beta -> 60` a pair
+  closing on its neighbour) are checked. **This bound is PERMISSIVE and
+  cannot loosen**: flanges, screw pitch and wiring only ADD to case width, so
+  it cannot exclude a candidate that would have been buildable, and it
+  tightens rather than loosens once the installed figure exists. Swept in
+  `stewart/diagnostics/sweep.py` (`2fee8b0`); measured NOT to have been
+  carrying the `e12235c` shortlist's result — see the 9 September entry,
+  `docs/phase-0-design-log.md`.
 - ~~**`z_home`'s range**~~ *(reopened 2026-09-04; bracketed 2026-09-05 — this
   supersedes the entry that said nothing supplied a range)*. Both ends are now
   computed, from `stewart/diagnostics/zhome_bracket.py`.
@@ -879,9 +916,13 @@ Listed so nothing in this file is mistaken for a settled value.
 - ~~`beta_p`'s range, which needs a **ball-joint housing diameter**~~ — **closed
   2026-09-09, below.** Published range 9.0–13.0 mm, both ends computed, no
   joint chosen.
-- `beta`'s usable range, which needs a **servo body diameter** — **partially
-  answered 2026-09-09**, below: body width is published, installed-arc
-  clearance is not.
+- ~~`beta`'s usable range, which needs a **servo body diameter**~~ — **bounded,
+  PERMISSIVELY, 2026-09-10, below.** Body width is published, installed-arc
+  clearance is not; bounded instead at the largest published sub-micro CASE
+  SIZE, `13.0 mm`, giving `beta` in `[4.1380°, 55.8620°]` at `r_b = 90`. This
+  is a substitute for the still-unpublished clearance, not that clearance
+  itself, and it tightens rather than loosens once that figure exists — NOT
+  the same standing as `beta_p`'s closure above.
 
 **What does *not* constrain those two ranges.** The exclusions above are
 **hardware**, not rank degeneracy, on both rings. Recorded because the opposite was
