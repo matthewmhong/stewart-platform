@@ -1776,14 +1776,88 @@ ledger in `2fee8b0`.
 
 ### STILL OWED — recorded as such, not done here
 
-- `min(C_i - |P_i|)` in millimetres against the build stack, pass/fail,
+- ~~`min(C_i - |P_i|)` in millimetres against the build stack, pass/fail,
   owed since the score was fixed in normalised units and unreachable by a
-  normalised ranking. `TODO(him): decision`
-- The `126 mm` rod against stock diameter and straightness, both cells NOT
-  RETRIEVED. `TODO(him): decision`
+  normalised ranking.~~ **DONE, below - PASS.** `TODO(him): decision`
+- ~~The `126 mm` rod against stock diameter and straightness, both cells NOT
+  RETRIEVED.~~ **DONE, below - PASS.** `TODO(him): decision`
 - The document batch: pairing argument, `h_p -> c_p`, Grubler, derivation
   renumber, the `arccos` metric floor, `fk()`'s `(R, T)` convention into
   `notation.md`. `TODO(him): decision`
+
+### Continued 2026-09-10 - two checks the normalised score cannot see, closed
+
+Source: `stewart/diagnostics/build_margin.py`. Recorded against the
+`2fee8b0` shortlist: `a = 60.40 mm`, `d = 126 mm`, `beta = 5 / 55 deg`,
+`beta_p = 52.5 / 7.5 deg`, `z_home = 95.625 mm`, at `r_b = 90 mm`,
+`r_p = 80 mm`, `h_p/r_b = 0.1`, tilt limit `6.5580 deg`. Both mirror
+members. Neither check is a ranking; both are PASS/FAIL. No rod, joint or
+servo chosen; `notation.md` not touched.
+
+#### CHECK 1 - REACH MARGIN IN MILLIMETRES.  PASS
+
+**`min(C_i - |P_i|) = 90.96 mm`**, both members, worst over legs and the
+29-pose envelope grid at the tuned `delta_con` - `263x` the `0.3464 mm` RSS
+build-error stack (`notation.md` sec.8, transcribed, not recomputed).
+`TODO(him): reasoning`
+
+- **Region, not winner.** Same computation on the next 7 groups below the
+  shortlist: `90.5` - `91.8 mm` for groups 2-6, dropping to `89.3` and
+  `81.4 mm` at groups 7-8 - still two orders of magnitude clear. The margin
+  is a property of where the sweep is ranking, not a special feature of the
+  leader alone. `TODO(him): reasoning`
+- **Rod cut tolerance has NO published figure anywhere in the pull, and had
+  never been checked against anything until this.** Inverted instead:
+  solving `|P(d)| = C` EXACTLY (not a linear approximation - the
+  perturbation is not small relative to `d`), the margin is exhausted at
+  `d -> 163.90 mm` or `43.13 mm`, i.e. a cut error of **`37.9 mm`** on a
+  `126 mm` target - not a tolerance failure on any process, a different
+  design. `TODO(him): reasoning`
+- **A gate-design mistake, caught and corrected before the number was taken
+  as final.** The first verification compared this mm-scale minimum against
+  the cached NORMALISED `margin_con` and failed on 4 of 20 random
+  candidates - not a bug in the reach-margin computation (an independent
+  `u, v`-basis re-derivation agrees with the `n`-basis one at 0/20), but a
+  wrong reference: `margin_con` is the minimum of `(C-|P|)/C`, whose worst
+  point need not be the same point that minimises the UNNORMALISED
+  `C - |P|` this check reports. Replaced with the correct cross-check
+  before reporting. `TODO(him): reasoning`
+
+#### CHECK 2 - ROD SLENDERNESS.  PASS at every published diameter
+
+`d/r_b = 1.40` inside the asserted `2.0` cap; `hardware-pull.md` sec.7
+gives NO elastic modulus for any listed stock and NO straightness/buckling
+figure except A286 (`<=2 mm/m`). Euler buckling (`K=1`, pinned-pinned - both
+rod ends are ball joints) at every published diameter, against the actual
+worst-case axial rod force from the 2.7 g ball's weight alone, solved as
+parallel-mechanism statics (`J_fk^T f = -W_ext`, `J_fk` unmodified from the
+FK-residual Jacobian; verified against an independent force-and-moment
+recomputation, not by re-checking the linear solve, worst residual
+`7.7e-15`). **Worst leg force `37.7 mN`.** `TODO(him): reasoning`
+
+- **PASS at every diameter, by at least `19x`** (the thinnest carbon
+  pushrod, `0.76 mm`, at the LOW end of an assumed `70-170 GPa` modulus
+  range) **up to tens of thousands x** for the larger stock. Closes the 19
+  August / 8 September judgement calls with a number rather than a fourth
+  judgement. `TODO(him): reasoning`
+- **`E` is NOT a hardware-pull quantity for any stock**, and is flagged as
+  such at every use - standard published values (`200 GPa` steel, `201 GPa`
+  A286, `70-170 GPa` carbon fibre), not pull-sourced. `TODO(him):
+  reasoning`
+- **What bow would have to be before it matters**, since no straightness
+  figure exists for the shortlist's own stock class: a chord-shortening of
+  `37.9 mm` (same threshold as check 1's cut-tolerance figure, both being an
+  error in the rod's effective end-to-end span) implies a circular-arc
+  sagitta of **`42.3 mm` over a 126 mm rod** - not a "straight" rod by any
+  measure. The ONE published straightness figure that exists at all,
+  A286's `<=2 mm/m`, bowed to its FULL rated tolerance over `126 mm`, would
+  shorten the chord by `1.3e-3 mm` - four orders of magnitude below where
+  it would start to matter. `TODO(him): reasoning`
+- **Platform self-weight is NOT included and remains a separate, larger,
+  unspecified load** - no material or mass has been chosen for the
+  platform. This closes the BALL's contribution only, matching the 19
+  August framing exactly; it does not close the leg-force question in
+  general. `TODO(him): decision`
 
 ---
 
