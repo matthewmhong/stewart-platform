@@ -321,7 +321,7 @@ range. The alternating `s_i` is what makes the family mirror-symmetric.
 > lies **outside the sampled region and its extent is unknown**.
 >
 > Also worth recording: `delta*` reduced mod 180 returns to `delta_G = arg G` of
-> §9, which is exactly where `(z_flat - h_p)²` is **minimised**. Under the datum
+> §9, which is exactly where `(z_flat - c_p)²` is **minimised**. Under the datum
 > the closed-form seed therefore pointed at the *tightest-feasibility* `delta`.
 >
 > None of this is live: the `z_home = z_flat` datum was **dropped 2026-09-04** and
@@ -395,10 +395,10 @@ Then
 |g|²             =  r_p²  +  r_b²  -  2 r_p r_b cos A
 g · u            =  r_b cos delta  -  r_p cos(A - delta)
 
-(z_flat - h_p)²  =  d²  -  |g|²  -  a²  -  2 a |g| cos(delta - delta_G)
+(z_flat - c_p)²  =  d²  -  |g|²  -  a²  -  2 a |g| cos(delta - delta_G)
 ```
 
-**Positive root**, because `z_flat - h_p` is `N_i` at that configuration and
+**Positive root**, because `z_flat - c_p` is `N_i` at that configuration and
 `N_i > 0`.
 
 **Why it is leg-independent, and why no group argument is needed.** Both `|g|²` and
@@ -427,7 +427,7 @@ Run: `stewart/diagnostics/zhome_datum.py`, check A.
 ## 10. `alpha` at home is one scalar, shared by all six legs *(2026-09-04)*
 
 Not a new measurement — it follows from §9's two residuals. At home `M_i = g_i·u_i`
-and `|g_i|²` are leg-independent, and `N_i = z_home - h_p` is common to all six. So
+and `|g_i|²` are leg-independent, and `N_i = z_home - c_p` is common to all six. So
 `C_i`, `P_i` and `phi_i` are common, and hence so is the home angle.
 
 Two uses:
