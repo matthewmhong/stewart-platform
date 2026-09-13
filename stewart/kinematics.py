@@ -315,7 +315,7 @@ class FKNotConverged(RuntimeError):
 #:   genuinely failed to converge lands orders above it, not just outside it.
 #:
 #: The claim that the tolerance is not what limits accuracy is still MEASURED,
-#: not argued from those two bounds: ``stewart/diagnostics/roundtrip.py``
+#: not argued from those two bounds: ``archive/diagnostics/roundtrip.py``
 #: tightens it tenfold and checks the round-trip pose error does not move.  It
 #: is free to be, because the answer no longer depends on the tolerance at all
 #: over the range where acceptance succeeds - which is the point.
@@ -459,7 +459,7 @@ def fk_jacobian(geom: Geometry, R: np.ndarray, rvec: np.ndarray,
     ``+e_i^T R [p_i]_x``, which differs from the above by more than a sign, so
     the two cannot be reconciled by flipping one.  This form is
     finite-differenced against the left perturbation it claims to describe in
-    ``stewart/diagnostics/roundtrip.py``; do not change the sign without
+    ``archive/diagnostics/roundtrip.py``; do not change the sign without
     re-running it.
 
     ``e_i`` is built from the ACTUAL ``|q_i - h_i|``, not from ``d``.  The two
@@ -495,7 +495,7 @@ def _cond_and_sigma(J: np.ndarray, char_len: float | None):
     matrix dimensionless.
 
     ``char_len`` is **not defaulted**.  It is the same undecided choice
-    ``docs/archive/notation.md`` sec.12 records for the scoring conditioning measure, and
+    ``archive/docs/notation.md`` sec.12 records for the scoring conditioning measure, and
     picking one here silently would settle it by accident.  Passing ``None``
     returns ``(None, None, None)``.
     """
@@ -719,7 +719,7 @@ def fk(
     is already zero, the solver returns immediately, and the round-trip test
     then passes for *any* ``ik`` - including one that returns zeros.
     :func:`stewart.roundtrip.round_trip` offsets the seed for that reason;
-    ``stewart/diagnostics/roundtrip.py`` goes further and seeds HOME, a fixed
+    ``archive/diagnostics/roundtrip.py`` goes further and seeds HOME, a fixed
     neutral pose that knows nothing about the commanded one.
 
     **A 6-RSS forward kinematics has several real solutions.**  The platform

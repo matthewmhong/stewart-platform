@@ -53,7 +53,7 @@ def _geodesic_deg(R, R_hat):
     the digits are gone before ``arccos`` is called - and a round trip that is
     correct to ``1e-13 deg`` was being reported at ``1e-6``.  Same quantity,
     verified to ``1e-12`` relative wherever ``arccos`` is well conditioned by
-    ``stewart.diagnostics.roundtrip.check_metric_agreement``.
+    ``check_metric_agreement`` in ``archive/diagnostics/roundtrip.py``.
 
     Neither form is a rotation convention; both name an axis and an angle.
     """

@@ -24,21 +24,22 @@ servo plane, then a fixed-length push-rod `d` to the platform.
 | `stewart/kinematics.py` | DONE - `stage1`, `legs`, `w`, `arm_tips`, `ik`, `fk` (+ `fk_solve`, `fk_jacobian`) |
 | `stewart/plotting.py` | DONE - draws points only, never solves kinematics |
 | `stewart/roundtrip.py` | DONE - `pose -> ik -> fk -> pose` harness; `ik`/`fk` are passed in |
-| `stewart/diagnostics/` | one module per design question, run with `python -m stewart.diagnostics.<name>` |
 | `test_kinematics.py`, `demo.py` | DONE |
+| `archive/` | frozen: old docs, the Phase 0 diagnostics and sweep outputs - do not edit or build on |
 
 ## Docs
 
 | file | job |
 |------|-----|
-| `STATUS.md` | current result, open items, next steps |
+| `STATUS.md` | requirements, open items, next steps |
 | `docs/derivation.md` | maths + the symbol glossary (§1) |
 | `docs/design-log.md` | dated narrative (the user's portfolio piece, in their voice) |
 | `docs/hardware.md` | sourced part specs |
-| `docs/archive/` | frozen superseded docs - do not edit |
 
 **Session state lives in `STATUS.md` - update it in place.  Do not create new
-dated handoff or session-summary documents.**
+dated handoff or session-summary documents.**  **Add to `docs/design-log.md` as
+work happens** - a dated entry for each decision or result, not a catch-up
+later.
 
 ## Notes for whoever picks this up
 

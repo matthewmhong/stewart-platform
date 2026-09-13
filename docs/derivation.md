@@ -13,7 +13,7 @@
 ## 1. Notation
 
 The single glossary for the project. Current definitions only; the dated history
-of how each symbol was settled is in `docs/archive/notation.md` and the design
+of how each symbol was settled is in `archive/docs/notation.md` and the design
 log. Current *values* (the chosen dimensions) are in `STATUS.md`.
 
 **Conventions.** Millimetres and radians internally; degrees only in printed
@@ -399,7 +399,7 @@ range. The alternating `s_i` is what makes the family mirror-symmetric.
 > None of this is live: the `z_home = z_flat` datum was **dropped 2026-09-04** and
 > `delta ∈ [0°, 180°)` is restored as sufficient. It is written down because the
 > datum is algebraically tempting and will be proposed again.
-> Grid and run: `stewart/diagnostics/zhome_datum.py`, check B.
+> Grid and run: `archive/diagnostics/zhome_datum.py`, check B.
 
 `delta` is tuned, not fixed. **Objective revised 2026-09-04 — this supersedes the
 `J(delta) = max over envelope and legs of |L_i·n_i|` stated here previously.**
@@ -494,7 +494,7 @@ Round-trip confirmation of the formula, independent of the algebra: build the
 geometry at the derived height, set `alpha = 0`, and check `|q_i - arm_tips(0)_i|`
 against `d`. **Worst residual 2.220e-16.**
 
-Run: `stewart/diagnostics/zhome_datum.py`, check A.
+Run: `archive/diagnostics/zhome_datum.py`, check A.
 
 ## 10. `alpha` at home is one scalar, shared by all six legs *(2026-09-04)*
 
@@ -513,7 +513,7 @@ Two uses:
 
 ## 11. Grubler-Kutzbach degree-of-freedom check *(CC-derived, 2026-09-10 — UNVERIFIED)*
 
-**CC-derived and unverified, per the standing rule** (`docs/archive/session-handoff-
+**CC-derived and unverified, per the standing rule** (`archive/docs/session-handoff-
 2026-09-05.md`: "anything the assistant derives is unverified until a diagnostic
 says otherwise, and must be labelled as such when written"). Nothing in the repo
 tests mobility; this is pen-and-paper only, checked against the known result for
@@ -573,7 +573,7 @@ ones wanted; neither question is asked here.
   **Superseded as a design basis, 2026-09-05.** The envelope is now set by a
   **recovery** framing — return the ball from a displacement `x0` in a time `tau`,
   bang-bang, `acc = 4x0/tau²` and `sin(tilt) = 7acc/5g` — giving a **6.558°**
-  requirement and a **10.529°** envelope. See `docs/archive/notation.md` §9; the number above
+  requirement and a **10.529°** envelope. See `archive/docs/notation.md` §9; the number above
   is kept because it is correct for what it measures and because the two framings
   scale **oppositely** in plate size (arrest: tilt as `1/k`; recovery: tilt as
   `k`), which is worth not re-deriving from scratch. For the record the two agree
@@ -583,7 +583,7 @@ ones wanted; neither question is asked here.
 - ~~Ball travel during a 150 ms latency window at 300 mm/s: **45 mm**.~~
   **Struck 2026-09-05.** The 300 mm/s was withdrawn 2026-09-03 as invented, and
   nothing depends on the bullet any more: the envelope's latency term is
-  `150 ms × 200 mm/s = 30 mm`, computed in `docs/archive/notation.md` §9 from the peak speed
+  `150 ms × 200 mm/s = 30 mm`, computed in `archive/docs/notation.md` §9 from the peak speed
   that survived. The 150 ms itself is still **provisional** and still needs a
   basis — sensor frame interval plus servo step response, on the hardware pull.
 - Distinguishable tilt steps = usable servo travel ÷ servo deadband. The geometry

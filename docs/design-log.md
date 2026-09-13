@@ -566,8 +566,8 @@ than by a per-leg construction.
 > *why*, and that explanation is not written yet. Nothing here is in his voice, and
 > nothing here should be read as his account of the session until he replaces it.
 >
-> Sources: `docs/archive/session-handoff-2026-09-04.md`, `docs/derivation.md` §8/§9/§10,
-> `stewart/diagnostics/zhome_datum.py`, `stewart/diagnostics/branch_check.py`.
+> Sources: `archive/docs/session-handoff-2026-09-04.md`, `docs/derivation.md` §8/§9/§10,
+> `archive/diagnostics/zhome_datum.py`, `archive/diagnostics/branch_check.py`.
 >
 > **Note on ordering.** Several results below reverse other results from the *same
 > day*. Where that happens it is stated, with what was replaced. The reversals are
@@ -638,7 +638,7 @@ than by a per-leg construction.
   `x0 = 80 mm` is a property of the sheet and not of `r_b`. **The `k`-dependence
   this entry establishes no longer exists to be established.** Its conclusion —
   absolute scale enters upstream — survives, but on the bed and on `p`'s
-  denominator, not on this. See the 8 September entry and `docs/archive/notation.md` sec.9.
+  denominator, not on this. See the 8 September entry and `archive/docs/notation.md` sec.9.
 
 ### Decided, reversing an earlier decision the same day
 
@@ -703,7 +703,7 @@ than by a per-leg construction.
 
 - `branch_check.py` — the script behind "8 of 432" and the −5.7e-3 boundary margin —
   was **recovered from a session scratchpad, not from the repo**, and committed as
-  `stewart/diagnostics/branch_check.py`. It had never been in git history. This is
+  `archive/diagnostics/branch_check.py`. It had never been in git history. This is
   the **third** recorded instance of a documented result with no code behind it.
   **Recovered is not the same as never lost.** `TODO(him): reasoning`
 
@@ -714,8 +714,8 @@ than by a per-leg construction.
 > Skeleton only, same terms as the 4 September entries above: facts and
 > residuals, no prose, nothing in his voice.
 >
-> Sources: `docs/archive/notation.md` sec.9/10/12, `docs/archive/session-handoff-2026-09-04.md`,
-> and the four modules in `stewart/diagnostics/` named below.
+> Sources: `archive/docs/notation.md` sec.9/10/12, `archive/docs/session-handoff-2026-09-04.md`,
+> and the four modules in `archive/diagnostics/` named below.
 
 **Envelope specified.** `dxy = 0`, `dz = 0`, `yaw = 0`, tilt limit **10.529 deg**.
 Bang-bang recovery: `acc = 4 x0 / tau^2`, `sin(tilt) = 7 acc / (5 g)`,
@@ -748,11 +748,11 @@ the mechanism is the opposite sign. `TODO(him): reasoning`
 > What survives: absolute scale does enter upstream. It enters in **exactly two
 > places** — the bed (`r_b <= 90 mm`) and `p`'s denominator (the asserted 80 mm
 > `r_b` floor) — and **not** through the tilt target. See the 8 September entry
-> and `docs/archive/notation.md` sec.9 and sec.12.
+> and `archive/docs/notation.md` sec.9 and sec.12.
 
 **Envelope is two axes, not four.** `dxy = 0` removes `x` and `y`; what remains is
 tilt magnitude and tilt azimuth. Being purely angular it carries no length
-dimension and does not scale with `k` at all. `docs/archive/notation.md` sec.9's note about
+dimension and does not scale with `k` at all. `archive/docs/notation.md` sec.9's note about
 translations forcing the envelope to scale is deleted. `TODO(him): reasoning`
 *(Unaffected by the 2026-09-08 decision above: the envelope was already angular,
 and a fixed tilt target is what it was already being read as.)*
@@ -773,11 +773,11 @@ Width right, position wrong: the window is **`[30, 90]`**, not `[0, 60]`. Mirror
 lines in azimuth sit at `30 + 60k`, because a reflection in the plane at azimuth
 `m` maps a tilt axis at `psi` to one at `2m + 180 - psi`. `[0, 60]` is symmetric
 about its own centre and misses the orbit `{75, 105}` entirely.
-`stewart/diagnostics/azimuth_symmetry.py`. `TODO(him): reasoning`
+`archive/diagnostics/azimuth_symmetry.py`. `TODO(him): reasoning`
 
 **Pose grid.** 5 magnitudes x 7 azimuths, magnitude 0 counted once:
 **29 poses, 174 `w` evaluations** per objective evaluation. Supersedes
-`docs/archive/notation.md` sec.9's `3^6 = 729` / `4374` and 2026-09-04's 81 / 486.
+`archive/docs/notation.md` sec.9's `3^6 = 729` / `4374` and 2026-09-04's 81 / 486.
 `TODO(him): reasoning`
 
 **`z_home` lower bracket, closed form.** `z_home > r_p sin(tilt) + c_p cos(tilt)`
@@ -856,8 +856,8 @@ translation, not by tilt. `TODO(him): reasoning`
 ### `fk()` and the round-trip gate — the gate passes
 
 > Same terms as above: facts and residuals, no prose, nothing in his voice.
-> Source: `docs/archive/cc-fk-gate.md`, `stewart/kinematics.py`,
-> `stewart/diagnostics/roundtrip.py`.
+> Source: `archive/docs/cc-fk-gate.md`, `stewart/kinematics.py`,
+> `archive/diagnostics/roundtrip.py`.
 
 **Gate result.** `pose -> ik -> six angles -> fk -> pose`, seeded **HOME**
 (`R = I`, `T = (0,0,z_home)`) at every pose. **14 436 poses, 4 geometries, 3
@@ -989,7 +989,7 @@ of units and `100 mm` remains the 2026-09-03 placeholder, not a decision.
 - `fk` returns **`(R, T)`, not `(T, R)`** as specified, because
   `stewart/roundtrip.py` is marked DONE and unpacks `R, T`. **Resolved
   2026-09-07 in favour of `(R, T)`** and recorded as a repo convention in
-  `docs/archive/notation.md` — see the 7 September entry below.
+  `archive/docs/notation.md` — see the 7 September entry below.
 - **`README.md`, `CLAUDE.md` and `demo.py` are stale**: the stub list is fully
   discharged, `CLAUDE.md`'s layout table still calls all five kinematics
   functions STUB, and `demo.py` prints "ik/fk stubbed -> every row reports 'not
@@ -1005,8 +1005,8 @@ of units and `100 mm` remains the 2026-09-03 placeholder, not a decision.
 ## 7 September
 
 > Same terms: facts and residuals, no prose, nothing in his voice.
-> Sources: `docs/archive/cc-fk-gate.md` (revised), `docs/archive/notation.md` Conventions and
-> sec.12, `stewart/kinematics.py`, `stewart/diagnostics/roundtrip.py`.
+> Sources: `archive/docs/cc-fk-gate.md` (revised), `archive/docs/notation.md` Conventions and
+> sec.12, `stewart/kinematics.py`, `archive/diagnostics/roundtrip.py`.
 
 Three corrections to the 5 September gate work. **The gate still passes**; none
 of the three changes the verdict.
@@ -1047,7 +1047,7 @@ has none. `TODO(him): reasoning`
   are all `arccos(P/C)`, the IK branch. `TODO(him): reasoning`
 
 **`(R, T)` pose order recorded as a repo convention.** Written into
-`docs/archive/notation.md`'s Conventions block, so it stops being a per-function question.
+`archive/docs/notation.md`'s Conventions block, so it stops being a per-function question.
 Orientation first, everywhere: `stage1(geom, R, T)`, `legs`, `w`, `ik` all
 already took it, and `fk(geom, alphas, R0, T0) -> (R, T)` matches rather than
 departs. Mnemonic recorded with it: in `q_i = T + R p_i`, `R` is the operator
@@ -1085,7 +1085,7 @@ the recovered pose returns **the same six angles to 2.0e-13 deg**.
   length now decides where a **reject line** sits, not just how a ranking sorts.
   Measured spread over four candidate lengths on the gate fixtures: `r_b`
   3.7–7.4, `r_p` 3.1–6.4, `d` 4.1–6.7, `a` 3.7–19.5 — a factor of 3 on one
-  fixture at benign values. Recorded in `docs/archive/notation.md` sec.12.
+  fixture at benign values. Recorded in `archive/docs/notation.md` sec.12.
   `TODO(him): decision`
   — **Narrowed later the same day.** With no reject line there is no threshold
   for the length to set, so it **no longer blocks the score**. It stays open for
@@ -1098,8 +1098,8 @@ the recovered pose returns **the same six angles to 2.0e-13 deg**.
 ### The score function — settled
 
 > Same terms: facts and residuals, no prose, nothing in his voice.
-> Sources: `stewart/diagnostics/score_discriminators.py`, part numbers cited per
-> claim; recorded in `docs/archive/notation.md` sec.8 and sec.12.
+> Sources: `archive/diagnostics/score_discriminators.py`, part numbers cited per
+> claim; recorded in `archive/docs/notation.md` sec.8 and sec.12.
 
 **Settled form.**
 
@@ -1204,9 +1204,9 @@ stock — not on anything the sweep can compute. `TODO(him): decision`
 > discussion, with no diagnostic behind them**. They are marked **ASSERTED** and
 > must not be read back as measured. Nothing here invents support for them.
 >
-> Sources: `stewart/diagnostics/box_boundary.py` and
-> `stewart/diagnostics/tilt_bracket.py`, both committed `fd42513`;
-> `docs/archive/notation.md` sec.8 and sec.12.
+> Sources: `archive/diagnostics/box_boundary.py` and
+> `archive/diagnostics/tilt_bracket.py`, both committed `fd42513`;
+> `archive/docs/notation.md` sec.8 and sec.12.
 
 ### THE OBJECTIVE IS INCOMPLETE — an open problem, not a solved one
 
@@ -1264,7 +1264,7 @@ p_mm  =  sqrt(0.2^2 + 0.2^2 + 0.2^2)  =  0.3464 mm
 p     =  0.3464 / 80                  =  0.004330
 ```
 
-normalised by an **asserted `r_b` floor of 80 mm**. Recorded in `docs/archive/notation.md`
+normalised by an **asserted `r_b` floor of 80 mm**. Recorded in `archive/docs/notation.md`
 sec.8, which supersedes its own "`p` is not yet fixed". `TODO(him): reasoning`
 
 - **Three sources at 0.2 mm**: printer tolerance; ball-joint free play; platform
@@ -1285,7 +1285,7 @@ sec.8, which supersedes its own "`p` is not yet fixed". `TODO(him): reasoning`
 
 ### Absolute scale — ASSERTED
 
-Recorded in `docs/archive/notation.md` sec.12.
+Recorded in `archive/docs/notation.md` sec.12.
 
 - **Print volume 180 x 180 mm, so `r_b <= 90 mm`.** This is the **upstream
   absolute length**, and **it arrived from the bed, not from torque**.
@@ -1307,7 +1307,7 @@ is a property of **the sheet**, not of `r_b`, so the tilt limit is **10.529 deg
 at every mechanism scale**. `TODO(him): reasoning`
 
 - **Withdrawn: the premise that absolute scale enters through the tilt target's
-  dependence on plate size.** It is struck in `docs/archive/notation.md` sec.9 and marked at
+  dependence on plate size.** It is struck in `archive/docs/notation.md` sec.9 and marked at
   both design-log entries that rest on it. `TODO(him): reasoning`
 - **Absolute scale enters in exactly two places**: the **bed**, giving
   `r_b <= 90 mm`; and **`p`'s denominator**, the asserted 80 mm `r_b` floor.
@@ -1330,7 +1330,7 @@ envelope reachable, `N_i > 0`. **Recorded so it is not reintroduced.**
 
 ### The `X = 1` crossing is limit-dependent
 
-Source: `tilt_bracket.py`. Recorded in `docs/archive/notation.md` sec.12 beside the
+Source: `tilt_bracket.py`. Recorded in `archive/docs/notation.md` sec.12 beside the
 2026-09-05 correction it qualifies.
 
 **The 2026-09-05 attribution — one candidate where the reach ceiling falls below
@@ -1382,15 +1382,15 @@ stands now. See the continuation below.
 > **Read the ASSERTED marks**, as above: several entries are decisions taken
 > in discussion with no diagnostic behind them, and none is invented here.
 >
-> Sources: `docs/hardware.md`; `stewart/diagnostics/tilt_authority.py`
-> (`3a01bd3`); `stewart/diagnostics/tilt_dropped.py`,
-> `stewart/diagnostics/sweep_ranges.py`, `stewart/diagnostics/fixed_ratio.py`
-> (all `2af4f3a`); `stewart/diagnostics/box_boundary.py` (`fd42513`,
-> referenced, not re-run); `docs/archive/notation.md` sec.8, sec.9, sec.12.
+> Sources: `docs/hardware.md`; `archive/diagnostics/tilt_authority.py`
+> (`3a01bd3`); `archive/diagnostics/tilt_dropped.py`,
+> `archive/diagnostics/sweep_ranges.py`, `archive/diagnostics/fixed_ratio.py`
+> (all `2af4f3a`); `archive/diagnostics/box_boundary.py` (`fd42513`,
+> referenced, not re-run); `archive/docs/notation.md` sec.8, sec.9, sec.12.
 
 #### `tau_L` is dropped, not revised
 
-Source: `docs/hardware.md`. Recorded in `docs/archive/notation.md` sec.9.
+Source: `docs/hardware.md`. Recorded in `archive/docs/notation.md` sec.9.
 
 **ASSERTED.** Neither term of `tau_L = 150 ms` is published by any candidate
 maker. Servo step response: Hitec, Savox and ROBOTIS each publish
@@ -1416,7 +1416,7 @@ not, so the term has a floor and no value. `TODO(him): reasoning`
 
 #### Absolute scale: `r_p` fixed, `r_b` fixed exactly, `r_p/r_b` drops out of the sweep
 
-Source: recorded in `docs/archive/notation.md` sec.12.
+Source: recorded in `archive/docs/notation.md` sec.12.
 
 **ASSERTED, both numbers.** `r_b = 90 mm`, the full print bed — sharper than
 the 8 September `r_b <= 90 mm`, which left the exact value open. `r_p = 80 mm`,
@@ -1443,8 +1443,8 @@ from the printed hub carrying the bought `220 mm` sheet — new, not on the
 
 #### The tilt-authority option is closed, and the reason is the finding
 
-Source: `stewart/diagnostics/tilt_authority.py`, committed `3a01bd3`. Recorded
-in `docs/archive/notation.md` sec.12 beside the objective-open paragraph it qualifies.
+Source: `archive/diagnostics/tilt_authority.py`, committed `3a01bd3`. Recorded
+in `archive/docs/notation.md` sec.12 beside the objective-open paragraph it qualifies.
 
 **`rho(authority, score) = +0.9088`** over the 363 feasible candidates —
 authority ranks **with** margin, more strongly than `tau_min`'s already-
@@ -1488,8 +1488,8 @@ Two different fixes happened in the same session and must not be read as one.
 
 #### The `N_i > 0` floor binds more than a test that could not fire showed
 
-Source: `stewart/diagnostics/tilt_dropped.py`, committed `2af4f3a`. Recorded
-in `docs/archive/notation.md` sec.12 beside the 2026-09-05 survivorship correction.
+Source: `archive/diagnostics/tilt_dropped.py`, committed `2af4f3a`. Recorded
+in `archive/docs/notation.md` sec.12 beside the 2026-09-05 survivorship correction.
 
 **`fixed_ratio.py`'s `z_lo <= floor` test is `0` by construction** — the
 screen it reads intersects reach with `Z_GRID > floor` strictly, so no
@@ -1507,8 +1507,8 @@ four tilt limits checked (`6.558` / `8.538` / `10.529` / `14.552°`).
 
 #### Zero-width brackets are a scan artefact, and get a floor
 
-Source: `stewart/diagnostics/tilt_dropped.py`, `2af4f3a`. Recorded in
-`docs/archive/notation.md` sec.12.
+Source: `archive/diagnostics/tilt_dropped.py`, `2af4f3a`. Recorded in
+`archive/docs/notation.md` sec.12.
 
 **21 of 143** candidates feasible at `6.558°` have `z_home` brackets of grid
 width `0.000 r_b`. On the **122** candidates common to the `10.529°`
@@ -1531,8 +1531,8 @@ figure down. The `143`-vs-`122` improvement is **overstated by composition**.
 
 #### `TIE_TOL` is eight decades wrong at `dxy = p`
 
-Source: `stewart/diagnostics/sweep_ranges.py` part 7, `2af4f3a`. Recorded in
-`docs/archive/notation.md` sec.8.
+Source: `archive/diagnostics/sweep_ranges.py` part 7, `2af4f3a`. Recorded in
+`archive/docs/notation.md` sec.8.
 
 **Measured ranking resolution `~1.5e-4`** at 24 displacement-azimuth
 directions (`probe_margin`'s own sampling); refining to 72 and 360 buys
@@ -1543,8 +1543,8 @@ harness requirement, not taken as a code change here.
 
 #### Sweep ranges from the hardware pull
 
-Source: `docs/hardware.md`; `stewart/diagnostics/sweep_ranges.py`,
-`2af4f3a`. Recorded in `docs/archive/notation.md` sec.12.
+Source: `docs/hardware.md`; `archive/diagnostics/sweep_ranges.py`,
+`2af4f3a`. Recorded in `archive/docs/notation.md` sec.12.
 
 - **`a` is discrete**: 32 published ProModeler hole positions, `9.0`–
   `60.4 mm` = `0.1000`–`0.6711 r_b`. Ceiling is hardware, not sampling;
@@ -1592,8 +1592,8 @@ Source: `docs/hardware.md`; `stewart/diagnostics/sweep_ranges.py`,
 > marked as such. None is invented support; each states what it substitutes
 > for and which direction it can be wrong in.
 >
-> Sources: `stewart/diagnostics/sweep.py` (`e12235c`, `2fee8b0`);
-> `stewart/diagnostics/tau_transmission.py` (`227927d`); `docs/archive/notation.md`
+> Sources: `archive/diagnostics/sweep.py` (`e12235c`, `2fee8b0`);
+> `archive/diagnostics/tau_transmission.py` (`227927d`); `archive/docs/notation.md`
 > sec.8, sec.12.
 
 ### THE SWEEP RAN AND RETURNED A SHORTLIST — the `[CC]` item Phase 0 was built for
@@ -1632,7 +1632,7 @@ members interior in `beta` with `2.71 mm` of arc slack. `TODO(him): decision`
 
 ### `beta` WAS BOUNDED, REVERSING THE 8 SEPTEMBER DECISION TO SWEEP IT UNBOUNDED
 
-Source: `stewart/diagnostics/sweep.py`, `2fee8b0`. Recorded in `docs/archive/notation.md`
+Source: `archive/diagnostics/sweep.py`, `2fee8b0`. Recorded in `archive/docs/notation.md`
 sec.12, the "`beta`'s usable range" entry.
 
 **Bound `[4.1380°, 55.8620°]`, derived from `arc = r_b * gap` against the
@@ -1653,12 +1653,12 @@ of arc; both collision ends — `beta -> 0` closing a pair on itself,
   axis was inflating the tie set's SIZE, not producing its winner. **The
   `e12235c` failure was weaker than it read at the time.** `TODO(him):
   reasoning`
-- **Amend `docs/archive/notation.md` sec.12** — done, below: "`beta`'s usable range" is
+- **Amend `archive/docs/notation.md` sec.12** — done, below: "`beta`'s usable range" is
   bounded permissively at case width, not closed.
 
 ### THE GROUPING KEY WAS WRONG AND IS CORRECTED
 
-Source: `stewart/diagnostics/sweep.py`, `2fee8b0`. Recorded in `docs/archive/notation.md`
+Source: `archive/diagnostics/sweep.py`, `2fee8b0`. Recorded in `archive/docs/notation.md`
 sec.8, the `(r_p, a, d, |e|)` collapse bullet.
 
 **`(a, d, |e|)` is not a complete invariant.** Measured on the sweep:
@@ -1672,13 +1672,13 @@ because the absolute `beta` enters the score. `TODO(him): reasoning`
 - **Part (8)'s key was established at `10°`/`15°` sampling; `2.5°` is the
   first grid fine enough to separate it.** A better measurement correcting
   an earlier one, not a reversal. `TODO(him): reasoning`
-- **Amend `docs/archive/notation.md` sec.8** — done, below: the `(r_p, a, d, |e|)` key is
+- **Amend `archive/docs/notation.md` sec.8** — done, below: the `(r_p, a, d, |e|)` key is
   marked superseded, not deleted.
 
 ### THE MIRROR/BRANCH FINDING — its own item, not a grid artefact
 
-Source: `stewart/diagnostics/sweep.py`, `2fee8b0`. Recorded beside the
-4 September branch decision and in `docs/archive/notation.md` sec.12's discrete-grid list.
+Source: `archive/diagnostics/sweep.py`, `2fee8b0`. Recorded beside the
+4 September branch decision and in `archive/docs/notation.md` sec.12's discrete-grid list.
 
 **The one remaining over-`TIE_TOL` group was first attributed by CC to
 1-degree `delta` quantisation. THAT ATTRIBUTION WAS WRONG, and CC withdrew
@@ -1708,7 +1708,7 @@ cannot remove a spread the grid never caused. `TODO(him): reasoning`
 
 ### `tau_min` DOES NOT BOUND `a` FROM ABOVE
 
-Source: `stewart/diagnostics/tau_transmission.py`, `227927d`, over the
+Source: `archive/diagnostics/tau_transmission.py`, `227927d`, over the
 `2fee8b0` feasible set (`327,780` candidates).
 
 **Whole set:** min `0.218`, median `0.869`, max `0.992`. Per `a`, the median
@@ -1740,7 +1740,7 @@ RISES from `0.60` at `9.00 mm` to a peak `0.912` near `40 mm`, then eases to
 artefact of the unbounded `beta` — it survives the bound.** `TODO(him):
 decision`
 
-- **`docs/archive/notation.md` sec.12's "`a`'s optimum is INTERIOR ... the first axis to
+- **`archive/docs/notation.md` sec.12's "`a`'s optimum is INTERIOR ... the first axis to
   come out clean end to end" is STALE** and is marked so below: that was
   measured with `d` at three values and the angles at `10°`/`15°`; at `0.1`
   in `d` and `2.5°` in both angles the optimum moves to the ceiling. The
@@ -1783,7 +1783,7 @@ ledger in `2fee8b0`.
   RETRIEVED.~~ **DONE, below - PASS.** `TODO(him): decision`
 - ~~The document batch: pairing argument, `h_p -> c_p`, Grubler, derivation
   renumber, the `arccos` metric floor, `fk()`'s `(R, T)` convention into
-  `docs/archive/notation.md`.~~ **DONE 2026-09-10, below.** `h_p -> c_p` renamed at every
+  `archive/docs/notation.md`.~~ **DONE 2026-09-10, below.** `h_p -> c_p` renamed at every
   call site, `test_kinematics.py` and `demo.py` both re-run and passing;
   Grubler-Kutzbach added to the derivation as §11, CC-derived and unverified;
   the derivation renumbered contiguous, 1-11 then Appendix, every citing
@@ -1794,18 +1794,18 @@ ledger in `2fee8b0`.
 
 ### Continued 2026-09-10 - two checks the normalised score cannot see, closed
 
-Source: `stewart/diagnostics/build_margin.py`. Recorded against the
+Source: `archive/diagnostics/build_margin.py`. Recorded against the
 `2fee8b0` shortlist: `a = 60.40 mm`, `d = 126 mm`, `beta = 5 / 55 deg`,
 `beta_p = 52.5 / 7.5 deg`, `z_home = 95.625 mm`, at `r_b = 90 mm`,
 `r_p = 80 mm`, `c_p/r_b = 0.1`, tilt limit `6.5580 deg`. Both mirror
 members. Neither check is a ranking; both are PASS/FAIL. No rod, joint or
-servo chosen; `docs/archive/notation.md` not touched.
+servo chosen; `archive/docs/notation.md` not touched.
 
 #### CHECK 1 - REACH MARGIN IN MILLIMETRES.  PASS
 
 **`min(C_i - |P_i|) = 90.96 mm`**, both members, worst over legs and the
 29-pose envelope grid at the tuned `delta_con` - `263x` the `0.3464 mm` RSS
-build-error stack (`docs/archive/notation.md` sec.8, transcribed, not recomputed).
+build-error stack (`archive/docs/notation.md` sec.8, transcribed, not recomputed).
 `TODO(him): reasoning`
 
 - **Region, not winner.** Same computation on the next 7 groups below the
@@ -1865,6 +1865,84 @@ recomputation, not by re-checking the linear solve, worst residual
   platform. This closes the BALL's contribution only, matching the 19
   August framing exactly; it does not close the leg-force question in
   general. `TODO(him): decision`
+
+---
+
+## 13 September
+
+> Drafted by Claude Code from the 13 September session, using the reasoning as
+> I gave it in that session. Numbers marked ESTIMATE have not been checked
+> against the kinematics. `TODO(author): rewrite in own voice`
+
+### I was optimising the wrong thing
+
+The sweep ranked geometries by reach margin: how far the platform is from a leg
+being unable to reach. That is a real quantity, but it is not what balancing a
+ball depends on. What matters for a Stewart platform doing this job is **tilt
+resolution** (how finely the plate can be set), **bandwidth** (how fast it
+responds) and **repeatability** (whether the same command gives the same
+tilt). The sweep measured none of them.
+
+It also showed in the result. The winning `a = 60.4 mm` sat at the top of an
+aftermarket horn catalogue: the objective kept asking for more arm until the
+catalogue ran out. A longer arm gives more reach and *worse* resolution, so
+reach margin was actively pushing the design the wrong way.
+
+### Two decisions
+
+**Use the servo's stock horn.** No printed or bought arm. The servo is the
+TowerPro MG90S; `a` is now whichever hole on its own horn works, a handful of
+values instead of a continuous axis.
+
+**Pick the easiest design to build that passes, not the optimum.** The final
+goal is a ball balanced on the plate. Once a design clears every requirement,
+extra margin buys nothing and a harder build costs real time. So the design
+question becomes a set of pass/fail requirements, then a search through
+simple-to-build candidates for one that passes.
+
+### Requirements, worked back from the ball
+
+The link from the plate to the ball is `(5/7) g sin θ` for a solid ball
+rolling without slip: **1° of tilt accelerates the ball at 0.122 m/s²**.
+
+- **Range ≥ 7°.** Phase 0's recovery derivation (50 mm back in 0.5 s,
+  bang-bang) gives 6.558°, rounded up.
+- **Precision ≤ 0.3° total.** A tilt error the loop can't remove, held for
+  `τ = 0.5 s`, drifts the ball `½ (5/7) g sin δ τ²`: 1.5 mm at 0.1°, 4.6 mm at
+  0.3°, 15.3 mm at 1°. For a ±5 mm hold tolerance, `δ ≤ 0.327°`. Resolution
+  and repeatability share this one budget:
+  `G × (deadband + backlash) + joint play / r_p ≤ 0.3°`, where `G` is degrees
+  of tilt per degree of servo. Camera feedback removes a steady offset but not
+  random play, which is why they add.
+- **Speed ≥ 140°/s.** Swing +7° to −7° in 20% of `τ`.
+- **Latency ≤ 50 ms**, 10% of `τ`, a rule of thumb.
+- **Torque**: a sanity check, not expected to bind with a 2.7 g ball.
+
+The ±5 mm tolerance, the 20% slew fraction and the 10% latency fraction are
+proposed, not yet confirmed.
+
+### What that says about the MG90S (ESTIMATE)
+
+With `G ≈ a / r_p` and published figures (5 µs deadband ≈ 0.45°, 600°/s
+unloaded), range needs `G ≥ 0.16` and speed needs `G ≥ 0.23`. Precision caps
+`G` at 0.51 with no backlash, 0.24 at 0.5° backlash, and 0.16 at 1°. **Gear
+backlash decides whether any geometry passes**: at 1° the window is empty. It
+isn't published, so the first bench test measures it.
+
+Range and resolution pull against each other through `G`, as the Phase 0
+appendix already noted: geometry doesn't change how many distinguishable tilt
+steps there are, only how they are spent. Speed pulls the other way. With the
+horn length fixed, the free variable is `r_p`: a ~15 mm hole at `r_p = 80 mm`
+gives `G ≈ 0.19`, likely too slow, so the 80 mm hub is reopened.
+
+### Tidied
+
+Nine overlapping documents became three plus `STATUS.md`. The sweep, its 18
+diagnostic scripts (~15,000 lines) and its outputs moved to `archive/`. The
+kinematics library (~1,700 lines, tests passing) is what carries forward.
+
+Next: measure the stock horn and servo footprint while waiting for the battery
+pack, then bench-test backlash, deadband, degrees per µs and loaded speed.
 
 ---
 
