@@ -261,7 +261,7 @@ def platform_ring(r_p: float, beta_p: float, c_p: float = 0.0):
     # anchors into three pairs, which is the 3-6 Stewart platform.  What rules
     # them out is the ball-joint housing diameter - two housings cannot occupy
     # one hole - so the true lower bound is set by that diameter and is not
-    # known yet (notation.md sec.12).  The rank collapse once claimed here was
+    # known yet (docs/archive/notation.md sec.12).  The rank collapse once claimed here was
     # DISPROVED on 2026-09-03: sigma_min stays O(1) as beta_p -> 0 because the
     # shafts stay split, so the six leg lines remain distinct.
     if not 0.0 < beta_p < 60.0:

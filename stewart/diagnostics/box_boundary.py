@@ -14,7 +14,7 @@ was not allowed to go further, and it stays that until the box is opened.  This
 module opens it, one axis at a time.
 
 WHAT IS NOT DECIDED HERE.  This module does not choose ranges, does not spec
-the sweep harness, and does not touch ``notation.md``.  The extensions below
+the sweep harness, and does not touch ``docs/archive/notation.md``.  The extensions below
 are DIAGNOSTIC PROBES, run to find out where the optimum actually sits; the
 grid that a sweep harness should eventually run is a separate decision and this
 module does not make it.  The coarse grid is held exactly as
@@ -55,9 +55,9 @@ quantities are REPORTED per step instead:
 
   * ``min |p_i - p_j|``, the closest approach of two platform anchors, which is
     what a ball-joint housing OD floors.  Reported in ``r_b`` and in mm at
-    ``r_b = 100 mm`` - the fixture scale ``docs/cc-fk-gate.md`` sec.2.1 already
+    ``r_b = 100 mm`` - the fixture scale ``docs/archive/cc-fk-gate.md`` sec.2.1 already
     uses, a UNITS PLACEHOLDER and NOT a chosen or candidate ``r_b``.  It is
-    ABOVE the ``r_b <= 90 mm`` bed ceiling decided 2026-09-08 (``notation.md``
+    ABOVE the ``r_b <= 90 mm`` bed ceiling decided 2026-09-08 (``docs/archive/notation.md``
     sec.12); see :data:`R_B_REFERENCE_MM`, which carries why that costs nothing
     and why nothing is rescaled.
   * ``d / a``, and a flag at ``d <= a``.  :func:`~stewart.geometry.make_geometry`
@@ -106,11 +106,11 @@ TOP_N = 5
 
 #: Reference scale for the buildability columns ONLY, mm.  A UNITS PLACEHOLDER,
 #: and NOT a candidate ``r_b`` - it never was one.  This is the fixture scale
-#: ``docs/cc-fk-gate.md`` sec.2.1 runs at, quoted here for one purpose: so that
+#: ``docs/archive/cc-fk-gate.md`` sec.2.1 runs at, quoted here for one purpose: so that
 #: a separation expressed in ``r_b`` can be read as a length.
 #:
 #: IT IS ABOVE THE CEILING.  Absolute scale was decided 2026-09-08:
-#: ``r_b <= 90 mm``, from a 180 x 180 mm print volume (``notation.md`` sec.12).
+#: ``r_b <= 90 mm``, from a 180 x 180 mm print volume (``docs/archive/notation.md`` sec.12).
 #: 100 > 90, so this number is not a value ``r_b`` can take.  That costs
 #: nothing here and nothing is rescaled: the kinematics is homogeneous of
 #: degree one and the envelope is purely angular, so every ratio, margin and
@@ -498,9 +498,9 @@ def report_groups(box, title, n=20):
     print()
     print("  sep_p is min |p_i - p_j| in r_b for the group's first member, and")
     print(f"  [mm] is that at the r_b = {R_B_REFERENCE_MM:.0f} mm fixture scale of")
-    print("  docs/cc-fk-gate.md sec.2.1 - a UNITS PLACEHOLDER, NOT a chosen r_b")
+    print("  docs/archive/cc-fk-gate.md sec.2.1 - a UNITS PLACEHOLDER, NOT a chosen r_b")
     print("  and NOT a candidate one: absolute scale was decided 2026-09-08 at")
-    print("  r_b <= 90 mm from the bed (notation.md sec.12), so 100 is above the")
+    print("  r_b <= 90 mm from the bed (docs/archive/notation.md sec.12), so 100 is above the")
     print("  ceiling.  Nothing here is rescaled - every ratio and margin below is")
     print("  unchanged by it, and only this column is denominated in it.")
     print("  It is carried here because this ranking is by margin alone, and a")
@@ -523,7 +523,7 @@ def main() -> None:
     print("  grid wall is a statement about the grid until the box is opened.")
     print()
     print("  NOTHING IS CHOSEN HERE.  No range is chosen, the sweep harness is")
-    print("  not specced, notation.md is not touched.  These are diagnostic")
+    print("  not specced, docs/archive/notation.md is not touched.  These are diagnostic")
     print("  probes to locate the optimum, not a proposed grid.")
     print()
     print("-" * 78)

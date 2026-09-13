@@ -2,7 +2,7 @@
 
     python -m stewart.diagnostics.tilt_bracket
 
-``tau_L = 150 ms`` is PROVISIONAL (``notation.md`` sec.9, and the module note in
+``tau_L = 150 ms`` is PROVISIONAL (``docs/archive/notation.md`` sec.9, and the module note in
 :mod:`.envelope`).  It is inherited from a figure withdrawn 2026-09-03, has no
 basis of its own, and carries 30 of the 80 mm and 3.97 of the 10.529 degrees.
 Everything downstream of the envelope - the ``z_home`` brackets, the feasible
@@ -14,7 +14,7 @@ screen is re-run at three tilt limits, ``tau_L`` = 75, 150 and 300 ms - half,
 current, and double - and the three are reported side by side.
 
 WHAT IS NOT DECIDED HERE.  This module does not choose ``tau_L``, does not
-choose ``v_peak``, and does not touch ``notation.md``.  The three ``tau_L``
+choose ``v_peak``, and does not touch ``docs/archive/notation.md``.  The three ``tau_L``
 values are a SENSITIVITY RANGE, not a shortlist, and none of them is preferred.
 The envelope is not changed anywhere: the tilt limits below come from
 :func:`.envelope.tilt_for` - the envelope's own closed form, called with a
@@ -342,14 +342,14 @@ def main() -> None:
     print("=" * 78)
     print("TILT-LIMIT SENSITIVITY OF THE FEASIBLE SET")
     print("=" * 78)
-    print("  tau_L = 150 ms is PROVISIONAL (notation.md sec.9): inherited from a")
+    print("  tau_L = 150 ms is PROVISIONAL (docs/archive/notation.md sec.9): inherited from a")
     print("  figure withdrawn 2026-09-03, no basis of its own, carrying 30 of the")
     print("  80 mm and 3.97 of the 10.529 degrees.  Everything downstream was")
     print("  measured at that one number.  This module re-runs the screen at half")
     print("  and double it and reports the three side by side.")
     print()
     print("  NOTHING IS CHOSEN HERE.  tau_L is not chosen, v_peak is not chosen,")
-    print("  the envelope is not changed and notation.md is not touched.  The")
+    print("  the envelope is not changed and docs/archive/notation.md is not touched.  The")
     print("  three values are a sensitivity RANGE, not a shortlist.")
     print()
 
@@ -700,7 +700,7 @@ def main() -> None:
     print("  both on the hardware pull, and it is still outstanding.  A feasible")
     print("  set robust over 75-300 ms says the DOWNSTREAM work does not have to")
     print("  wait for that number; it does not say the number does not matter.")
-    print("  tau_L stays PROVISIONAL and notation.md sec.9 is unchanged.")
+    print("  tau_L stays PROVISIONAL and docs/archive/notation.md sec.9 is unchanged.")
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@
 
     python -m stewart.diagnostics.score_discriminators
 
-``notation.md`` sec.12 records four things as NOT DECIDED that this module is
+``docs/archive/notation.md`` sec.12 records four things as NOT DECIDED that this module is
 careful not to decide: the characteristic length, whether the conditioning
 measure should come from the FK Jacobian at all, the score function, and any
 weighting between terms.  This module MEASURES the candidate discriminators on
@@ -69,7 +69,7 @@ from .zhome_bracket import (A_RB, BETA, BETA_P, D_RB, DELTA_GRID, C_P, R_B,
 # --------------------------------------------------------------------------- #
 # NAMES - now official, were provisional here first
 # --------------------------------------------------------------------------- #
-#: **Named in ``notation.md`` sec.6 as of 2026-09-10** - ``rod_i`` and
+#: **Named in ``docs/archive/notation.md`` sec.6 as of 2026-09-10** - ``rod_i`` and
 #: ``tangent_i``, adopted from the local names this module coined below and
 #: which ``tilt_authority.py`` reused; sec.11's clash entries for both are
 #: marked resolved, not deleted.  Before that date these were unnamed, sec.11
@@ -296,7 +296,7 @@ def _tune_delta(inv, deltas_deg=DELTA_GRID):
     Maximin, not minimax: at a fixed leg and pose the margin is strictly
     decreasing in ``|w_i|``, but ``|L_i|`` varies across legs and poses, so the
     largest-``|w_i|`` leg is generally not the smallest-margin leg and the two
-    aggregations have different minimisers (``notation.md`` sec.8, on ``J``).
+    aggregations have different minimisers (``docs/archive/notation.md`` sec.8, on ``J``).
     """
     dr = np.deg2rad(np.asarray(deltas_deg, float))
     LL, P, A, B = inv
@@ -441,7 +441,7 @@ def verify_jcmd(rows, R, n_cases=6):
 def _jacobians_at_pose(geom, R_k, T_k):
     """``(tau, J_fk, D)`` at one pose.  ``D`` is ``df/dalpha``, up to sign.
 
-    Names (official in notation.md sec.6 as of 2026-09-10 - see
+    Names (official in docs/archive/notation.md sec.6 as of 2026-09-10 - see
     :data:`PROVISIONAL_NAMES` for their provenance as local names first)::
 
         rod_i     = q_i - h_i,   |rod_i| = d
@@ -595,7 +595,7 @@ def evaluate(rec, R, T_of, az):
 
     ``z_home`` is the MIDPOINT of the candidate's grid bracket.  That is a
     choice of a point in the interior, made for definiteness, and it is NOT a
-    recommendation: ``z_home`` is a swept axis (``notation.md`` sec.8) and this
+    recommendation: ``z_home`` is a swept axis (``docs/archive/notation.md`` sec.8) and this
     module does not settle it.  Every bracket measured is contiguous, so the
     midpoint of two feasible grid ends lies inside the feasible interval.
     """
@@ -773,7 +773,7 @@ def tune_constrained(margin, cond, deltas_deg, cap):
 
 
 #: Decades at which the conditioning tail is counted.  These are REPORTING
-#: BINS, not thresholds: ``notation.md`` sec.12 says a reject line is undecided
+#: BINS, not thresholds: ``docs/archive/notation.md`` sec.12 says a reject line is undecided
 #: and that the characteristic length is what would set it, so nothing here may
 #: be read as one.  They exist because a maximum of ``1e19`` in a summary table
 #: says nothing about how many candidates are near it.
@@ -2772,7 +2772,7 @@ def _report_tune_mismatch(rows, R, az, ef_max=None, cap=SCORE_CAP,
 def _tail_block(rows):
     """The conditioning tail, and where in the parameter grid it sits.
 
-    Reports only.  ``notation.md`` sec.12 records that a near-singular candidate
+    Reports only.  ``docs/archive/notation.md`` sec.12 records that a near-singular candidate
     "would pass feasibility and reach the ranking stage" and that the failure
     mode had so far been located only on ``smoke_geometry``, which is explicitly
     not a design.  Whether that is still true of the actual feasible set is a
@@ -2880,13 +2880,13 @@ def main() -> None:
     print("=" * 78)
     print("CANDIDATE DISCRIMINATORS - measured, none chosen")
     print("=" * 78)
-    print("  This module decides NOTHING.  notation.md sec.12 lists the")
+    print("  This module decides NOTHING.  docs/archive/notation.md sec.12 lists the")
     print("  characteristic length, the choice of conditioning measure, and the")
     print("  score function as open; all three stay open here.  Every")
     print("  conditioning number below is quoted at all four candidate lengths")
     print("  and for both Jacobians, and every one is PROVISIONAL.")
     print()
-    print("  NAMES (official in notation.md sec.6 as of 2026-09-10; local here")
+    print("  NAMES (official in docs/archive/notation.md sec.6 as of 2026-09-10; local here")
     print("  first, and this table is kept as that provenance record):")
     for meaning, name in PROVISIONAL_NAMES.items():
         print(f"    {meaning:<46} -> {name}")
@@ -3141,7 +3141,7 @@ def main() -> None:
         print()
     print("  Both columns in every pair are PROVISIONAL.  This table says how")
     print("  much the undecided length matters to the ORDER of the field, which")
-    print("  is the question notation.md sec.12 raises when it says the length")
+    print("  is the question docs/archive/notation.md sec.12 raises when it says the length")
     print("  'changes the ranking of candidates'.  It does not say which length")
     print("  to take.")
 
@@ -3249,7 +3249,7 @@ def main() -> None:
     print("    p, by identity, to 7e-18.")
     print("  * z_home, which is a swept axis; the bracket midpoint here is a")
     print("    point of evaluation, not a choice.")
-    print("  * the names in notation.md sec.6 / sec.11.  The two used here,")
+    print("  * the names in docs/archive/notation.md sec.6 / sec.11.  The two used here,")
     print("    rod_i and tangent_i, are official as of 2026-09-10.")
     print("  * the cap C.  Four are run side by side; none is preferred, and the")
     print("    unconstrained tune is retained beside every one of them.")

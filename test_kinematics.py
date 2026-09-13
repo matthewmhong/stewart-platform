@@ -1,6 +1,6 @@
 """Verification table for the kinematics, re-established from scratch.
 
-The four rows of ``stewart-ik-derivation.md`` sec.7.  The document recorded
+The four rows of ``docs/derivation.md`` sec.7.  The document recorded
 these as passing, but every function they exercise raised
 ``NotImplementedError`` in the repo, so the table was treated as unverified
 and is re-run here.

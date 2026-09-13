@@ -495,7 +495,7 @@ def _cond_and_sigma(J: np.ndarray, char_len: float | None):
     matrix dimensionless.
 
     ``char_len`` is **not defaulted**.  It is the same undecided choice
-    ``notation.md`` sec.12 records for the scoring conditioning measure, and
+    ``docs/archive/notation.md`` sec.12 records for the scoring conditioning measure, and
     picking one here silently would settle it by accident.  Passing ``None``
     returns ``(None, None, None)``.
     """

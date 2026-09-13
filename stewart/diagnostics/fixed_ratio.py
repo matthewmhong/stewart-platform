@@ -13,7 +13,7 @@ values that are not it.
     :mod:`.tilt_bracket` ran sat at **0.60**, the smallest of the three;
   * :mod:`.box_boundary`'s ``r_p`` ray ran DOWNWARD from 0.60 to 0.10, away
     from the asserted ratio, and the margin climbed the whole way;
-  * the one nearby datum is ``docs/cc-fk-gate.md``'s fixture F, ``r_p > r_b``
+  * the one nearby datum is ``docs/archive/cc-fk-gate.md``'s fixture F, ``r_p > r_b``
     at 110/100, which carried the narrowest non-empty ``z_home`` bracket found
     anywhere - 10 mm at that fixture's own ``delta``.
 
@@ -26,7 +26,7 @@ specced.**  Every axis below is exactly as :mod:`.zhome_bracket` builds it -
 0.1``, the 1-degree ``delta`` scan, the 366-pose screen envelope, the 29-pose
 harness grid, the 10.529-degree tilt limit and the existing cap ``cond(J_fk)
 <= 1e6`` at ``char_len = r_b``.  The ONLY thing this module changes is that
-``r_p/r_b`` is held at one value instead of three.  ``notation.md`` is not
+``r_p/r_b`` is held at one value instead of three.  ``docs/archive/notation.md`` is not
 touched, and nothing here is a proposed grid.
 
 THE RATIO, and why the quotient is used rather than the quoted decimal.  The
@@ -37,9 +37,9 @@ quantity can tell them apart - and rather than assert that, part (0) runs the
 whole screen at BOTH and reports whether any count, end or width moves.
 
 THE SCORE.  ``margin(dxy = p)`` at ``p = sqrt(3 * 0.2^2) / 90 = 0.003849``.
-This is the 2026-09-08 build-error assertion (``notation.md`` sec.8) with its
+This is the 2026-09-08 build-error assertion (``docs/archive/notation.md`` sec.8) with its
 ``r_b`` normaliser taken from the scale now in force.  The value in
-``notation.md`` is ``0.004330``, normalised by the then-asserted **80 mm
+``docs/archive/notation.md`` is ``0.004330``, normalised by the then-asserted **80 mm
 floor**; ``r_b`` is now 90 mm and ``p`` scales inversely with it, so
 ``0.004330`` is the wrong number here and is **not used** - it is carried in
 part (0) only to show the two apart.  The score is EVALUATED at ``p`` through
@@ -113,7 +113,7 @@ R_P_RB = R_P_MM / R_B_MM
 #: The decimal the assertion quotes.  Carried for the part (0) check only.
 R_P_RB_QUOTED = 0.8889
 
-#: The three sources of build error, mm, each 0.2 (``notation.md`` sec.8): the
+#: The three sources of build error, mm, each 0.2 (``docs/archive/notation.md`` sec.8): the
 #: printer tolerance, which has a source, and the ball-joint free play and
 #: platform centring, which are PLACEHOLDERS at the printer's figure pending
 #: the hardware pull.  Combined RSS on an independence assumption; the 0.6 mm
@@ -122,11 +122,11 @@ R_P_RB_QUOTED = 0.8889
 BUILD_ERROR_SOURCES_MM = (0.2, 0.2, 0.2)
 
 #: The score's probe, in ``r_b``.  The sec.8 assertion renormalised to the
-#: ``r_b`` now in force.  ``notation.md`` quotes 0.004330 at the superseded
+#: ``r_b`` now in force.  ``docs/archive/notation.md`` quotes 0.004330 at the superseded
 #: 80 mm floor; ``p`` scales inversely with ``r_b``, so at 90 mm it is smaller.
 P_SCORE = float(np.sqrt(sum(s * s for s in BUILD_ERROR_SOURCES_MM)) / R_B_MM)
 
-#: The value ``notation.md`` sec.8 still carries, at the superseded 80 mm
+#: The value ``docs/archive/notation.md`` sec.8 still carries, at the superseded 80 mm
 #: floor.  Reported in part (0) so the two are seen apart; **never used as the
 #: probe below**.
 P_SCORE_SUPERSEDED = 0.004330
@@ -335,12 +335,12 @@ def part0(main, quoted, ref_slices):
     src = " + ".join(f"{s}^2" for s in BUILD_ERROR_SOURCES_MM)
     p_mm = float(np.sqrt(sum(s * s for s in BUILD_ERROR_SOURCES_MM)))
     print(f"    p_mm = sqrt({src}) = {p_mm:.6f} mm   "
-          f"(RSS, notation.md sec.8)")
+          f"(RSS, docs/archive/notation.md sec.8)")
     print(f"    p    = p_mm / r_b = {p_mm:.6f} / {R_B_MM:.0f} = "
           f"{P_SCORE:.9f}   [r_b]")
     print(f"    agrees with the quoted {P_SCORE_QUOTED} to "
           f"{abs(P_SCORE - P_SCORE_QUOTED):.1e}")
-    print(f"    notation.md sec.8 still carries {P_SCORE_SUPERSEDED}, "
+    print(f"    docs/archive/notation.md sec.8 still carries {P_SCORE_SUPERSEDED}, "
           f"normalised by the")
     print(f"    superseded 80 mm floor.  p scales INVERSELY with r_b, so at "
           f"{R_B_MM:.0f} mm it is")
@@ -721,7 +721,7 @@ def part4(main, ref_slices, res_24_360):
     print("  is the 2026-09-08 runaway seen from the other end: the margin")
     print("  measures distance from unreachability, and a smaller platform ring")
     print("  is further from it.  That is a recorded DEFECT of the objective")
-    print("  (notation.md sec.12, tilt_authority), not a reason to prefer a")
+    print("  (docs/archive/notation.md sec.12, tilt_authority), not a reason to prefer a")
     print("  smaller r_p - and r_p is no longer a choice in any case.")
 
 
@@ -1045,7 +1045,7 @@ def verdict(main, ref_slices, res_24_360):
     print(f"  The score's own resolution is {res_24_360:.1e} at "
           f"{SD.N_DISP_DIR} displacement azimuths, so")
     print(f"  no ordering above is claimed below that.  No range is chosen")
-    print(f"  here, the sweep harness is not specced, and notation.md is not")
+    print(f"  here, the sweep harness is not specced, and docs/archive/notation.md is not")
     print(f"  touched.")
 
 
@@ -1060,7 +1060,7 @@ def main_report() -> None:
     print("  package has been evaluated near the ratio it fixes.")
     print()
     print("  NOTHING IS CHOSEN HERE.  No range is chosen, the sweep harness is")
-    print("  not specced, notation.md is not touched.  Every axis is exactly as")
+    print("  not specced, docs/archive/notation.md is not touched.  Every axis is exactly as")
     print("  zhome_bracket builds it; the only change is that r_p/r_b is held")
     print("  at one value instead of three.")
     print()

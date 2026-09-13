@@ -30,7 +30,7 @@ therefore not directly comparable number-for-number; both conventions are
 named at every table so that is never silently assumed.
 
 **Does not propose a weight, a combined score, or a bound on ``a``.**  Does
-not touch the objective or ``notation.md``.  Every number in this module is a
+not touch the objective or ``docs/archive/notation.md``.  Every number in this module is a
 plain ratio with no characteristic length - the docstring in
 ``score_discriminators`` calls this out explicitly - except mm figures, which
 carry ``r_b = 90`` mm as always.
@@ -458,7 +458,7 @@ def main() -> None:
         print("WHAT THIS DOES NOT DECIDE")
         print("=" * 78)
         print("  No weight, no combined score, no bound on a is proposed here.")
-        print("  The objective stays open and notation.md is not touched.")
+        print("  The objective stays open and docs/archive/notation.md is not touched.")
         print(f"  Every mm figure is at the ASSERTED r_b = {S.R_B_MM:.0f} mm.")
 
 

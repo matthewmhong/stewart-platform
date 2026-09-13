@@ -20,11 +20,25 @@ servo plane, then a fixed-length push-rod `d` to the platform.
 
 | file | state |
 |------|-------|
-| `stewart/geometry.py` | `Geometry` + validation DONE, `base_ring` DONE, `smoke_geometry` DONE; `platform_ring`, `make_geometry` STUB |
-| `stewart/kinematics.py` | `Unreachable` DONE; `stage1`, `legs`, `arm_tips`, `ik`, `fk` STUB (signatures + docstrings only) |
+| `stewart/geometry.py` | DONE - `Geometry` + validation, `base_ring`, `platform_ring`, `make_geometry`, `smoke_geometry` |
+| `stewart/kinematics.py` | DONE - `stage1`, `legs`, `w`, `arm_tips`, `ik`, `fk` (+ `fk_solve`, `fk_jacobian`) |
 | `stewart/plotting.py` | DONE - draws points only, never solves kinematics |
 | `stewart/roundtrip.py` | DONE - `pose -> ik -> fk -> pose` harness; `ik`/`fk` are passed in |
-| `demo.py` | DONE - runs against the stubs, writes `demo.png` |
+| `stewart/diagnostics/` | one module per design question, run with `python -m stewart.diagnostics.<name>` |
+| `test_kinematics.py`, `demo.py` | DONE |
+
+## Docs
+
+| file | job |
+|------|-----|
+| `STATUS.md` | current result, open items, next steps |
+| `docs/derivation.md` | maths + the symbol glossary (§1) |
+| `docs/design-log.md` | dated narrative (the user's portfolio piece, in their voice) |
+| `docs/hardware.md` | sourced part specs |
+| `docs/archive/` | frozen superseded docs - do not edit |
+
+**Session state lives in `STATUS.md` - update it in place.  Do not create new
+dated handoff or session-summary documents.**
 
 ## Notes for whoever picks this up
 
@@ -33,7 +47,6 @@ servo plane, then a fixed-length push-rod `d` to the platform.
 - `smoke_geometry()` is **not** a layout - it exists only to shape-check the
   plotting and the round trip before `make_geometry` is written.  It looks
   wrong when plotted, by design.
-- Implement the stubs in the order given in `README.md`.
 - **IK reachability:** the test is `|P| > C` (see the `ik` docstring), never
   the two-sphere bound `|d - a| < |L| < d + a` alone, and never
   `np.clip(P / C, -1, 1)` - clipping fabricates a boundary "solution".

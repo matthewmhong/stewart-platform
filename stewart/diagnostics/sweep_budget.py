@@ -42,7 +42,7 @@ BYTES_PER_FLOAT = 8
 #: into the handoff are reproducible rather than remembered.
 POSES_SUPERSEDED = {
     "2026-09-04, four-axis envelope at 3 points": 81,
-    "notation.md sec.9's original 3^6": 729,
+    "docs/archive/notation.md sec.9's original 3^6": 729,
 }
 
 
@@ -274,7 +274,7 @@ def part3() -> None:
     print("  correction of one framing by the other and not a live result: it is")
     print("  the arithmetic of a question that no longer has a subject.  Both")
     print("  rows are MOOT, not wrong - the quantity they disagree about does")
-    print("  not exist.  See notation.md sec.9, which carries the withdrawal and")
+    print("  not exist.  See docs/archive/notation.md sec.9, which carries the withdrawal and")
     print("  what replaced it (absolute scale enters in exactly two places: the")
     print("  bed, r_b <= 90 mm, and p's denominator, the asserted 80 mm floor).")
     print()

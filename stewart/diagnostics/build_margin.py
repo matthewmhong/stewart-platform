@@ -18,14 +18,14 @@ therefore blind to absolute length.  Build error is not scale-invariant - it
 is a fixed number of millimetres regardless of ``r_b``.  This reports
 ``min`` over legs and the 29-pose envelope grid of the UNNORMALISED
 ``C_i - |P_i|``, in millimetres, at the candidate's own tuned ``delta_con``,
-and compares it against the RSS build-error stack in `notation.md` sec.8
+and compares it against the RSS build-error stack in `docs/archive/notation.md` sec.8
 (``0.3464 mm``) and against the rod cut tolerance, which sec.8 excludes from
 ``p`` on the grounds that it perturbs ``d`` rather than the platform pose -
 and which has never been checked against anything, anywhere, until here.
 
 CHECK 2 - ROD SLENDERNESS.  `d/r_b = 1.40` sits inside the asserted `2.0`
 cap with neither a published slenderness figure nor a retrievable
-straightness figure behind it (`hardware-pull.md` sec.7).  This computes the
+straightness figure behind it (`docs/hardware.md` sec.7).  This computes the
 Euler critical buckling load at every published stock diameter, against the
 actual worst-case axial rod force implied by the shortlist geometry
 carrying the 2.7 g ball whose weight was ruled a non-issue by judgement on
@@ -38,7 +38,7 @@ it does NOT give an elastic modulus for any listed stock.  The `E` values
 used for the buckling load are standard published material properties, not
 pull-sourced, and are named as such at every use.
 
-NOTHING CHOSEN.  No rod stock, joint or servo is picked here.  `notation.md`
+NOTHING CHOSEN.  No rod stock, joint or servo is picked here.  `docs/archive/notation.md`
 is not touched.  Every length carries `r_b = 90 mm`, `r_p = 80 mm`; no
 number appears without the char_len it was computed at.
 
@@ -73,10 +73,10 @@ SHORTLIST = [
         delta_con=59.0, score_p=0.8748764911242893),
 ]
 
-#: The RSS build-error stack recorded in `notation.md` sec.8: three 0.2 mm
+#: The RSS build-error stack recorded in `docs/archive/notation.md` sec.8: three 0.2 mm
 #: sources (printer tolerance; ball-joint free play and platform centring,
 #: both placeholders at the printer's figure).  Transcribed, not recomputed -
-#: `notation.md` is not touched by this module.
+#: `docs/archive/notation.md` is not touched by this module.
 BUILD_ERROR_MM = float(np.sqrt(3 * 0.2 ** 2))
 
 assert abs(BUILD_ERROR_MM - 0.3464) < 5e-5, "build-error stack drifted from sec.8"
@@ -286,7 +286,7 @@ def worst_leg_force_n(beta, beta_p, a, d, z_home, delta_con, R, T):
     return worst, info
 
 
-#: Rod stock, transcribed from `hardware-pull.md` sec.7.1/7.3.  ``diam_mm``
+#: Rod stock, transcribed from `docs/hardware.md` sec.7.1/7.3.  ``diam_mm``
 #: is the diameter USED FOR I: nominal OD for stock threaded at most one end
 #: or not at all (Du-Bro, CST, generic CF), the ISO metric MINOR (root)
 #: diameter for stock threaded over its FULL length (DIN 975/976, A286,
@@ -386,9 +386,9 @@ def part_reach_margin(res, R, T):
         print(f"  {label:<28} {margin_mm:>14.4f} "
               f"{margin_mm/BUILD_ERROR_MM:>14.1f} {thresh:>16.2f}")
     print()
-    print(f"  BUILD-ERROR STACK (notation.md sec.8, transcribed, not "
+    print(f"  BUILD-ERROR STACK (docs/archive/notation.md sec.8, transcribed, not "
           f"recomputed): {BUILD_ERROR_MM:.4f} mm")
-    print(f"  ROD CUT TOLERANCE: hardware-pull.md sec.7 gives diameters, "
+    print(f"  ROD CUT TOLERANCE: docs/hardware.md sec.7 gives diameters, "
           f"threading and (almost")
     print(f"  nowhere) straightness - NO cut-length tolerance figure exists "
           f"anywhere in the")
@@ -448,7 +448,7 @@ def part_leg_force(R, T):
     print("=" * 78)
     print(f"  d = {SHORTLIST[0]['d']:.0f} mm at d/r_b = "
           f"{SHORTLIST[0]['d']/R_B_MM:.2f}, inside the asserted 2.0 cap.")
-    print(f"  hardware-pull.md sec.7: available diameters and threading are")
+    print(f"  docs/hardware.md sec.7: available diameters and threading are")
     print(f"  published; NO elastic modulus is published for ANY listed "
           f"stock, and")
     print(f"  straightness/buckling figures are published for NONE except "
@@ -512,7 +512,7 @@ def part_leg_force(R, T):
               f"{pcr_str:>16} {marg_str:>12}")
     print()
     print(f"  E values are STANDARD PUBLISHED MATERIAL PROPERTIES, not from")
-    print(f"  hardware-pull.md (which gives no modulus for any listed "
+    print(f"  docs/hardware.md (which gives no modulus for any listed "
           f"stock) - A286's")
     print(f"  201 GPa is a well-documented alloy property; the rest are "
           f"flagged ASSUMED.")
@@ -581,7 +581,7 @@ def main() -> None:
           "80 mm, c_p/r_b =")
     print(f"  0.1, tilt limit {tilt:.4f} deg.  Both mirror members.  No "
           "rod, joint or servo")
-    print("  is chosen here.  notation.md is not touched.")
+    print("  is chosen here.  docs/archive/notation.md is not touched.")
     with at_tilt(tilt):
         az, mg = ENV.envelope_poses()
         R = ENV.tilt_R(az, mg)
@@ -596,7 +596,7 @@ def main() -> None:
     print("=" * 78)
     print("  No rod stock, joint or servo is chosen.  Platform self-weight "
           "remains")
-    print("  unaddressed (no material or mass chosen).  notation.md is not "
+    print("  unaddressed (no material or mass chosen).  docs/archive/notation.md is not "
           "touched.")
 
 

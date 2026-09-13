@@ -2,7 +2,7 @@
 
     python -m stewart.diagnostics.sweep_ranges
 
-WHAT THIS DOES.  ``docs/hardware-pull.md`` (2026-09-09) reports what exists and
+WHAT THIS DOES.  ``docs/hardware.md`` (2026-09-09) reports what exists and
 chooses nothing.  This module turns three of its sections into RANGES on the
 sweep axes and evaluates the feasible set over them at the tilt limit now in
 force - :func:`.envelope.tilt_for` at ``x0 = 50 mm``, the working displacement
@@ -32,7 +32,7 @@ printed from that closed form, never hardcoded as degrees.
               flagged, not narrowed.
 
 WHAT IS NOT DECIDED HERE.  **No joint, no servo and no horn is chosen.  The
-harness is not specced.  notation.md is not touched.**  The tie threshold in
+harness is not specced.  docs/archive/notation.md is not touched.**  The tie threshold in
 part (7) is a MEASUREMENT of what the score can resolve, offered so that a
 threshold can come from measurement instead of from ``1e-15``; it is not set
 as a constant anywhere.
@@ -974,7 +974,7 @@ def verdict(slc, subs):
     print()
     print(f"  NOTHING IS CHOSEN HERE.  No joint, no servo, no horn.  The")
     print(f"  harness is not specced and no tie threshold is set - part (7) is")
-    print(f"  a measurement offered so that one can be.  notation.md is not")
+    print(f"  a measurement offered so that one can be.  docs/archive/notation.md is not")
     print(f"  touched.  Every mm figure is at the ASSERTED r_b = "
           f"{FR.R_B_MM:.0f} mm and")
     print(f"  r_p = {FR.R_P_MM:.0f} mm; margin carries no characteristic "
@@ -990,7 +990,7 @@ def main() -> None:
     print("=" * 78)
     print("SWEEP RANGES FROM THE HARDWARE PULL, AT THE LIMIT IN FORCE")
     print("=" * 78)
-    print("  docs/hardware-pull.md (2026-09-09) reports what exists and chooses")
+    print("  docs/hardware.md (2026-09-09) reports what exists and chooses")
     print("  nothing.  This module turns sec.1 (servo horn hole ladders),")
     print("  sec.2 (ball-joint housing OD) and sec.7 (rod stock) into ranges on")
     print("  the sweep axes, and evaluates the feasible set over them.")
@@ -1010,7 +1010,7 @@ def main() -> None:
     print(f"  computed directly above ({note}).")
     print()
     print("  NO JOINT, NO SERVO AND NO HORN IS CHOSEN.  The harness is not")
-    print("  specced.  notation.md is not touched.")
+    print("  specced.  docs/archive/notation.md is not touched.")
     print()
     print("-" * 78)
     print("THE SWEEP")

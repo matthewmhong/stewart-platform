@@ -3,7 +3,7 @@
     python -m stewart.diagnostics.tilt_dropped
 
 THE DECISION THIS MODULE RUNS ON, asserted 2026-09-09 and not reopened here.
-``tau_L`` is **dropped**.  ``docs/hardware-pull.md`` sec.4 establishes that
+``tau_L`` is **dropped**.  ``docs/hardware.md`` sec.4 establishes that
 servo step response is **NOT PUBLISHED by any manufacturer found** - every
 maker publishes seconds-per-60-deg no-load speed, which is a slew rate and
 contains no propagation delay, no rise time, no overshoot and no settling
@@ -23,7 +23,7 @@ The limit is **taken from** :func:`.envelope.tilt_for` at that ``x0`` and
 printed, never transcribed as a number of degrees - so the figure below is
 reproduced by this module rather than asserted by it.
 
-WHAT IS NOT DONE HERE.  ``envelope.py`` is not edited and ``notation.md`` is
+WHAT IS NOT DONE HERE.  ``envelope.py`` is not edited and ``docs/archive/notation.md`` is
 not touched: the ``tau_L`` drop needs recording and that is a separate
 documentation pass.  ``TILT_LIMIT_DEG`` therefore still reads 10.529 in
 :mod:`.envelope`, and this module treats that as the REFERENCE column - the
@@ -233,7 +233,7 @@ def part_limits(cols):
     print()
     print("  envelope.TILT_LIMIT_DEG still reads "
           f"{ENV.TILT_LIMIT_DEG:.4f} and envelope.py is NOT")
-    print("  edited here; notation.md is not touched.  Recording the drop is a")
+    print("  edited here; docs/archive/notation.md is not touched.  Recording the drop is a")
     print("  separate documentation pass.  Until it happens, the reference")
     print("  column below is that constant and the limit in force is not.")
 
@@ -431,7 +431,7 @@ def part4(cols):
     print(f"  build-error sources rather than transcribed; the request quotes")
     print(f"  0.3464 / 90 = {FR.P_SCORE_QUOTED}, and the two agree to "
           f"{abs(FR.P_SCORE - FR.P_SCORE_QUOTED):.1e}.")
-    print(f"  notation.md's {FR.P_SCORE_SUPERSEDED} is at the superseded 80 mm "
+    print(f"  docs/archive/notation.md's {FR.P_SCORE_SUPERSEDED} is at the superseded 80 mm "
           f"floor and is NOT used.")
     print()
     print("  EVALUATED AT p through probe_margin, the same worst-over-24-")
@@ -635,7 +635,7 @@ def verdict(cols, res):
     print()
     print("  NOTHING IS CHOSEN HERE.  No range is chosen, no part is chosen,")
     print("  the sweep harness is not specced, envelope.py is not edited and")
-    print("  notation.md is not touched - recording the tau_L drop is a")
+    print("  docs/archive/notation.md is not touched - recording the tau_L drop is a")
     print("  separate documentation pass, and until it happens envelope.py")
     print(f"  still carries {ENV.TILT_LIMIT_DEG:.4f} deg.")
     print()
@@ -653,7 +653,7 @@ def main() -> None:
     print("THE FEASIBLE SET AFTER tau_L IS DROPPED - 2026-09-09")
     print("=" * 78)
     print("  DECISION, ASSERTED 2026-09-09: tau_L is DROPPED, not revised.")
-    print("  docs/hardware-pull.md sec.4 establishes that servo step response")
+    print("  docs/hardware.md sec.4 establishes that servo step response")
     print("  is unpublished by every candidate maker and cannot be")
     print("  reconstructed from published data, so the 30 mm latency drift and")
     print("  the 3.97 deg it carried have no basis and are REMOVED.  This")

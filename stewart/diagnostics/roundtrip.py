@@ -36,7 +36,7 @@ the 2026-09-03 handoff, and it is what makes ``a`` and ``d`` land in the
 
 THESE FIXTURES PREDATE THE BED CONSTRAINT.  Absolute scale was decided
 2026-09-08: ``r_b <= 90 mm``, from a 180 x 180 mm print volume
-(``notation.md`` sec.12).  100 > 90, so ``100 mm`` is NOT a value ``r_b`` can
+(``docs/archive/notation.md`` sec.12).  100 > 90, so ``100 mm`` is NOT a value ``r_b`` can
 take - it is a UNITS PLACEHOLDER and was never a candidate.  Read it
 throughout as "the ``r_b = 1`` fixture, with lengths printed in units of
 100 mm".  Nothing is rescaled and nothing is re-run: by the homogeneity above,
@@ -101,7 +101,7 @@ FIXTURES = [
 #: ``fk``'s Jacobian has dimensionless translation columns (mm of residual per
 #: mm of translation) and mm-per-radian rotation columns, so no singular value
 #: or condition number taken from it means anything until a characteristic
-#: length is named.  That is the SAME undecided choice ``notation.md`` sec.12
+#: length is named.  That is the SAME undecided choice ``docs/archive/notation.md`` sec.12
 #: records for the scoring conditioning measure, and it is **not settled here**
 #: - settling it by accident, inside a gate, is exactly how an undecided item
 #: becomes a silent constant.
@@ -694,7 +694,7 @@ def report_cond_vs_length(usable, verbose=True):
     print("  J's translation columns are dimensionless and its rotation")
     print("  columns are mm/rad, so cond(J) is not defined until a")
     print("  characteristic length names the exchange rate.  That length is")
-    print("  the SAME open choice notation.md sec.12 records for the scoring")
+    print("  the SAME open choice docs/archive/notation.md sec.12 records for the scoring")
     print("  conditioning measure.  IT IS NOT SETTLED HERE.  Four candidates")
     print("  are shown so the size of the dependence is visible; the gate")
     print(f"  quotes {CHAR_LEN_PROVISIONAL_LABEL} and flags it PROVISIONAL.")

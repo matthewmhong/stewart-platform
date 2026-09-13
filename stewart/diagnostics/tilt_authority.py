@@ -3,7 +3,7 @@
     python -m stewart.diagnostics.tilt_authority
 
 THE QUESTION, and why it is the one worth asking.  The 2026-09-08 finding
-(``docs/phase-0-design-log.md``, ``notation.md`` sec.12) is that the objective
+(``docs/design-log.md``, ``docs/archive/notation.md`` sec.12) is that the objective
 has no interior optimum: ``r_p/r_b`` runs to 0.10, the smallest value probed,
 with margin still climbing monotonically and no turn.  The diagnosis recorded
 with it is that the reach margin measures **distance from unreachability, not
@@ -22,8 +22,8 @@ still open.
 **This module measures which.  It does not fix the objective, does not propose
 a weight or a combined score, does not choose a servo travel figure, and does
 not change the feasibility tests** - servo travel is excluded from feasibility
-by the 2026-09-08 decision (``notation.md`` sec.12), and nothing here
-reintroduces it.  ``notation.md`` is not touched.
+by the 2026-09-08 decision (``docs/archive/notation.md`` sec.12), and nothing here
+reintroduces it.  ``docs/archive/notation.md`` is not touched.
 
 WHAT IS DEFINED.  Per candidate, at the tuned ``delta`` under the EXISTING cap
 ``cond(J_fk) <= 1e6`` at ``char_len = r_b``::
@@ -68,7 +68,7 @@ Both signs are printed at every correlation, labelled, so the reading cannot
 come apart from the number.
 
 THE SCORE IT IS CORRELATED AGAINST.  ``margin(dxy = p)`` at **p = 0.004330**,
-the value fixed 2026-09-08 (``notation.md`` sec.8).  That value is BELOW all
+the value fixed 2026-09-08 (``docs/archive/notation.md`` sec.8).  That value is BELOW all
 three probes :mod:`.score_discriminators` carried (0.005 / 0.0075 / 0.010
 ``r_b``), so the score has never been evaluated at the value now in force.  It
 is therefore evaluated DIRECTLY here, through
@@ -126,7 +126,7 @@ from .zhome_bracket import A_RB, BETA, BETA_P, D_RB, DELTA_GRID, C_P, R_B, RP_RB
 # the score, at the value now in force
 # --------------------------------------------------------------------------- #
 #: The build error the margin is read at, FIXED 2026-09-08 and ASSERTED, not
-#: measured (``notation.md`` sec.8): ``sqrt(3 * 0.2^2) / 80 = 0.004330``, three
+#: measured (``docs/archive/notation.md`` sec.8): ``sqrt(3 * 0.2^2) / 80 = 0.004330``, three
 #: 0.2 mm sources combined RSS and normalised by an asserted 80 mm ``r_b``
 #: floor.  It sits BELOW all three probes ``score_discriminators`` carried, so
 #: the score has never been evaluated here; this module evaluates it directly
@@ -447,7 +447,7 @@ def part2b(coarse, explored, rp_ray):
     print("  arm, so a fixed servo travel buys less platform tilt.  That is a")
     print("  statement about producing a fixed platform DISPLACEMENT.  The")
     print("  settled envelope is dxy = dz = yaw = 0 and a fixed tilt ANGLE")
-    print(f"  ({TILT_LIMIT_DEG:.4f} deg, notation.md sec.9), so the anchors'")
+    print(f"  ({TILT_LIMIT_DEG:.4f} deg, docs/archive/notation.md sec.9), so the anchors'")
     print("  excursion is r_p sin(tilt) - it SHRINKS with the ring.  A smaller")
     print("  platform has to move its anchors less to reach the same angle, so")
     print("  it needs LESS servo swing, not more.")
@@ -533,7 +533,7 @@ def part5(measured, R, T_of, deltas_deg):
     print("=" * 78)
     print("(5) IS alpha_span MONOTONE IN THE POINTWISE MARGIN?")
     print("=" * 78)
-    print("  Why this decides where tilt authority would go.  notation.md")
+    print("  Why this decides where tilt authority would go.  docs/archive/notation.md")
     print("  sec.8 records the rule: a quantity that matters and is NOT")
     print("  monotone in the pointwise margin must enter the INNER TUNE, not")
     print("  the outer score, or the tune will spend it - delta is chosen")
@@ -846,7 +846,7 @@ def main() -> None:
     print("  whether tilt authority belongs in the inner tune or the outer")
     print("  score.  Part (5) reports whether sec.8's rule applies to it; the")
     print("  rule's consequence is a decision and is not taken here.")
-    print("  notation.md is untouched.")
+    print("  docs/archive/notation.md is untouched.")
     print()
     print("  LIMITATION, the same one the 8 September entry records against")
     print("  these four probes: each ray moves ONE axis with the other four")

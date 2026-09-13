@@ -515,7 +515,7 @@ def main() -> None:
 
     print()
     print("=" * 78)
-    print("BRACKET, as it should be written into notation.md sec.12")
+    print("BRACKET, as it should be written into docs/archive/notation.md sec.12")
     print("=" * 78)
     print("  LOWER  z_home > r_p sin(tilt) + c_p cos(tilt)")
     print(f"         = {np.sin(np.deg2rad(TILT_LIMIT_DEG)):.6f} r_p + "

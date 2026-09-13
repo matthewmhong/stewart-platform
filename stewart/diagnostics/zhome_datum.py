@@ -377,7 +377,7 @@ def main():
     print("-" * 78)
     print("The script behind '8 of 432 ... all at d/r_b = 0.8' is NOT in the repo")
     print("and NOT in git history - the only occurrence of '432' anywhere in the")
-    print("history is the prose claim in docs/session-handoff-2026-09-04.md:78.")
+    print("history is the prose claim in docs/archive/session-handoff-2026-09-04.md:78.")
     print("The grid below is RECOVERED VERBATIM from the surviving scratchpad copy")
     print("of the script that produced it, not reconstructed from the prose.")
     print("Block [B0] re-derives the original 8 as a check on that recovery.")

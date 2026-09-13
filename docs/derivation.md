@@ -10,39 +10,111 @@
 
 ---
 
-## 1. Notation key
+## 1. Notation
 
-### Frames
+The single glossary for the project. Current definitions only; the dated history
+of how each symbol was settled is in `docs/archive/notation.md` and the design
+log. Current *values* (the chosen dimensions) are in `STATUS.md`.
 
-| Symbol | Meaning |
-|---|---|
-| `{W}` | **World / base frame.** Origin fixed to the base, axes fixed to the table. Never moves. |
-| `{P}` | **Platform frame.** Origin at the platform centre, axes glued to the plate — they tilt when it tilts. |
+**Conventions.** Millimetres and radians internally; degrees only in printed
+summaries and servo commands. All vectors are **column** vectors. Legs are
+0-indexed in code (`i = 0..5`, `floor(i/2)`) and 1-indexed in prose and error
+messages (`floor((i-1)/2)`). **Pose order is `(R, T)` in every signature** —
+`ik(geom, R, T)`, `fk(...) -> (R, T)` — because in `q_i = T + R p_i`, `R` is the
+operator and `T` the offset.
 
-### Quantities
+### Frames and pose
 
-| Symbol | Meaning | Frame | Known before solving? |
-|---|---|---|---|
-| `T` | position of the platform centre | `{W}` | **yes** — half of the commanded pose |
-| `R` | platform orientation; converts a vector's `{P}` components into `{W}` components | `{P} → {W}` | **yes** — the other half of the pose |
-| `p_i` | position of platform anchor *i* on the plate | `{P}` | **yes** — a design constant, off the ring drawing. Never changes. |
-| `b_i` | position of servo *i*'s shaft | `{W}` | **yes** — a design constant, bolted to the base |
-| `a` | servo arm length | scalar | **yes** — design parameter, constrained to horns you can buy |
-| `d` | push-rod length | scalar | **yes** — *measure it after cutting*, don't assume nominal |
-| `q_i` | world position of platform anchor *i* | `{W}` | intermediate (stage 1 output) |
-| `L_i` | leg vector, servo shaft → platform anchor | `{W}` | intermediate |
-| `h_i` | position of servo *i*'s arm tip | `{W}` | **no** — determined by `alpha_i` |
-| `alpha_i` | servo *i*'s angle | scalar | **no — this is the unknown** |
-| `n_i` | unit normal of servo *i*'s rotation plane | `{W}` | **yes** — design constant |
-| `u_i` | unit vector in that plane; direction of `alpha_i = 0` | `{W}` | **yes** — your choice of zero |
-| `v_i` | `n_i × u_i`; the second in-plane axis | `{W}` | **yes** — follows from `n_i`, `u_i` |
-| `w_i` | `L_i · n_i`; signed distance of anchor *i* off servo *i*'s plane. Only the horizontal part of `L_i` contributes, since `n_i` is horizontal | scalar | intermediate |
-| `rho_i` | `sqrt(d² − w_i²)`; the rod's length once projected into the plane — what is left of `d` after clearing it. `rho_i ≤ d`, equal only at `w_i = 0` | scalar | intermediate |
+| Symbol | Meaning | Units |
+|---|---|---|
+| `{W}` | world frame. Fixed to the base; origin at the base ring centre, `z` up, base plate at `z = 0` | — |
+| `{P}` | platform frame. Origin at the platform centre on the plate top, axes glued to the plate | — |
+| `T` | position of the platform centre, in `{W}` | mm |
+| `R` | platform orientation; converts `{P}` components to `{W}` components | — |
+
+### Base ring
+
+| Symbol | Meaning | Units |
+|---|---|---|
+| `r_b` | base ring radius (fixed, 90 mm — the print bed) | mm |
+| `beta` | base pair half-split | deg |
+| `s_i` | within-pair sign, `(-1, +1, -1, +1, -1, +1)`; also the `C3` orbit label | — |
+| `theta_i` | shaft azimuth, `120 floor(i/2) + s_i beta` | deg |
+| `b_i` | servo shaft position, `r_b (cos theta_i, sin theta_i, 0)` | mm |
+| `delta` | servo-plane twist from tangential, alternating within each pair, `[0, 180)`. Tuned per candidate, not swept | deg |
+| `psi_i` | azimuth of `n_i`, `theta_i + 90 + s_i delta` (the `+90` is forced by the mirror condition) | deg |
+| `n_i` | unit normal of servo `i`'s rotation plane (horizontal) | — |
+| `u_i` | `z × n_i`; in-plane direction of `alpha_i = 0` (arm flat) | — |
+| `v_i` | `n_i × u_i`, equal to `z` while `n_i` is horizontal; positive `alpha_i` raises the tip | — |
+
+### Platform ring
+
+| Symbol | Meaning | Units |
+|---|---|---|
+| `r_p` | platform ring radius (fixed, 80 mm — the printed hub) | mm |
+| `beta_p` | platform pair half-split | deg |
+| `phi_i` | anchor azimuth, `120 floor(i/2) + s_i beta_p` | deg |
+| `c_p` | plate offset: anchor-plane depth below the `{P}` origin, a measured hardware number | mm |
+| `p_i` | platform anchor, `(r_p cos phi_i, r_p sin phi_i, -c_p)` in `{P}` | mm |
+| `mu` | rotation of the platform ring inside `{P}`. **Not a parameter** — a gauge; `R = I` means platform pair centres line up with base pair centres | deg |
+
+### Links, per-leg quantities, the unknown
+
+| Symbol | Meaning | Units |
+|---|---|---|
+| `a` | servo arm length (a discrete set: published horn holes) | mm |
+| `d` | push-rod length — measure after cutting | mm |
+| `q_i` | world anchor position, `T + R p_i` | mm |
+| `L_i` | leg vector, `q_i - b_i` | mm |
+| `h_i` | arm tip, `b_i + a (u_i cos alpha_i + v_i sin alpha_i)` | mm |
+| `rod_i` | `q_i - h_i`, magnitude `d` | mm |
+| `tangent_i` | unit arm tangent, `-u_i sin alpha_i + v_i cos alpha_i` | — |
+| `w_i` | `L_i · n_i`, anchor's signed distance off servo `i`'s plane | mm |
+| `rho_i` | `sqrt(d² - w_i²)`, rod length projected into the plane | mm |
+| `M_i`, `N_i` | `L_i · u_i`, `L_i · v_i`; `N_i` is the anchor height above the base plate | mm |
+| `C_i` | `hypot(M_i, N_i) = sqrt(\|L_i\|² - w_i²)`, in-plane magnitude of the leg | mm |
+| `P_i` | `(\|L_i\|² + a² - d²) / 2a`; contains no `delta` | mm |
+| `alpha_i` | **the unknown** — servo `i`'s angle from `u_i` toward `v_i` | rad (deg at the servo) |
 
 `(u_i, v_i)` is an orthonormal basis for servo *i*'s rotation plane, written in
 world components. It is what lets a 2D problem be posed inside a tilted 3D plane.
 
-Index `i` runs 1…6. All vectors are **column** vectors.
+### Analysis quantities
+
+| Symbol | Meaning | Units |
+|---|---|---|
+| `z_home` | platform height at the home pose; a sweep axis, bracketed below by `N_i > 0` and above by reach | mm |
+| `z_flat` | plate height with all arms flat (`alpha_i = 0`), `R = I`. Assembly datum only, §9 | mm |
+| `A_i`, `B_i` | `w_i(delta) = A_i cos delta + B_i sin delta`; both `delta`-free | mm |
+| margin | normalised reach margin `(C_i - \|P_i\|) / C_i`, maximin over legs and envelope poses. Negative = infeasible | — |
+| `p` | build error the score is read at, `0.3464 mm / r_b = 0.003849` (RSS of three 0.2 mm sources) | — |
+| score | `margin(dxy = p)`, `delta` tuned to maximise `margin(0)` subject to `cond(J_fk) <= 1e6` at `char_len = r_b` | — |
+| `tau_i` | transmission ratio, `\|rod_i · tangent_i\| / d`; zero at loss of authority | — |
+| `J_fk` | forward-kinematics Jacobian | — |
+| `k` | uniform length scale; `alpha_i` is invariant under scaling every length by `k` | — |
+
+### Working envelope
+
+Tilt only: `dxy = dz = 0`, yaw 0. **Tilt limit 6.558°** from bang-bang recovery of
+a 50 mm ball displacement in `tau = 0.5 s`: `acc = 4 x0 / tau²`,
+`sin(tilt) = 7 acc / 5g`. Tilt goes as `1/tau²`, so a 10% error in `tau` moves
+`sin(tilt)` ~20%. Grid: 5 magnitudes × 7 azimuths over `[30°, 90°]` = 29 poses
+(D₃ symmetry makes a 60° window sufficient — but it is `[30°, 90°]`, not
+`[0°, 60°]`). The 10° azimuth grid is optimistic on worst-case margin by up to
+`2.88e-3`; use it for ranking, not for feasibility.
+
+### Symmetry
+
+| Symbol | Meaning |
+|---|---|
+| `C3` | rotation by 120° about `z`; leg permutation `[2, 3, 4, 5, 0, 1]` |
+| `m0`, `m60`, `m120` | mirror planes at azimuths 0, 60, 120 (mod 180); `m0` permutation `[1, 0, 5, 4, 3, 2]`. The tilt axes they fix sit at 30 + 60k |
+| `D3` | the order-6 group they generate — a requirement on the *legs* (shafts and anchors together) |
+| `sigma` | leg permutation induced by a group element |
+
+Under a mirror `w_sigma(i) = -w_i`; under `C3` no sign flip. Free test on any `w`:
+home or pure heave gives six equal `|w|`, alternating sign; pure yaw gives two
+values, one per `C3` orbit.
 
 ---
 
@@ -441,7 +513,7 @@ Two uses:
 
 ## 11. Grubler-Kutzbach degree-of-freedom check *(CC-derived, 2026-09-10 — UNVERIFIED)*
 
-**CC-derived and unverified, per the standing rule** (`docs/session-handoff-
+**CC-derived and unverified, per the standing rule** (`docs/archive/session-handoff-
 2026-09-05.md`: "anything the assistant derives is unverified until a diagnostic
 says otherwise, and must be labelled as such when written"). Nothing in the repo
 tests mobility; this is pen-and-paper only, checked against the known result for
@@ -501,7 +573,7 @@ ones wanted; neither question is asked here.
   **Superseded as a design basis, 2026-09-05.** The envelope is now set by a
   **recovery** framing — return the ball from a displacement `x0` in a time `tau`,
   bang-bang, `acc = 4x0/tau²` and `sin(tilt) = 7acc/5g` — giving a **6.558°**
-  requirement and a **10.529°** envelope. See `notation.md` §9; the number above
+  requirement and a **10.529°** envelope. See `docs/archive/notation.md` §9; the number above
   is kept because it is correct for what it measures and because the two framings
   scale **oppositely** in plate size (arrest: tilt as `1/k`; recovery: tilt as
   `k`), which is worth not re-deriving from scratch. For the record the two agree
@@ -511,7 +583,7 @@ ones wanted; neither question is asked here.
 - ~~Ball travel during a 150 ms latency window at 300 mm/s: **45 mm**.~~
   **Struck 2026-09-05.** The 300 mm/s was withdrawn 2026-09-03 as invented, and
   nothing depends on the bullet any more: the envelope's latency term is
-  `150 ms × 200 mm/s = 30 mm`, computed in `notation.md` §9 from the peak speed
+  `150 ms × 200 mm/s = 30 mm`, computed in `docs/archive/notation.md` §9 from the peak speed
   that survived. The 150 ms itself is still **provisional** and still needs a
   basis — sensor frame interval plus servo step response, on the hardware pull.
 - Distinguishable tilt steps = usable servo travel ÷ servo deadband. The geometry

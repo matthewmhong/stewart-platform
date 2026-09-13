@@ -247,7 +247,7 @@ def main() -> None:
     print("  60, 120 the fixed azimuths are 90, 150, 30 (mod 180) - i.e. 30 + 60k.")
     print("  Physically: tilting about an axis lying IN a mirror plane reflects to")
     print("  the OPPOSITE tilt; it is the axis PERPENDICULAR to the plane that is")
-    print("  self-symmetric.  notation.md sec.10's w-pattern table already says")
+    print("  self-symmetric.  docs/archive/notation.md sec.10's w-pattern table already says")
     print("  this ('tilt about an axis perpendicular to a mirror plane').")
 
 

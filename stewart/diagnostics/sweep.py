@@ -8,7 +8,7 @@ tests, tunes ``delta`` per candidate, scores the survivors at the build-error
 probe, and returns a **ranked shortlist of TIE GROUPS**.  Every number in the
 eventual build is meant to be traceable to a run of this file.
 
-WHAT IS FIXED AND IS NOT AN AXIS.  ``notation.md`` sec.9/12, all ASSERTED
+WHAT IS FIXED AND IS NOT AN AXIS.  ``docs/archive/notation.md`` sec.9/12, all ASSERTED
 2026-09-08 and read from :mod:`.fixed_ratio` rather than restated::
 
     r_b = 90 mm, r_p = 80 mm   so r_p/r_b = 80/90 is NOT a sweep axis
@@ -23,7 +23,7 @@ THE FIVE AXES.
 ``beta``
     ``(0, 60)`` degrees, **open at both ends, UNBOUNDED**.  The servo
     mounting-flange footprint, screw pitch and inter-body clearance are
-    unpublished for every candidate servo checked (``docs/hardware-pull.md``
+    unpublished for every candidate servo checked (``docs/hardware.md``
     sec.5, among the 39 unpublished cells), so the collision bound that would
     close this axis **cannot be set**.  The full open interval is swept and the
     shortlist's required arc spacing is reported in mm at ``r_b = 90`` as a
@@ -42,7 +42,7 @@ THE FIVE AXES.
     extension arms are a 3D print, not stock, and are excluded.
 ``d / r_b``
     continuous, capped at ``2.0`` = 180 mm.  The cap is ASSERTED on rod
-    slenderness and bow (``notation.md`` sec.12), **not** a hardware limit -
+    slenderness and bow (``docs/archive/notation.md`` sec.12), **not** a hardware limit -
     stock runs to 2.1x the longest length this sweep has ever used.  The axis
     has no asserted LOWER end, so it is swept down to one grid step and the
     feasibility screen is left to set the bottom; where that bottom falls is
@@ -62,7 +62,7 @@ FEASIBILITY - pass/fail, before any scoring, four tests::
 
 Test 3 is taken from :func:`.zhome_bracket.z_lower_closed_form` and **never**
 from the pose grid.  It is a continuum bound and a discrete grid reports it
-satisfied ``+5.9e-4`` before it truly is (``notation.md`` sec.12, the first of
+satisfied ``+5.9e-4`` before it truly is (``docs/archive/notation.md`` sec.12, the first of
 four recorded instances of a grid reporting what the continuum does not).
 Test 4 is the fourth of those instances turned into a test: 21 of 143
 candidates feasible at this limit had a bracket of grid width ``0.000 r_b`` -
@@ -117,7 +117,7 @@ and its margin are reported and the run stops.  **Nothing is widened here.**
 
 WHAT IS NOT DECIDED HERE.  **No joint, no servo, no horn.**  The objective is
 NOT fixed: ``margin`` still measures distance from unreachability rather than
-capability (``notation.md``, 8 Sept) and that stays open.  ``notation.md`` is
+capability (``docs/archive/notation.md``, 8 Sept) and that stays open.  ``docs/archive/notation.md`` is
 not touched.  Every conditioning number carries the ``char_len`` it was
 computed at; ``margin`` is dimensionless and carries none.
 
@@ -174,7 +174,7 @@ MIN_BRACKET_RB = MIN_BRACKET_MM / R_B_MM
 TIE_TOL = 1.5e-4
 
 #: Published servo BODY WIDTH, mm, across the five Hitec/Savox parts of
-#: ``docs/hardware-pull.md`` sec.5.  A real published number, and **not** the
+#: ``docs/hardware.md`` sec.5.  A real published number, and **not** the
 #: quantity ``beta`` needs: that is the INSTALLED-ARC clearance - mounting-
 #: flange footprint, screw-hole pitch, inter-body clearance including wiring -
 #: which is among the pull's 39 unpublished cells for every servo checked.
@@ -220,7 +220,7 @@ MEMBERS_PER_GROUP = 6
 # --------------------------------------------------------------------------- #
 # the five axes
 # --------------------------------------------------------------------------- #
-#: Largest published sub-micro servo CASE SIZE, mm - ``docs/hardware-pull.md``
+#: Largest published sub-micro servo CASE SIZE, mm - ``docs/hardware.md``
 #: sec.5, MFR, Hitec HS-5085MG and HS-5087MH.  The BARE BODY, and that is the
 #: whole of what is published.
 SERVO_CASE_MM = 13.0
@@ -722,7 +722,7 @@ def group_key_e(rec):
     10-deg and ``beta_p`` at 15-deg sampling; **2.5 deg is the first grid fine
     enough to separate same-``|e|`` candidates that are not mirrors.**
 
-    ``notation.md`` sec.8's statement of this key is STALE.  It is flagged
+    ``docs/archive/notation.md`` sec.8's statement of this key is STALE.  It is flagged
     here and **not edited** - that file is not touched by this module.
     """
     return (rec["a"], rec["d"], round(abs(rec["beta_p"] - rec["beta"]), 9))
@@ -1035,7 +1035,7 @@ def part_empties(res, subs):
     xs = [e for e in res["empties"] if e["cause"] == "X"]
     print(f"    X across the union: {len(xs):,}.  The 2026-09-05 correction "
           f"rested on ONE")
-    print(f"    such candidate at one provisional tilt; notation.md sec.12 "
+    print(f"    such candidate at one provisional tilt; docs/archive/notation.md sec.12 "
           f"records that")
     print(f"    whether the category reappears at {ENV.TILT_LIMIT_DEG:.3f} deg "
           f"on a grid this wide was")
@@ -1170,7 +1170,7 @@ def part_shortlist(subs):
     print("  and beta_p at 15-deg sampling; 2.5 deg is the FIRST GRID FINE")
     print("  ENOUGH TO SEPARATE IT.  The old key is reported below beside the")
     print("  new one so the correction is visible rather than replaced.")
-    print("  notation.md sec.8's statement of that key is STALE - flagged here,")
+    print("  docs/archive/notation.md sec.8's statement of that key is STALE - flagged here,")
     print("  and NOT edited: this module does not touch that file.")
     print()
     print(f"  TIE_TOL = {TIE_TOL:.1e}, the ranking resolution MEASURED at "
@@ -1496,7 +1496,7 @@ def part_mirror(subs, n_worst=3):
               f"{np.percentile(sp, 95):.2e}  max {sp.max():.2e}  "
               f"(> TIE_TOL: {int((sp > TIE_TOL).sum()):,})")
     print()
-    print("  FIFTH INSTANCE of the pattern notation.md sec.12 tracks, and the")
+    print("  FIFTH INSTANCE of the pattern docs/archive/notation.md sec.12 tracks, and the")
     print("  first NOT on a pose or candidate grid - the four on record are the")
     print("  N_i > 0 bound, the azimuth window, the harness pose grid and the")
     print("  zero-width z_home brackets.  This one is not a grid resolution")
@@ -1770,7 +1770,7 @@ def part_verdict(res, subs, tilt):
     print("  beats - the bound is permissive and picks no part.  The OBJECTIVE")
     print("  IS NOT FIXED - margin")
     print("  still measures distance from unreachability rather than capability")
-    print("  (notation.md, 8 Sept), and that stays open.  notation.md is not")
+    print("  (docs/archive/notation.md, 8 Sept), and that stays open.  docs/archive/notation.md is not")
     print("  touched by this module.")
 
 

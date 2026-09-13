@@ -79,8 +79,8 @@ def tilt_for(x0: float, tau: float = TAU) -> float:
 
 #: The requirement: recover the 50 mm working displacement in ``tau``.
 TILT_BARE_DEG = tilt_for(X0_BARE)
-#: The envelope.  ``tau_L`` was DROPPED 2026-09-08 (``notation.md`` sec.9):
-#: ``docs/hardware-pull.md`` finds neither of its two terms reconstructable
+#: The envelope.  ``tau_L`` was DROPPED 2026-09-08 (``docs/archive/notation.md`` sec.9):
+#: ``docs/hardware.md`` finds neither of its two terms reconstructable
 #: from published data, so the 30 mm of latency drift it produced has no
 #: basis and is removed rather than left provisional.  What is left is the
 #: working displacement alone, so this is derived from ``X0_WORKING`` through
