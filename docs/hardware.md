@@ -569,3 +569,28 @@ straightness — came back with real numbers from manufacturers' own pages.
 
 No part is recommended. No sweep range is chosen. No purchase, order, or account was
 made — this was research only.
+
+---
+
+## 12. Horn extension — the spec the printed part has to meet (2026-09-16)
+
+Design decided 2026-09-16 (see `docs/design-log.md`); the CAD is the user's.
+This section is the requirement list, not a design.
+
+**Job.** Carry the M3 rod-end bolt at `a ≈ 22 mm` from the spline centre, using
+the MG90S stock horn as the spline interface.  Nothing critical is printed: the
+moulded spline does the indexing.
+
+| # | constraint | why |
+|---|---|---|
+| H1 | pivot radius `a = 20–25 mm`, one value, same on all six | `G = a / r_p`; with `G` 0.24–0.38 this puts `r_p` at 58–70 mm, inside the 180 mm bed |
+| H2 | **hysteresis at the rod-end hole ≤ 54 µm** under reversing rod load (~1 N, up to 40% of it out of the horn plane) | the whole R2 slack: 0.047° of the 0.25° budget, the rest being 0.116° deadband + 0.087° joint play |
+| H3 | no drilling of the stock horn | holes are 1 mm in a ~4 mm arm; opening them to 2 mm leaves no material |
+| H4 | shear carried mechanically, not by adhesive | CA does not bond POM, and MG90S horns are POM or nylon.  Two 1 mm steel pins (straightened paperclip) through the existing holes, plus a pocket that captures the arm against rotation |
+| H5 | adhesive is epoxy, on scuffed and IPA-wiped faces | epoxy tolerates POM/nylon and fills the gaps a printed pocket will have |
+| H6 | bolt heads and the part clear the servo case through ±83° of travel | that is the measured travel; a collision at an end stop stalls the servo |
+| H7 | load in-plane with the print layers | flat on the bed; layer adhesion is the weak axis |
+| H8 | the six assemblies identical to within the R2 budget | any per-leg difference is a fixed offset — trimmable in firmware, unlike play |
+
+Permanence is acceptable: each MG90S ships with spare horns, and the 18°
+spline granularity is trimmed in firmware (§6), so nothing needs re-indexing.

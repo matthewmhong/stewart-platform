@@ -1946,6 +1946,191 @@ pack, then bench-test backlash, deadband, degrees per µs and loaded speed.
 
 ---
 
+## 15 September
+
+<!-- TODO(author): drafted for you - rewrite in your own voice -->
+
+**Build in two stages.** Stage 1 is the platform, moved by a joystick. Stage 2
+adds a camera and closes the loop to balance the ball. The camera was too far
+ahead of everything else to plan around yet.
+
+The requirements stay as they are for the hardware. A joystick doesn't need
+0.3° precision or 140°/s, but the horn hole and `r_p` set `G`, and `G` decides
+whether stage 2 can pass without a rebuild. What waits for stage 2 is only
+what needs a camera: the latency requirement, its 10% rule of thumb, and the
+camera noise check on the ±5 mm tolerance.
+
+### Slew fraction vs tilt range (UNVERIFIED quick calculation)
+
+R1's 6.558° assumes the plate reverses tilt instantly. If it takes `k τ` to
+swing across, the ball spends less time at full tilt, so reaching 50 mm in
+0.5 s needs more tilt:
+
+| `k` | tilt needed |
+|---|---|
+| 0 | 6.56° |
+| 0.05 | 6.90° |
+| 0.1 | 7.29° |
+| 0.2 | 8.20° |
+| 0.3 | 9.38° |
+
+A 7° range only allows `k ≈ 0.08`, not the proposed 0.2. Open: raise R1 to
+about 8.5°, or ask for a faster swing.
+
+### Servo bench-test sketch
+
+`firmware/servo_test/servo_test.ino` drives one MG90S in microseconds from the
+Serial Monitor, so the bench tests don't need a new upload per test. It uses
+`writeMicroseconds()` because `Servo.write()` moves in ~11 µs steps, coarser
+than the 5 µs deadband being measured. A `jump` command flashes the pin 13 LED
+at the instant of the command, so 240 fps video can time the step from that
+frame. Limits default to 900–2100 µs until `wide` is sent, so a typo can't
+drive the horn into its end stop. Compiles for an Uno; not yet run on hardware.
+
+---
+
+## 16 September
+
+<!-- TODO(author): drafted for you - rewrite in your own voice -->
+
+Bench-tested one MG90S with the pointer rig and the serial sketch.
+
+| parameter | measured |
+|---|---|
+| horn holes | 7, from 4.15 to 15.95 mm, in 1.967 mm steps |
+| degrees per µs | 0.087 (133° / 90° / 46° at 1000 / 1500 / 2000 µs) |
+| deadband | 4 µs = 0.35° |
+| gear backlash, free | 1–2° |
+| speed | 286°/s no load, 250 at 150 g·cm, 207 at 382, 162 at 556 |
+| travel | 530–2480 µs = 169.7°, centred on 1505 µs |
+
+The horn is linear to about ±2% across the middle of its range, which is a
+relief: `a` can be treated as a fixed lever.
+
+**Decision: R1 = 8.5°, `k` = 0.2 (option A).** The 15 September calculation
+said a 0.2 slew fraction needs 8.20°, so 7° and 0.2 were never compatible.
+Raising the range is the cheaper side to give: it costs servo travel, of which
+there is plenty (85° per side), while tightening `k` would have demanded a
+faster swing than the servo has. R3 follows: 17° in 0.1 s, **170°/s**.
+
+### The backlash result kills the design as specified
+
+Precision needs `G (deadband + backlash) + play / r_p ≤ 0.3°` and speed needs
+`G ω ≥ 170°/s`. Both contain `G`, so eliminating `r_p` gives the fastest tilt
+rate that still holds precision, for *any* geometry:
+
+    rate_max = ω δ / (deadband + backlash + play / a)
+
+At `ω = 250°/s`, `a = 15.95 mm` and 0.1 mm of joint play, that is 44°/s at 1°
+of backlash and 28°/s at 2°. R3 asks for 170. **The design is 4–6× short, and
+no choice of `r_p` changes it** — `r_p` trades speed for precision one for one,
+which is exactly what the formula above cancels out. Even with zero backlash it
+is 1.6× short: the 0.35° deadband and the joint play nearly spend the whole
+0.3° budget on their own.
+
+Phase 0's appendix said geometry doesn't change how many distinguishable tilt
+steps exist, only how they are spent. This is that statement with numbers in
+it, and the number is too small.
+
+### Preload rescues it
+
+Re-measured with ~100 g hanging from the horn so the load never reverses:
+**backlash is negligible**. The 1–2° is free play in an unloaded gear train,
+and the real platform never unloads it — its own weight holds every servo
+against one flank. That is the 3.9× back, for nothing.
+
+What binds now is `deadband + joint play / a`, and at 0.1 mm the ball joints
+contribute 0.36° — as much as the whole deadband. The dominant unknown is no
+longer something I can measure on the bench; it's which joints I buy.
+
+The other thing that emerged: passing the inequality isn't the same as being
+buildable. R3 goes as `1/τ³` and sets a floor on `G`, which caps `r_p = a / G`.
+Holding the 0.5 s recovery forces an anchor circle of about 22 mm — a plate
+balanced on a stub. Letting `τ` out to 0.7 s drops R1 to 4.2° and R3 to 60°/s,
+and `r_p` lands at 42–67 mm, which is a real platform. The fast spec was
+writing cheques the servo could only cash as a miniature.
+
+### The horn rule falls
+
+The M3 rod ends I found need a 3 mm bolt; the stock horn's holes are 1.3 mm and
+its arm is ~4 mm wide, so drilling one out would leave almost no material. The
+obvious fix, an aluminium horn, turns out not to exist for this servo: micro
+metal horns are cut for 21T/23T/25T splines, and sources can't even agree
+whether the MG90S is 20T or 21T (I counted 20). Ordering one is a bet on a fit
+you only discover on arrival, and a loose spline is the worst possible place to
+lose precision.
+
+Printing the whole horn is worse — 20 teeth on a 4.8 mm shaft is a 0.75 mm
+pitch, finer than FDM holds.
+
+So: **keep the moulded spline, print an arm that clamps to it.** Two plates
+sandwich the stock horn, two M2 bolts pass through holes that already exist,
+and the printed arm carries the M3 rod-end bolt at `a ≈ 22 mm`. The longer arm
+is a bonus rather than a cost — the joint-play term is `play / a`, so it
+*shrinks* as the arm grows, and `r_p` moves to a comfortable 58–70 mm.
+
+It does add one new error source, the flex of a printed part under reversing
+load. The R2 budget leaves 0.047° for it, which at 22 mm is 54 µm of hysteresis
+at the tip. That's the number the part has to hold, and it's why it's a fat
+two-bolt sandwich rather than a tab.
+
+**Chosen: `τ` = 0.7 s, `e` = ±8 mm.** The requirements that follow are R1 ≥
+4.5°, R2 ≤ 0.25°, R3 ≥ 65°/s, R4 ≤ 70 ms, and ball joints with no more than
+0.21 mm of total play per leg. `r_p` lands between 42 and 67 mm. Giving up
+0.2 s of recovery time and 3 mm of hold tolerance bought a platform three times
+the size and joints I can actually buy.
+
+What can still move: gravity preloads every servo one way on the real platform,
+so the free play I measured by rocking the horn may never appear in service —
+worth up to 3.9× for free, and the next test. 286°/s against a published 600
+suggests the supply voltage or my frame counting is costing another 2×. After
+that, the requirements themselves: recovery time `τ` and hold tolerance `e`
+each buy their factor linearly.
+
+### The evaluator, and what it says
+
+Wrote `stewart/performance.py`: R1, R2, R3 and a rod-end cone check, every
+sensitivity a numerical derivative of `ik` or `fk` rather than the `G ~ a/r_p`
+caricature. 540 candidates in under three seconds.
+
+The leading design is `r_b = 90, beta = 5, r_p = 70, beta_p = 35, a = 22,
+d = 70`, sitting 60 mm high and using only ±14.6° of the ±83° of servo travel
+available. R1, R3 and the joint cone pass with room. R2 is the whole question:
+0.287° worst case against a 0.25° budget, or 0.117° if the six legs' errors are
+treated as independent rather than conspiring. Joint play is 60% of that error,
+so tomorrow's measurement decides it — 0.06 mm passes outright, 0.1 mm passes
+only on the generous reading. No geometry in the sweep escapes this; it is a
+joints problem.
+
+**Decided: judge R2 in quadrature.** Summing the six legs assumes their
+independent errors all point the same way at the same instant; they don't, and
+the inputs are already pessimistic (half a deadband plus the full per-leg play,
+both ends counted). The penalty for being wrong is bounded and small — ±8.6 mm
+of ball wander instead of ±8 mm — while the strict reading would have demanded
+0.06 mm joints, which means waiting on a second order. The worst-case number
+stays in the report as the reserve I'd spend if the joints wear or a servo
+unloads mid-slew.
+
+With that, the leading candidate passes every check, and the joint spec relaxes
+from 0.06 mm to about 0.28 mm — inside what ordinary M3 rod ends manage.
+
+Two things the evaluator caught that I had wrong:
+
+**A longer arm is not always better.** I had argued `play / a` shrinks with a
+longer arm, which is true only if `r_p` grows to keep `G` fixed. With `r_p`
+capped by the print bed, `a = 25` comes out *worse* than `a = 22` (0.312 vs
+0.287), because the extra gearing amplifies the deadband faster than it dilutes
+the play.
+
+**The rod-end bolt at the arm must not be parallel to the servo shaft.** The
+rods lean about 31° out of the servo plane, so a shaft-parallel bolt sits 31°
+off perpendicular and the joint binds — against a cone of maybe 13°. Tilt the
+bolt ~30° toward the direction of arm rotation and the worst misalignment over
+the whole envelope drops to 4.2°. That is a hole angle in the printed horn
+extension, and I nearly specified it wrong.
+
+---
+
 ## Where Phase 0 stands
 
 See `STATUS.md` at the repo root for the current state. The earlier version of
