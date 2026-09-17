@@ -392,3 +392,164 @@ def search(candidates, servo: Servo | None = None, req: Requirements | None = No
             continue
         out.append((params, evaluate(geom, servo, req)))
     return out
+
+
+# --------------------------------------------------------------------------- #
+# clearance - does anything hit anything?
+# --------------------------------------------------------------------------- #
+
+
+@dataclass(frozen=True)
+class Body:
+    """The servo case as a box around the shaft centre, in the servo frame.
+
+    Axes are the servo frame's own: ``n`` along the shaft, ``u`` in-plane, and
+    ``v = n x u`` (vertical under horizontal shafts).  Defaults are the MG90S
+    measured 2026-09-16 - 12.3 mm along the shaft, 32.2 mm across the mounting
+    tabs, 35.3 mm tall - with the case hanging below the shaft.
+
+    ``STATUS.md`` flags that which measured span is which was never confirmed.
+    If 35.3 is the tab span rather than the height, swap ``along_u`` and
+    ``below``; the check is only as good as these four numbers.
+    """
+
+    along_n: float = 12.3  # full thickness, centred on the shaft
+    along_u: float = 32.2  # full width across the tabs, centred
+    below: float = 30.0  # case bottom below the shaft centre
+    above: float = 5.0  # case top above the shaft centre
+
+
+def _point_box_distance(pts_frame: np.ndarray, body: Body) -> np.ndarray:
+    """Distance from points to the axis-aligned case box, in the servo frame.
+
+    ``pts_frame`` is ``(3, k)`` in ``(n, u, v)`` components.  Zero inside.
+    """
+    half = np.array([body.along_n / 2.0, body.along_u / 2.0])
+    outside = np.abs(pts_frame[:2]) - half[:, None]
+    lo, hi = -body.below, body.above
+    outside_v = np.maximum(lo - pts_frame[2], pts_frame[2] - hi)
+    gaps = np.vstack([outside, outside_v])
+    return np.linalg.norm(np.maximum(gaps, 0.0), axis=0)
+
+
+def clearance(geom: Geometry, req: Requirements, z: float,
+              body: Body | None = None, n_samples: int = 25):
+    """Minimum separations over the envelope, mm.
+
+    Returns a dict with
+
+    ``rod_rod``
+        closest approach between two different rods.
+    ``rod_body_other``
+        closest approach between a rod and a *different* leg's servo case.
+        This is the one that bites: a rod sweeping across its neighbour.
+    ``rod_body_own``
+        rod against its own servo's case.  Small by construction - the rod
+        starts at that servo's arm tip - so judge it against the arm radius,
+        not against zero.
+
+    Rods are sampled as ``n_samples`` points; the true minimum can sit between
+    samples, so the figures are slightly optimistic.  25 samples over a 70 mm
+    rod is a 3 mm step, which is fine for spotting a collision and too coarse
+    to certify a 0.5 mm gap.
+    """
+    body = body or Body()
+    v = np.cross(geom.n, geom.u, axis=0)
+    t = np.linspace(0.0, 1.0, n_samples)
+    out = {"rod_rod": np.inf, "rod_body_other": np.inf, "rod_body_own": np.inf}
+    for az in _envelope(req):
+        R, T = tilt_pose(np.radians(req.tilt_deg), az, z)
+        tips = arm_tips(geom, ik(geom, R, T))
+        anchors = R @ geom.p + T[:, None]
+        # (6, 3, n_samples) sampled points along each rod
+        rods = np.stack([tips[:, i, None] + t * (anchors[:, i] - tips[:, i])[:, None]
+                         for i in range(6)])
+        for i in range(6):
+            for j in range(6):
+                if i < j:  # rod i against rod j, sample-to-sample
+                    diff = rods[i][:, :, None] - rods[j][:, None, :]
+                    out["rod_rod"] = min(out["rod_rod"],
+                                         float(np.linalg.norm(diff, axis=0).min()))
+                rel = rods[i] - geom.b[:, j, None]
+                frame = np.vstack([geom.n[:, j] @ rel, geom.u[:, j] @ rel, v[:, j] @ rel])
+                dist = float(_point_box_distance(frame, body).min())
+                key = "rod_body_own" if i == j else "rod_body_other"
+                out[key] = min(out[key], dist)
+    return out
+
+
+@dataclass(frozen=True)
+class Horn:
+    """The printed horn extension as a box that turns with the servo arm.
+
+    Measured 2026-09-18: 32.3 x 12 x 4.95 mm overall.  Placed in the arm frame
+    with ``length`` radial (along the arm), ``width`` across it inside the servo
+    plane, and ``thickness`` along the shaft, since the part is a sandwich over
+    the stock horn.  ``behind`` is how far it reaches back past the spline
+    centre; the rest of ``length`` reaches outward past the ``a = 22 mm`` bolt.
+    """
+
+    length: float = 32.3
+    width: float = 12.0
+    thickness: float = 4.95
+    behind: float = 8.0
+
+    def points(self, n_r: int = 7, n_w: int = 3, n_t: int = 2) -> np.ndarray:
+        """A ``(3, k)`` grid over the box in arm-frame ``(radial, across, axial)``."""
+        r = np.linspace(-self.behind, self.length - self.behind, n_r)
+        w = np.linspace(-self.width / 2.0, self.width / 2.0, n_w)
+        t = np.linspace(-self.thickness / 2.0, self.thickness / 2.0, n_t)
+        grid = np.meshgrid(r, w, t, indexing="ij")
+        return np.vstack([g.ravel() for g in grid])
+
+
+def horn_clearance(geom: Geometry, req: Requirements, z: float,
+                   body: Body | None = None, horn: Horn | None = None,
+                   n_samples: int = 25):
+    """Minimum separations involving the printed horn extension, mm.
+
+    Returns ``horn_body`` (horn against another leg's servo case), ``horn_rod``
+    (horn against another leg's rod) and ``horn_horn``.  A leg's own rod and
+    case are excluded: the horn is bolted to one and carries the other.
+
+    The horn is sampled on a grid rather than treated as a solid, so a gap
+    between two flat faces can read slightly large; with ~5 mm steps it is a
+    collision detector, not a certificate for millimetre gaps.
+    """
+    body = body or Body()
+    horn = horn or Horn()
+    v = np.cross(geom.n, geom.u, axis=0)
+    box = horn.points()
+    t = np.linspace(0.0, 1.0, n_samples)
+    out = {"horn_body": np.inf, "horn_rod": np.inf, "horn_horn": np.inf}
+    for az in _envelope(req):
+        R, T = tilt_pose(np.radians(req.tilt_deg), az, z)
+        alphas = ik(geom, R, T)
+        tips = arm_tips(geom, alphas)
+        anchors = R @ geom.p + T[:, None]
+        rods = np.stack([tips[:, i, None] + t * (anchors[:, i] - tips[:, i])[:, None]
+                         for i in range(6)])
+        # horn points in world: radial/across rotate with alpha in the servo plane
+        horns = []
+        for i in range(6):
+            ca, sa = np.cos(alphas[i]), np.sin(alphas[i])
+            radial = ca * geom.u[:, i] + sa * v[:, i]
+            across = -sa * geom.u[:, i] + ca * v[:, i]
+            horns.append(geom.b[:, i, None] + np.outer(radial, box[0])
+                         + np.outer(across, box[1]) + np.outer(geom.n[:, i], box[2]))
+        for i in range(6):
+            for j in range(6):
+                if i == j:
+                    continue
+                rel = horns[i] - geom.b[:, j, None]
+                frame = np.vstack([geom.n[:, j] @ rel, geom.u[:, j] @ rel, v[:, j] @ rel])
+                out["horn_body"] = min(out["horn_body"],
+                                       float(_point_box_distance(frame, body).min()))
+                diff = horns[i][:, :, None] - rods[j][:, None, :]
+                out["horn_rod"] = min(out["horn_rod"],
+                                      float(np.linalg.norm(diff, axis=0).min()))
+                if i < j:
+                    diff = horns[i][:, :, None] - horns[j][:, None, :]
+                    out["horn_horn"] = min(out["horn_horn"],
+                                           float(np.linalg.norm(diff, axis=0).min()))
+    return out

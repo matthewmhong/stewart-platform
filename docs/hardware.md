@@ -594,3 +594,33 @@ moulded spline does the indexing.
 
 Permanence is acceptable: each MG90S ships with spare horns, and the 18°
 spline granularity is trimmed in firmware (§6), so nothing needs re-indexing.
+
+---
+
+## 13. Servo bracket — the spec, ahead of the FEA (2026-09-18)
+
+Design is the user's; this is the requirement list.  Written before the FEA so
+the analysis has thresholds that came from the error budget rather than from
+the CAD.
+
+| # | constraint | why |
+|---|---|---|
+| B1 | **shaft axis parallel to the base plane, within 1°** | the IK's fixed minus branch rests on horizontal shafts (`docs/derivation.md` §8); 1° of cant is 0.10 mm of out-of-plane tip error, systematic rather than random |
+| B2 | shaft centres on `r_b = 80 mm`, at the `beta = 10, delta = 0` positions from `base_ring` | the design of 2026-09-18 |
+| B3 | case hangs below the shaft, tabs on the base side | matches `Body` in `performance.py`, which the clearance figures assume |
+| B4 | compliance at the arm tip ≤ **~60 µm** under the load case below, shared with the horn extension's 54 µm (§12 H2) | bracket flex enters R2 exactly like gearing error; the split between bracket and horn is still to be allocated |
+| B5 | mounts with the MG90S tab pattern (footprint 35.3 / 12.3 / 32.2 mm, spans unconfirmed) | measured 2026-09-16 |
+| B6 | leaves the horn's swept volume clear: 32.3 × 12 × 4.95 mm turning about the shaft | `horn_clearance()`; at `beta = 10` the nearest approach to a neighbour is 13.6 mm |
+
+**Load case for the FEA** (all at one servo):
+
+1. reaction torque about the shaft, `rod force × a` ≈ 22 N·mm at ~1 N of rod
+   force, higher transiently during a slew;
+2. rod force at the arm tip, ~1 N with ~40% out of the servo plane — this is
+   what twists the bracket rather than merely bending it;
+3. screw preload, if the tabs are modelled in detail.
+
+Per-leg rod forces have **not** been computed — that needs a platform mass
+(estimate 200–250 g for plate, joints and rods).  Buckling is not a concern and
+does not need FEA: Euler for a 70 mm M3 steel rod is ~650 N against ~1 N
+working load.

@@ -2129,6 +2129,61 @@ bolt ~30° toward the direction of arm rotation and the worst misalignment over
 the whole envelope drops to 4.2°. That is a hole angle in the printed horn
 extension, and I nearly specified it wrong.
 
+## 18 September
+
+<!-- TODO(author): drafted for you - rewrite in your own voice -->
+
+Labelled the bench-tested unit **servo 1** and started a per-servo calibration
+table in `STATUS.md`. Each leg carries its own centre and deg/µs into the
+firmware trim, so the six have to be told apart — tape on the case before
+anything is assembled, because afterwards they are identical.
+
+Found the travel ends of all six. They agree closely: low ends 510–530 µs,
+high ends 2480–2490, centres 1495–1505. The range every unit reaches is
+530–2480 µs, so a common 550–2460 µs (±83° about 1500) drives the whole set and
+per-leg trim mops up the rest.
+
+Also added a clearance check — rod against rod, rod against every servo case —
+because nothing in the project modelled interference, and that is the classic
+way a platform that passes on paper binds on the bench. At `r_b = 80` the
+closest approaches are 10.2 mm rod-to-rod and 7.3 mm rod-to-neighbouring-case,
+which is comfortable rather than lucky. It also settled the base radius: `r_b`
+turns out not to matter to R3 or the joint cone at all, so 90 mm — which would
+have put the shafts on a circle as wide as the print bed — buys only 0.018° of
+precision over 80 mm. Taking 80.
+
+Then the horn extension came off the CAD at 32.3 × 12 × 4.95 mm, and modelling
+*that* rather than a bare rod changed the design. The rods were never the tight
+part: at `beta = 5` the horn passes 2.7 mm from the neighbouring servo case,
+and at `beta = 2` it collides outright. `beta` — the angular spacing within a
+servo pair — governs the whole thing, and opening it to 10° costs 0.002° of R2,
+nothing in speed or the joint cone, and roughly doubles every clearance in the
+machine.
+
+**The design to build: `r_b = 80, beta = 10, delta = 0, r_p = 70,
+beta_p = 35, a = 22, d = 70`**, sitting 63.2 mm high.
+
+Also wrote down something that had been assumed silently since Phase 0: **the
+servo shafts must sit parallel to the base plane.** The IK picks one branch for
+all six legs, and that choice is only valid because horizontal shafts make
+`v_i = z`, so `N_i` is the anchor height and always positive. Cant the shafts
+and the branch reopens — the maths stops describing the machine. A cant of 1°
+costs 0.10 mm of out-of-plane tip error, systematic rather than random, so it's
+a target for the mounting jig rather than a hard limit. It now sits in
+`STATUS.md` next to the design, and as B1 in the bracket spec
+(`docs/hardware.md` §13), which I wrote ahead of the FEA so the thresholds come
+from the error budget instead of from whatever the CAD happens to give.
+
+Worth noting what nearly happened: the 16 September candidate would have been
+built with 2.7 mm between a printed part and a servo case, on the strength of a
+clearance check that modelled rods as infinitely thin lines. The part that
+mattered was the one I hadn't drawn yet.
+
+That confirms the `travel_deg = 83` the evaluator has been assuming on the
+strength of servo 1 alone — a guess that happened to be right, which is worth
+noting because R1 only needs ±14.6° of it. Travel was never going to be the
+binding constraint; precision was.
+
 ---
 
 ## Where Phase 0 stands

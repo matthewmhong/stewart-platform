@@ -1,7 +1,7 @@
 # Status
 
 Where the project stands right now. **Edit this file in place each session**;
-`git log -p STATUS.md` is the history. Last updated 2026-09-16.
+`git log -p STATUS.md` is the history. Last updated 2026-09-18.
 
 ## Direction (since 2026-09-13)
 
@@ -68,7 +68,8 @@ steady offset but not random play. **Backlash is ~0 under preload** (measured
 
 ### MG90S parameters
 
-Measured 2026-09-16 on one MG90S (supply voltage not recorded).
+Measured 2026-09-16 on **servo 1** (supply voltage not recorded).  Figures
+below are that unit; per-unit numbers go in the calibration table that follows.
 
 | parameter | published | **measured** | how to measure |
 |---|---|---|---|
@@ -81,6 +82,122 @@ Measured 2026-09-16 on one MG90S (supply voltage not recorded).
 | gear backlash (powered, holding) | not published | **1–2° free; NEGLIGIBLE under one-way preload** (2026-09-16) — the platform's weight preloads every servo, so the free figure does not apply in service | rock the horn, read the pointer tip |
 | speed under load | 0.10 s/60° at 4.8 V, no load (600°/s) | **286°/s no load; 250 to 150 g·cm; 240 at 191; 207 at 382; 162 at 556** (less than half the published no-load figure) | 240 fps video of a 60° step |
 | stall torque | ~1.8–2.2 kg·cm (listings vary) | not measured (not needed; R5 has huge margin) | not needed if R5 passes easily |
+
+### Per-servo calibration
+
+Label the servos 1–6 with tape **before** assembly; each leg's firmware needs
+its own centre and deg/µs.  Servo 1 is the unit bench-tested 2026-09-16.
+
+| servo | low end µs | high end µs | centre µs | travel ° | deg/µs | deadband µs | notes |
+|---|---|---|---|---|---|---|---|
+| 1 | 530 | 2480 | 1505 | 169.7 | 0.087 | 4 | full bench test 2026-09-16 |
+| 2 | 520 | 2480 | 1500 | 170.5* | | 4 | measured 2026-09-18 |
+| 3 | 520 | 2480 | 1500 | 170.5* | | 4 | measured 2026-09-18 |
+| 4 | 510 | 2480 | 1495 | 171.4* | | 4 | measured 2026-09-18 |
+| 5 | 510 | 2490 | 1500 | 172.3* | | 4 | measured 2026-09-18 |
+| 6 | 510 | 2490 | 1500 | 172.3* | | 4 | measured 2026-09-18 |
+
+\* travel ° computed with servo 1's 0.087 deg/µs until each unit's own
+figure is measured.
+
+**All six measured 2026-09-18**, deadband 4 µs on every unit.  Low ends span 510–530 µs, high ends
+2480–2490, centres 1495–1505 — tight enough to drive the set from one common
+limit pair and leave the rest to per-leg trim.  The range every unit reaches is
+530–2480 µs, so the **common working limits are 550–2460 µs = ±83° about 1500**,
+which is exactly the `travel_deg = 83` that `stewart/performance.py` assumes
+(previously extrapolated from servo 1 alone, now confirmed for the set).
+
+Working limits are 20 µs inside each end.  Centre = midpoint of the two ends;
+servo 1 landed within 5 µs of the nominal 1500.  Only travel is needed from
+2–6 right now — deg/µs and deadband can follow, and matter per leg only for
+the trim table.
+
+### DESIGN TO BUILD (2026-09-18)
+
+    r_b = 80, beta = 10, delta = 0, r_p = 70, beta_p = 35, a = 22, d = 70
+    home height 63.2 mm
+
+| check | value | limit | |
+|---|---|---|---|
+| R1 tilt, every azimuth | 4.5° held, 14.6° of servo travel used | ≥ 4.5° | PASS |
+| R2 tilt error (quadrature) | 0.137° | ≤ 0.25° | PASS |
+| R3 tilt rate | 78.9°/s | ≥ 65°/s | PASS |
+| rod-end misalignment | 4.2° | ≤ 13° | PASS |
+| rod–rod | 20.3 mm | — | clear |
+| rod–other case | 16.4 mm | — | clear |
+| horn–other case | 13.6 mm | — | clear |
+| horn–horn | 14.2 mm | — | clear |
+
+Supersedes the 2026-09-16 candidate (`r_b = 90, beta = 5`): the **horn
+extension** (32.3 × 12 × 4.95 mm, measured 2026-09-18) turned out to be the
+tight part, not the rods, and `beta` is what governs it.
+
+### Mounting: shafts horizontal (assumption, load-bearing)
+
+**Every servo shaft must sit parallel to the base plane**, with the arm
+sweeping in a vertical plane.  This is not a convenience — the IK's fixed
+*minus* branch rests on it (`ik` docstring; `docs/derivation.md` §8): with
+horizontal shafts `v_i = z` exactly, so `N_i = L_i · z` is the anchor height
+above the base, positive at every pose the platform can hold, which is what
+makes one branch correct for all six legs at once.  **Cant the shafts and the
+branch choice reopens**, and `base_ring`'s parameterisation no longer describes
+the machine.
+
+Tolerance: a cant of `ε` displaces the arm tip out of its plane by
+`a sin(α) sin(ε)`, at most (α ≤ 14.6°, a = 22 mm):
+
+| cant | tip error |
+|---|---|
+| 0.5° | 0.05 mm |
+| 1° | 0.10 mm |
+| 2° | 0.19 mm |
+| 3° | 0.29 mm |
+
+**Aim for ≤ 1°.**  Unlike joint play this error is *systematic* — a repeatable
+function of `α`, not random — so calibration and camera feedback absorb most of
+it, which is why 1° is a target rather than a hard limit.  It is still worth
+the jig: six brackets each canted a different way is six different systematic
+errors.
+
+`Body` in `performance.py` assumes the same thing (case hanging below the
+shaft), so the clearance figures inherit it.
+
+### Base radius and clearance (2026-09-18)
+
+`r_b` is free: every value from 70 to 90 mm passes all four checks at
+`beta = 5, r_p = 70, d = 70`.  R3 and the joint cone are set by `r_p`, not
+`r_b`; only R2 moves.
+
+| `r_b` | R2 | rod–rod | rod–other body | rod–own body |
+|---|---|---|---|---|
+| 70 | 0.173° | 8.4 mm | 6.3 mm | 3.2 mm |
+| 80 | 0.135° | 10.2 mm | 7.3 mm | 4.9 mm |
+| 90 | 0.117° | 11.9 mm | 8.5 mm | 5.2 mm |
+
+`r_b = 80` chosen: `r_b = 90` puts the shafts on a 180 mm
+circle, the whole print bed, with nothing left for plate or rim; 80 costs
+0.018° of R2 (15% of the margin, from a budget over half spare) and buys 10 mm
+of radial room.  70 is also legal but spends half the remaining slack, and the
+joint play is not measured yet.
+
+**`beta` decides whether the horns fit.**  With the horn extension modelled
+(`horn_clearance()`), horn-to-neighbouring-case at `r_b = 80` is:
+
+| beta | 2° | 5° | 10° | 15° |
+|---|---|---|---|---|
+| horn–case | **0.0 — collides** | 2.7 mm | 13.6 mm | 24.1 mm |
+
+`beta = 10` costs 0.002° of R2 and nothing in R3 or the cone, and roughly
+doubles every clearance — hence the design above.  How far the horn reaches
+back past the spline (`Horn.behind`) changes none of this: 4 mm and 16 mm give
+the same answer to 0.1 mm, because what nearly touches is the horn's flank
+against the neighbour, not its tail.
+
+Clearances come from `clearance()`, which models the servo case as a box
+(`Body`, defaults from the 2026-09-16 measurements) and samples each rod at
+25 points.  **Not yet modelled:** the base plate itself and the plate underside.  The `Body`
+defaults also assume the case hangs below the shaft and that 32.2 mm is the tab
+span — the span labelling is still unconfirmed.
 
 ### Leading candidate (2026-09-16, from `stewart/performance.py`)
 
@@ -224,8 +341,8 @@ on reach alone.
    - **Voltage and re-timed speed** (optional now; worth up to 2× if needed).
      Measure the pack voltage under load; count video frames from *first
      movement* to stop, not from the LED.
-   - Find the **low end of travel** (2480 µs is only the high end) and count
-     the spline teeth.
+   - ~~Find the low end of travel, count the spline teeth~~ **DONE.**
+   - **Calibrate servos 2–6** (travel ends first) into the per-servo table.
 4. ~~Write the evaluator~~ **DONE 2026-09-16** (`stewart/performance.py`): R1,
    R2, R3 and the rod-end cone, from numerical derivatives of `ik`/`fk`.  No
    unit tests yet — that is the gap.
