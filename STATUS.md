@@ -301,16 +301,20 @@ on reach alone.
 
 ## Open
 
-- **Ball joints:** M3 rod ends (spherical bearings, M3 female shank, 3 mm
-  bore) are the candidate — metal-on-metal, and the M3 threaded push-rod makes
-  `d` adjustable per leg.  Two checks before buying twelve: measured play
-  ≤ 0.1 mm each (budget 0.21 mm per leg), and the **misalignment cone**
-  (a rod end binds at ±13–15° off its bolt axis — the evaluator must check leg
-  swing against it, and the bolt-axis orientation on base and plate is a design
-  choice).
-- **Horn extension:** the user is designing it; requirements are in
-  `docs/hardware.md` §12.  Its flex budget is 54 µm of hysteresis at the tip —
-  the only part of R2 that is not deadband or joint play.
+- **Ball joints:** M3 rod ends chosen and ordered (spherical bearings, M3
+  female shank, 3 mm bore) — metal-on-metal, and the M3 threaded push-rod makes
+  `d` adjustable per leg.  **Two measurements outstanding on arrival:**
+  play (budget 0.28 mm total per leg, so ≤ 0.14 mm each) and the **bind angle**
+  (the evaluator assumes a 13° cone; it reports 4.2° used, so there is room,
+  but the real number is unmeasured).  Bolt axes are a design choice and the
+  evaluator picks the best ones: `evaluate().axes_base` / `.axes_platform`.
+- **Horn extension:** designed 2026-09-18, 32.3 × 12 × 4.95 mm; requirements
+  in `docs/hardware.md` §12.  Not yet printed or stiffness-tested — its flex
+  budget is 54 µm of hysteresis at the tip, the only part of R2 that is not
+  deadband or joint play.
+- **Servo bracket:** not designed.  Spec in `docs/hardware.md` §13; an FEA
+  against B4 (~60 µm compliance) is planned, and needs per-leg rod forces,
+  which need a platform mass estimate.
 - **Check `e = ±8 mm` against camera noise `σ`** in stage 2 (`e ≥ 3σ`).  The
   rest of `e` is settled.
 - **Joystick control path** not chosen: IK on the Arduino (port `ik`) or on a
@@ -320,12 +324,10 @@ on reach alone.
   `writeMicroseconds()`; a PCA9685 board steps in ~4.9 µs.
 - **Camera** not chosen (stage 2). A 30 fps camera uses 33 ms of R4's 70 ms
   by itself.
-- **Ball joints** not chosen; their free play enters R2.
 - **Platform mass** unknown; needed for R5.
 - **Rotation convention** behind roll/pitch/yaw not chosen.
 - **Naming clashes** with no agreed answer: `R` (sinusoid amplitude), `s`
   (screw direction), `t` (plate thickness), `a` / `A_i`, `p` (pitch).
-- **No git remote.** Every commit lives on one machine.
 
 ## Next steps
 

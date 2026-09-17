@@ -4,10 +4,19 @@ Design toolkit for a 6-RSS (rotary servo) Stewart platform built to balance a
 ping-pong ball: base and platform ring geometry, closed-form inverse
 kinematics, numerical forward kinematics, and plotting.
 
-**Where it stands.** The kinematics are done and tested. The design is being
-chosen against pass/fail requirements (tilt range, tilt precision, tilt speed,
-latency), with TowerPro MG90S servos and their stock horns, picking the
-simplest design to build that passes. Details in [STATUS.md](STATUS.md).
+**Where it stands.** The kinematics are done and tested, the servos are
+bench-measured, and a geometry has been chosen that passes every requirement:
+
+    r_b = 80, beta = 10, delta = 0, r_p = 70, beta_p = 35, a = 22, d = 70
+
+Requirements are derived from the ball rather than picked: a 50 mm disturbance
+recovered in 0.7 s and held to ±8 mm gives tilt range ≥ 4.5°, tilt precision
+≤ 0.25°, tilt speed ≥ 65°/s and loop latency ≤ 70 ms.  `stewart/performance.py`
+checks a candidate against those with the real kinematics, plus rod-end
+misalignment and part-to-part clearance.  Next is the build: base, brackets and
+a joystick-driven platform, then a camera and closed-loop balancing.
+Details in [STATUS.md](STATUS.md); the reasoning, including the wrong turns, is
+in [docs/design-log.md](docs/design-log.md).
 
 ## Conventions
 
@@ -32,10 +41,13 @@ simplest design to build that passes. Details in [STATUS.md](STATUS.md).
     stewart/
       geometry.py        Geometry, base_ring, platform_ring, make_geometry
       kinematics.py      stage1, legs, arm_tips, ik, fk (+ Jacobian, solver)
+      performance.py     R1-R3, rod-end cone and clearance against one design
       plotting.py        drawing only - never solves kinematics
       roundtrip.py       pose -> ik -> fk -> pose harness
     test_kinematics.py
     demo.py
+    firmware/
+      servo_test/        Arduino bench-test sketch for one MG90S
     archive/             frozen: old docs, Phase 0 diagnostics and sweep outputs
 
 ## Documents
