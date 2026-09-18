@@ -25,9 +25,10 @@ servo plane, then a fixed-length push-rod `d` to the platform.
 | `stewart/performance.py` | DONE - `Servo`, `Requirements`, `evaluate`, `search`; R1-R3 + rod-end cone against the real kinematics |
 | `stewart/plotting.py` | DONE - draws points only, never solves kinematics |
 | `stewart/roundtrip.py` | DONE - `pose -> ik -> fk -> pose` harness; `ik`/`fk` are passed in |
-| `test_kinematics.py`, `demo.py` | DONE |
+| `test_kinematics.py`, `demo.py` | DONE - `demo.py` runs on the design to build (`DESIGN` lives there) |
+| `layout.py` | DONE - base-plate plan and the twelve M3 hole centres, from `DESIGN` + the bracket dimensions |
 | `firmware/servo_test/` | DONE - MG90S bench-test sketch (Arduino, `writeMicroseconds`, serial commands) |
-| `cad/` | the user's CAD - not in the repo yet.  The printed horn extension's requirements are `docs/hardware.md` §12 |
+| `cad/` | the user's CAD - not in the repo yet.  Arm extension: `docs/hardware.md` §12; servo bracket and base-plate holes: §13 |
 | `archive/` | frozen: old docs, the Phase 0 diagnostics and sweep outputs - do not edit or build on |
 
 ## Docs
@@ -60,3 +61,4 @@ later.
 ## Run
 
     python demo.py
+    python layout.py

@@ -8,16 +8,17 @@ Where the project stands right now. **Edit this file in place each session**;
 - **Goal:** balance a ping-pong ball on the plate. The design to build is the
   **simplest one to make that passes every requirement below**, not the
   highest-scoring one.
-- **Servo:** TowerPro MG90S.  **Superseded 2026-09-16:** the stock horn is
-  kept only as the *spline interface* — a printed two-plate clamp bolts to it
-  through two existing holes and carries the rod-end bolt at `a ≈ 22 mm`
-  (requirements: `docs/hardware.md` §12).  Reasons: the stock holes (1 mm) are
+- **Servo:** TowerPro MG90S.  The stock horn is kept only as the *spline
+  interface*: a printed arm is over-printed around it (print pause, horn
+  dropped in) and carries the rod-end bolt at **`a = 22.5 mm`** (requirements:
+  `docs/hardware.md` §12).  Reasons: the stock holes (1 mm) are
   too small for an M3 rod end, aluminium 20T horns for the 4.8 mm micro spline are
   not reliably available (sources disagree 20T vs 21T), a printed spline is out
-  (0.75 mm tooth pitch), and `a = 22 mm` beats the stock 15.95 mm.  (The
-  "longer is always better" version of that last reason is wrong — see the
-  leading-candidate section: past ~22 mm the extra gearing amplifies the
-  deadband faster than it dilutes the play.)
+  (0.75 mm tooth pitch), and `a = 22.5 mm` beats the stock 15.95 mm.  (The
+  "longer is always better" version of that last reason is wrong: with `r_p`
+  fixed, `a = 25` gave a worse R2 than 22, because the extra gearing
+  amplifies the deadband faster than it dilutes the play — design log,
+  16 September.)
 - **Build order (since 2026-09-15):** stage 1 is the platform driven by a
   joystick, no camera. Stage 2 adds the camera and self-balancing. The
   geometry built in stage 1 is still sized to R1–R3, because `G` is fixed by
@@ -66,6 +67,12 @@ roughly `a / r_p`. Deadband and backlash add because camera feedback removes a
 steady offset but not random play. **Backlash is ~0 under preload** (measured
 2026-09-16), so the live terms are the 0.35° deadband and the joint play.
 
+**R2 is judged in quadrature over the six legs** (decided 2026-09-16): within
+a leg the errors add, but across legs they are independent, and summing
+assumes all six conspire at once.  The worst-case sum (0.342° at the design to
+build) is kept as the wear-and-surprise reserve; if the six ever did align, the
+ball would wander ±8.6 mm instead of ±8.
+
 ### MG90S parameters
 
 Measured 2026-09-16 on **servo 1** (supply voltage not recorded).  Figures
@@ -75,13 +82,34 @@ below are that unit; per-unit numbers go in the calibration table that follows.
 |---|---|---|---|
 | stock horn hole distances | — | **7 holes, 4.15 → 15.95 mm in 1.967 mm steps**: 4.15, 6.12, 8.08, 10.05, 12.02, 13.99, 15.95 | calipers, spline centre to each hole |
 | spline tooth count | 20 or 21 (listings disagree) | **20** (counted 2026-09-16) → horn fits every 18°, so up to 9° of trim per leg (≈ 207 µs) | count |
-| body + mounting-tab footprint | — | **35.3 mm along the shaft axis, 12.3 thick, 32.2 across the tabs** (orientation confirmed 2026-09-18: case runs back along the shaft from the horn) | calipers (bounds `beta`) |
+| body + mounting-tab footprint | — | **measured 2026-09-18** (below) | calipers |
 | degrees per µs | ~0.09 (estimated, not published) | **0.087** (133° / 90° / 46° at 1000 / 1500 / 2000 µs; linear to ±2%) | protractor at 1000 / 1500 / 2000 µs |
 | usable travel | ~90–180° (listings vary) | **530–2480 µs = 169.7°**, centred on 1505 µs (within 5 µs of nominal centre); working limits 550–2460 µs = ±83° | same test, find the ends |
 | deadband | 5 µs (≈ 0.45°) | **4 µs = 0.35°** | smallest µs step that moves a 100 mm pointer |
 | gear backlash (powered, holding) | not published | **1–2° free; NEGLIGIBLE under one-way preload** (2026-09-16) — the platform's weight preloads every servo, so the free figure does not apply in service | rock the horn, read the pointer tip |
 | speed under load | 0.10 s/60° at 4.8 V, no load (600°/s) | **286°/s no load; 250 to 150 g·cm; 240 at 191; 207 at 382; 162 at 556** (less than half the published no-load figure) | 240 fps video of a 60° step |
 | stall torque | ~1.8–2.2 kg·cm (listings vary) | not measured (not needed; R5 has huge margin) | not needed if R5 passes easily |
+
+### MG90S case (calipers, 2026-09-18)
+
+Along the shaft, from the top: stock-horn top → case bottom **34.6**; spline
+top → case bottom **32.65**.  Stacked from the spline top:
+
+| step | mm | from spline top |
+|---|---|---|
+| spline top → gear-boss top | 4 | 4 |
+| gear boss (to the main case's top face) | 6 | 10 |
+| main case top → tabs | 1.8 | 11.8 |
+| tab thickness | 2.75 | 14.55 |
+| tabs → case bottom | 18 | 32.55 |
+
+Main case top → bottom is **22.55** (= 1.8 + 2.75 + 18); the stack closes to
+0.1 mm against the direct 32.65.  Across: body **22.75 × 12.3**, tabs **32.2**
+across, shaft centre **16** from the far end of the body (6.75 from the near
+end), spline **⌀4.6**.  So with the case hanging below the shaft: body 6.75
+above / 16 below the shaft centre, tabs 11.5 above / 20.7 below.  At a 30 mm
+shaft height the lower tab clears the plate by 9.3 mm.  Tab slot spacing is
+left to the bracket CAD.
 
 ### Per-servo calibration
 
@@ -114,8 +142,9 @@ the trim table.
 
 ### DESIGN TO BUILD (2026-09-18)
 
-    r_b = 80, beta = 10, delta = 0, r_p = 70, beta_p = 35, a = 22, d = 70
+    r_b = 80, beta = 10, delta = 0, r_p = 70, beta_p = 35, a = 22.5, d = 70
     home height 63.2 mm above the shaft plane
+    (a = 22.5 is the printed arm as made, 2026-09-18; was 22)
     shaft height 30 mm above the base-plate top (chosen 2026-09-18), so the
     platform ball centres sit 93.2 mm above the plate at home.  The printed
     arm reaches 26.5 mm from the shaft axis (measured 2026-09-18), 26.35 mm
@@ -123,22 +152,27 @@ the trim table.
 
 | check | value | limit | |
 |---|---|---|---|
-| R1 tilt, every azimuth | 4.5° held, 14.6° of servo travel used | ≥ 4.5° | PASS |
-| R2 tilt error (quadrature) | 0.137° | ≤ 0.25° | PASS |
-| R3 tilt rate | 78.9°/s | ≥ 65°/s | PASS |
-| rod-end misalignment | 4.2° | ≤ 13° | PASS |
-| rod–rod | 20.3 mm | — | clear |
-| rod–other case | 29.3 mm | — | clear |
-| horn–other case | 25.1 mm | — | clear |
-| horn–horn | 14.2 mm | — | clear |
+| R1 tilt, every azimuth | 4.5° held, 14.4° of servo travel used | ≥ 4.5° | PASS |
+| R2 tilt error (quadrature) | 0.140° | ≤ 0.25° | PASS |
+| R3 tilt rate | 80.7°/s | ≥ 65°/s | PASS |
+| rod-end misalignment, arm end (straight bolt) | 25.1° | ≤ ~30° | PASS |
+| rod-end misalignment, plate end (best bolt axis) | 4.2° | ≤ ~30° | PASS |
+| rod–rod | 20.1 mm | — | clear |
+| rod–own case / own bracket | 14.6 / 15.8 mm | — | clear |
+| rod–other case / other bracket | 36.9 / 44.8 mm | — | clear |
+| arm–other case | 42.4 mm | — | clear |
+| arm–arm | 30.8 mm | — | clear |
+
+Clearances as of 2026-09-18 with every part at its measured position along
+the shaft (bracket window face 22.21 mm behind the rod-end ball plane).
 
 Supersedes the 2026-09-16 candidate (`r_b = 90, beta = 5`): the **horn
 extension** (32.3 × 12 × 4.95 mm, measured 2026-09-18) turned out to be the
 tight part, not the rods, and `beta` is what governs it.
 
 **Case clearances re-run 2026-09-18** with `Body` corrected (it had the case
-12.3 mm along the shaft, centred on it; the real case runs 35.3 mm back from
-the horn).  **Build constraint: in each pair the horns face each other and the
+12.3 mm along the shaft, centred on it; the real case runs 28.65 mm back from
+the gear-boss top).  **Build constraint: in each pair the horns face each other and the
 cases point away.**  The pair's shafts are 27.8 mm apart, so cases pointing
 inward collide (horn–case 0.0 mm).  `Body.sides` encodes the choice.
 
@@ -151,12 +185,14 @@ d = 70, delta = 0` was never recorded, so these are checked after the fact:
 | `r_p` | 55–80 | all pass; R3 falls from 100 to 69°/s as `r_p` grows |
 | `beta_p` | 20–50 | all pass; R2 0.180° at 20, flat at 0.135° from 40 up |
 | `d` | 55–90 | all pass; R1–R3 unchanged, only the home height moves (46–85 mm) |
-| `delta` | 0–40 | all pass; R2 improves slightly (0.124° at 40) |
+| `delta` | 0–40, 170 | R1–R3 pass, R2 improves slightly (0.124° at 40), **but the parts collide**: horn–horn 5.0 / 0.5 / 0.1 mm at 10 / 20 / 40, horn–case 0.0 at 170 (= −10) |
 | `a` | 18–26 | **18 fails R3** (64.5°/s); 20–26 pass, R2 rising with `a` |
 
 So the design sits in a flat passing region: the values are *a* passing
 point, not an optimum, which is what "simplest that passes" asked for.
-`delta = 0` (servo planes tangent) is the simplest to build.
+`delta = 0` (servo planes tangent) is the simplest to build, and it is also
+**the only `delta` with room**: turning the servos one way swings a pair's
+horns into each other, the other way swings each horn into its partner's case.
 
 ### Mounting: shafts horizontal (assumption, load-bearing)
 
@@ -170,7 +206,7 @@ branch choice reopens**, and `base_ring`'s parameterisation no longer describes
 the machine.
 
 Tolerance: a cant of `ε` displaces the arm tip out of its plane by
-`a sin(α) sin(ε)`, at most (α ≤ 14.6°, a = 22 mm):
+`a sin(α) sin(ε)`, at most (α ≤ 14.4°, a = 22.5 mm):
 
 | cant | tip error |
 |---|---|
@@ -190,21 +226,10 @@ shaft), so the clearance figures inherit it.
 
 ### Base radius and clearance (2026-09-18)
 
-`r_b` is free: every value from 70 to 90 mm passes all four checks at
-`beta = 5, r_p = 70, d = 70`.  R3 and the joint cone are set by `r_p`, not
-`r_b`; only R2 moves.
-
-| `r_b` | R2 | rod–rod | rod–other body | rod–own body |
-|---|---|---|---|---|
-| 70 | 0.173° | 8.4 mm | 6.3 mm | 3.2 mm |
-| 80 | 0.135° | 10.2 mm | 7.3 mm | 4.9 mm |
-| 90 | 0.117° | 11.9 mm | 8.5 mm | 5.2 mm |
-
-`r_b = 80` chosen: `r_b = 90` puts the shafts on a 180 mm
-circle, the whole print bed, with nothing left for plate or rim; 80 costs
-0.018° of R2 (15% of the margin, from a budget over half spare) and buys 10 mm
-of radial room.  70 is also legal but spends half the remaining slack, and the
-joint play is not measured yet.
+`r_b = 80` (chosen 2026-09-18): every `r_b` from 70 to 90 mm passes, R3 and
+the joint cone don't depend on it, and 80 costs 0.018° of R2 against 90 for
+10 mm of radial room.  The comparison table is in the design log and git
+history.
 
 **`beta` decides whether the horns fit.**  With the horn extension modelled
 (`horn_clearance()`), horn-to-neighbouring-case at `r_b = 80` is:
@@ -212,7 +237,7 @@ joint play is not measured yet.
 | beta | 2° | 5° | 10° | 15° |
 |---|---|---|---|---|
 | horn–case, old `Body` | **0.0 — collides** | 2.7 mm | 13.6 mm | 24.1 mm |
-| horn–case, corrected `Body` | 5.2 mm | 12.8 mm | 25.1 mm | 36.6 mm |
+| horn–case, corrected `Body`, before the final axial placement | 5.2 mm | 12.8 mm | 25.1 mm | 36.6 mm |
 
 With the case modelled correctly `beta = 5` would also have cleared, so
 `beta = 10` was chosen on a wrong model.  It still costs only 0.002° of R2 and
@@ -221,102 +246,15 @@ back past the spline (`Horn.behind`) changes none of this: 4 mm and 16 mm give
 the same answer to 0.1 mm, because what nearly touches is the horn's flank
 against the neighbour, not its tail.
 
-Clearances come from `clearance()`, which models the servo case as a box
-(`Body`, defaults from the 2026-09-16 measurements) and samples each rod at
-25 points.  **Not yet modelled:** the base plate itself and the plate underside.
-`Body.above` / `below` (11 / 22 mm about the shaft) come from the generic MG90S
-drawing, not a measurement.
+Clearances come from `clearance()` and `horn_clearance()`, which model the
+servo case as a box (`Body`, measured 2026-09-18) and the arm as a box
+(`Horn`), and sample each rod at 25 points.  **Not modelled:** the base plate
+itself and the plate underside.
 
-**Base footprint (2026-09-18).**  With the cases pointing away from their
-partners, the case ends reach a radius of 92–93 mm, and the smallest square
-around all six is 177–180 mm, the whole print bed.  So the plate does not have
-to be printed: cut it from sheet, or print it in pieces, or stop the plate at
-the bracket feet and let the case ends overhang (the case is held by its tabs).
-
-### Leading candidate (2026-09-16, from `stewart/performance.py`)
-
-    r_b = 90, beta = 5, delta = 0, r_p = 70, beta_p = 35, a = 22, d = 70
-    home height 60.2 mm, servo angle used +/-14.6 deg of the +/-83 available
-
-| check | value | limit | |
-|---|---|---|---|
-| R1 tilt, 72 azimuths | 4.5° held | ≥ 4.5° | PASS |
-| R2 tilt error, **in quadrature** (judged) | 0.117° | ≤ 0.25° | PASS |
-| R2 tilt error, worst case (reserve) | 0.287° | — | — |
-| R3 tilt rate | 78.6°/s | ≥ 65°/s | PASS |
-| rod-end misalignment | 4.2° | ≤ 13° | PASS |
-
-**This candidate passes every check.**  R2 is judged in quadrature over the six
-legs (decided 2026-09-16, see the design log): within a leg the errors add, but
-across legs they are independent, and summing assumes all six conspire at once.
-The worst-case sum is kept as the wear-and-surprise reserve.
-
-Joint play is the sensitive input either way (0.1 mm at `a = 22` is 0.26° of
-equivalent servo error, against 0.175° of deadband).  How much this candidate
-can take:
-
-| play (total per leg) | 0.10 mm | 0.20 mm | 0.25 mm | 0.29 mm |
-|---|---|---|---|---|
-| R2, quadrature | 0.117° | 0.187° | 0.222° | **0.250° — limit** |
-
-So **anything under ~0.28 mm passes**, which ordinary M3 rod ends should clear
-comfortably.  (**Superseded:** at the design to build, `r_b = 80`, the limit
-is **0.24 mm**; see Open → Ball joints.)  (On the worst-case reading the limit would have been 0.06 mm, and
-no geometry in a 540-candidate sweep met it.  The cost of the looser reading is
-0.6 mm of extra ball wander if the six errors ever do align: ±8.6 mm instead of
-±8 mm.)
-
-Two findings worth keeping:
-
-- **`a = 25` is worse than `a = 22`** at fixed `r_p` (0.312° vs 0.287°).  The
-  earlier "longer arm always helps" reasoning held `G` fixed by scaling `r_p`;
-  with `r_p` capped by the print bed, a longer arm just raises `G` and
-  amplifies the deadband more than it shrinks `play / a`.
-- **The rod-end bolt at the arm must NOT be parallel to the servo shaft.**
-  Parallel gives 31° of misalignment and binds.  The best axis per leg is
-  ~30° off the shaft axis, tilted toward the direction of arm rotation
-  (`evaluate().axes_base`).  At the plate the best axis is in-plane and
-  roughly tangential (`axes_platform`), as expected.
-
-### Gearing after the preload re-test (2026-09-16)
-
-**Kept for the `τ` / `e` reasoning; its geometry numbers are superseded** by
-the leading-candidate section above, which uses the real kinematics and
-`a = 22 mm` rather than `G ≈ a / r_p` and the stock horn.
-
-**Chosen spec: `τ = 0.7 s`, `e = ±8 mm`** → R1 4.5°, R3 65°/s, `δ` 0.267°.
-
-Backlash under one-way preload is negligible, so the binding budget is
-
-    rate_max  =  ω δ / (deadband + joint play / a)
-
-with `ω = 250°/s` (measured, ~150 g·cm), deadband 0.35°, `a = 15.95 mm`.
-**Ball-joint play is now the dominant unknown** — 0.1 mm at `a` is 0.36°, as
-large as the deadband — and it is a purchasing decision, not a measurement.
-
-What each (`τ`, `e`) asks of the joints (total play per leg, both ends,
-`ω = 250°/s`):
-
-| `τ` | `e` | R1 | R3 | `δ` | max joint play |
-|---|---|---|---|---|---|
-| 0.5 s | ±5 mm | 8.2° | 164°/s | 0.327° | 0.04 mm |
-| 0.5 s | ±10 mm | 8.2° | 164°/s | 0.654° | 0.18 mm |
-| 0.7 s | ±8 mm | 4.2° | 60°/s | 0.267° | 0.21 mm |
-| 0.8 s | ±10 mm | 3.2° | 40°/s | 0.256° | 0.35 mm |
-
-Passing the inequality is not enough — the `G` window also has to give a
-buildable `r_p = a / G`:
-
-| case | `G` window | `r_p` |
-|---|---|---|
-| `τ` 0.5, `e` ±10, play 0.15 mm | 0.66–0.74 | **22–24 mm** — anchor circle far too small |
-| `τ` 0.7, `e` ±8, play 0.1 mm | 0.24–0.38 | **42–67 mm** |
-| `τ` 0.8, `e` ±10, play 0.05 mm | 0.16–0.48 | **33–100 mm** |
-
-R3 ∝ 1/τ³ and it sets `G ≥ R3/ω`, which caps `r_p`.  Holding `τ = 0.5 s`
-forces a stubby 22 mm anchor circle; **relaxing `τ` to 0.7–0.8 s is what buys a
-sane platform.**  All of this uses `G ≈ a / r_p`; the evaluator replaces it
-with the real kinematics.
+**Base footprint (2026-09-18, final).**  With the real brackets and their
+lugs, the footprint reaches r = 104.1 mm, so the base plate is at least
+~210 mm across and is cut from sheet.  The earlier 177–180 mm figure counted
+the servo cases only.
 
 ---
 
@@ -328,7 +266,8 @@ with the real kinematics.
   (`docs/derivation.md` §8), `z_flat` datum (§9), one shared home angle (§10).
 - Envelope: tilt only, no translation or yaw; 29-pose grid over the `[30°, 90°]`
   azimuth window.
-- `r_b ≤ 90 mm` from the 180 × 180 mm print bed.
+- ~~`r_b ≤ 90 mm` from the 180 × 180 mm print bed~~ — the base plate is cut
+  from sheet (≥ ~210 mm), so the bed no longer bounds `r_b`; `r_b = 80` stands.
 
 Phase 0's sweep result (`a = 60.4 mm`, `d = 126 mm`, `beta = 5°`,
 `beta_p = 52.5°`) is **superseded**: it needed a long aftermarket arm and ranked
@@ -336,20 +275,42 @@ on reach alone.
 
 ## Open
 
-- **Ball joints:** M3 rod ends chosen and ordered (spherical bearings, M3
-  female shank, 3 mm bore) — metal-on-metal, and the M3 threaded push-rod makes
-  `d` adjustable per leg.  **Two measurements outstanding on arrival:**
-  play (budget **0.24 mm** total per leg at `r_b = 80`, so ≤ 0.12 mm each; `r_b = 90` would allow 0.29 mm, so play of 0.24–0.29 mm means going back to a bigger base) and the **bind angle**
-  (the evaluator assumes a 13° cone; it reports 4.2° used, so there is room,
-  but the real number is unmeasured).  Bolt axes are a design choice and the
-  evaluator picks the best ones: `evaluate().axes_base` / `.axes_platform`.
-- **Horn extension:** designed 2026-09-18, 32.3 × 12 × 4.95 mm; requirements
-  in `docs/hardware.md` §12.  Not yet printed or stiffness-tested — its flex
-  budget is 54 µm of hysteresis at the tip, the only part of R2 that is not
-  deadband or joint play.
-- **Servo bracket:** not designed.  Spec in `docs/hardware.md` §13; an FEA
-  against B4 (~60 µm compliance) is planned, and needs per-leg rod forces,
-  which need a platform mass estimate.
+- **Ball joints:** M3 rod ends (spherical bearings, M3 female shank, 3 mm
+  bore), **arrived and measured 2026-09-18**: ball 4.37 wide, housing 2.53
+  thick and Ø9.89, 18.05 overall (housing edge to shank end, so ball centre →
+  shank end **13.1**), thread 5.17 deep.  For `d = 70` centre to centre the
+  exposed rod is 43.8, so an **M3 rod cut to 54.1** bottoms out in both ends.
+  **Bind angle ~22°** bare; **~30° at both ends with an M3 threaded insert
+  on each side of the ball as a spacer** (2026-09-18, by hand; inserts 4.02
+  long, so the ball centre sits 4.02 + 2.19 = **6.21 mm** out from the arm's
+  outer face).  That lets the
+  arm keep a **straight bolt, parallel to the shaft**: the rod end then sees
+  25.1° over the envelope (5° inside 30°), the plate end 4.2°.  **Play: felt, "very very minor", not quantified** (no dial
+  indicator); budget 0.23 mm total per leg.  It is very likely **preloaded
+  out**, like the servo backlash: every rod stays in compression under the
+  platform's weight, 0.18–0.19 of the weight per rod over the whole envelope,
+  and a rough R3 slew (9° in 0.14 s) accelerates the anchors at ~0.2 g, well
+  short of unloading them.  Confirm on the assembled platform.
+- **Arm extension:** 32.3 × 12 × 4.95 mm, over-printed on the stock horn,
+  straight M3 hole at 22.5 mm; requirements in `docs/hardware.md` §12.
+  **Not stiffness-tested** — its flex budget is 54 µm of hysteresis at the
+  tip, the only part of R2 that is not deadband or joint play.
+- ~~Rod-end ball centre along the shaft~~ **settled 2026-09-18:** ball centre
+  6.21 mm out from the arm face, arm face 16.0 mm from the bracket window
+  face, so each window face is 22.21 mm behind the ball plane.
+- **Arm M3 hole: straight, parallel to the shaft** (decided 2026-09-18,
+  superseding the 25° tilt).  Base-end misalignment over the envelope at
+  `a = 22.5`: straight 25.1°, 15° → 10.7°, 20° → 5.9°, 25° → 0.3°.  The tilt
+  needed a seat, a side lobe and two mirrored arms; spacing the ball out on
+  threaded inserts raised the bind angle to ~30° instead, so straight passes
+  with 5° to spare and one arm fits all six.  If more margin is ever wanted,
+  moving the top plate to `r_p 65, beta_p 30` drops the straight-bolt angle
+  to 18.6° (stiffness cond 4.8 against 3.8).
+- **Servo bracket:** designed 2026-09-18 (C bracket, dimensions in
+  `docs/hardware.md` §13) and placed on the base plate (twelve M3 holes,
+  §13).  **FEA NEXT** (the rod-end measurements are in): against B4
+  (~60 µm at the arm tip, shared with the arm extension).  Rod force from
+  weight is 0.18–0.19 × the platform weight per rod; ~1 N with margin.
 - **Check `e = ±8 mm` against camera noise `σ`** in stage 2 (`e ≥ 3σ`).  The
   rest of `e` is settled.
 - **Joystick control path** not chosen: IK on the Arduino (port `ik`) or on a
@@ -366,10 +327,8 @@ on reach alone.
 
 ## Next steps
 
-1. **Before the battery arrives:** measure the horn holes, spline and servo
-   footprint; build the pointer rig.  The servo test sketch is written:
-   `firmware/servo_test/` (compiles for Uno; test procedures in its header).
-   Install the Servo library in the Arduino IDE before uploading.
+1. ~~Measure the horn holes, spline and servo footprint~~ **DONE** (servo
+   test sketch: `firmware/servo_test/`).
 2. **Battery check:** MG90S is 4.8–6 V. 4× AA is fine; 2S LiPo needs a
    regulator. Common ground with the Arduino; don't power servos from USB.
 3. ~~Bench-test one MG90S~~ **DONE 2026-09-16.**  Re-tests that decide whether
@@ -379,15 +338,22 @@ on reach alone.
      Measure the pack voltage under load; count video frames from *first
      movement* to stop, not from the LED.
    - ~~Find the low end of travel, count the spline teeth~~ **DONE.**
-   - **Calibrate servos 2–6** (travel ends first) into the per-servo table.
+   - ~~Calibrate servos 2–6 (travel ends)~~ **DONE 2026-09-18**; per-unit
+     deg/µs still open (only needed for the trim table).
 4. ~~Write the evaluator~~ **DONE 2026-09-16** (`stewart/performance.py`): R1,
    R2, R3 and the rod-end cone, from numerical derivatives of `ik`/`fk`.  No
-   unit tests yet — that is the gap.
+   unit tests yet — that is the gap.  Since 2026-09-18 it checks the arm-end
+   joint with the as-built straight bolt (`Requirements.base_bolt`).
 5. ~~List a few dozen easy-to-build designs~~ **DONE 2026-09-16**: 540
-   candidates evaluated.  Leading candidate below; the pick is gated on the
-   measured joint play, not on more searching.
-6. Settle the `k` vs R1 conflict before step 5 picks `G`.
+   candidates evaluated; superseded by the design to build (2026-09-18).
+6. ~~Settle the `k` vs R1 conflict~~ **DONE 2026-09-16** (`k = 0.2`, R1 × 1.25).
 7. CAD, then order the remaining parts.
+   - ~~Rod ends: measure play, bind angle, dimensions, ball offset~~ **DONE
+     2026-09-18.**
+   - **NEXT: FEA of the servo bracket** (B4), before printing all six.
+     Reminder requested by the user.
+   - ~~Base-plate drill positions~~ **DONE 2026-09-18**: twelve M3 holes in
+     `docs/hardware.md` §13, plate ≥ ~210 mm across.
 8. Stage 1 done when: the platform follows a joystick through ±R1 tilt in
    every direction.
 9. Stage 2: camera, latency measurement, confirm `e` and the latency

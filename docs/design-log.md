@@ -2217,6 +2217,96 @@ and only sets the height. The one edge nearby is the arm: `a = 18` fails R3.
 The design is a passing point in a flat region rather than a tuned optimum,
 which is what I asked for.
 
+`delta` was the exception, and a good one. Its performance numbers pass
+everywhere, and R2 even improves a little as it grows. The clearance check tells
+a different story. Yaw the servos one way and each pair's horns swing into
+each other: 5.0 mm apart at 10°, 0.5 mm at 20°. Yaw them the other way and
+each horn swings into its partner's case. `delta = 0` was picked because it's
+the simplest layout, every servo square to its radius, and it turns out to be
+the only one with room.
+
+Measured the MG90S case properly with calipers. The shaft isn't centred in the
+body: it's 16 mm from one end and 6.75 from the other. So with the case hanging
+below, the lower tab reaches 20.7 mm under the shaft centre, and at a 30 mm
+shaft height it clears the plate by 9 mm. From the gear-boss top to the case
+bottom is 28.65 mm: a 6 mm gear boss, then 22.55 mm of main case, with the
+2.75 mm tabs sitting 1.8 mm below the case top. The stack closes to 0.1 mm
+against the overall measurement.
+
+The printed arm came out at **a = 22.5 mm**, not 22. It still passes
+everything (R2 0.140°, R3 80.7°/s), and the joint-play limit tightens slightly
+to 0.23 mm. The design now uses 22.5, because the kinematics have to describe
+the part that exists.
+
+The arm CAD has the M3 hole straight through, parallel to the shaft. That
+would put the rod end 25° out of line and bind it. Tilting the hole 25° across
+the arm's width brings the misalignment down to 0.3°, and anything from 20 to
+30° is fine. Because each pair's horns face each other, the tilts come out
+mirrored: legs 1, 3, 5 need one hand and 2, 4, 6 the other, so it's one body
+mirrored in CAD, three of each.
+
+Sketched the servo casing as a C: a wall with a window the servo drops through,
+a top arm and a foot. The tabs screw to the wall, and the foot screws up from
+under the base plate so no screw heads show, which also keeps the plate clear
+under the arms. The C has to open toward the case, because the horn is on the
+tab side of the wall. Kept symmetric, one bracket fits all six. The thing to
+watch is the tab screws: the slots sit only ~2.5 mm past the window edge,
+which is too little wall for an M2 heat-set insert.
+
+Finished the bracket after several test prints to dial in the fit around the
+printer's tolerances. The tabs self-tap: 1.85 mm holes for the servo's own
+2.06 mm screws, so there are no inserts. The servo sits on a seat 14 mm up,
+which puts the shaft at 30. A notch at the top of the window lets the wires
+through. Two diagonal lugs at the base take the screws into the plate. Against
+the rods it has at least 10 mm everywhere. The lugs push the base footprint out
+to about 205 mm across, so the plate has to come from sheet. The top tab screw
+breaks into the wire notch. I'm accepting that because the screw still bites
+on three sides and the load on it is small. The lugs take M3 bolts and nuts
+through the plate.
+
+The rod ends arrived. There's play I can feel but can't measure without a dial
+indicator. It probably doesn't matter, for the same reason the servo backlash
+didn't: the platform's weight keeps every rod in compression, at 18–19% of the
+weight each in every pose, so each ball stays pressed against one side of its
+housing. Even a full-speed slew only accelerates the anchors at about 0.2 g,
+nowhere near enough to unload them. The bind angle is about 22°, against 4.2°
+needed. To get 70 mm centre to centre, the M3 rod is 54.1 mm and bottoms out in
+both ends.
+
+Bolted straight onto the arm, the rod end's housing hit the arm face long
+before its own 22° limit, because the ball only stands 0.9 mm proud of the
+housing. The tilted hole makes it worse, since the arm face rises toward the
+housing on one side. The fix is a seat: a small boss square to the bolt that
+lifts the ball clear. 1.4 mm just lets it sit, and 2.8 mm frees the full 22°.
+The arm end only ever sees 0.3° of misalignment, so I'm using 3 mm for margin,
+not because the joint needs it.
+
+In the end I didn't build the tilted version. It needed a seat, a side lobe so
+the hole stayed inside the part, a self-tapped bolt instead of the captive
+nut, and two mirror-image arms. I went at it from the other side: spacing the
+ball away from the arm. A nut as a spacer got the joint to 15°, not enough for
+the 25° a straight bolt needs. M3 threaded inserts on both sides of the ball
+got it to about 30°. So the arm keeps its straight hole, one part fits all six
+legs, and the top-plate geometry doesn't have to change. (Keeping a straight
+bolt at 15° would have meant pulling the top-plate joints toward their
+servos, `r_p 60, beta_p 22`, which roughly halves the platform's sideways
+stiffness.)
+
+The last measurement for the base plate: with the servo fitted, the arm's outer
+face sits 16.0 mm from the bracket's window face. The rod-end ball is 6.21 mm
+further out, so each bracket sits 22.21 mm behind the plane the kinematics call
+the base. That turned into twelve M3 hole positions, and the plate needs to be
+about 210 mm across. The arms sit further back than I'd been modelling, so
+every clearance got bigger: arm to arm went from 13.7 mm to 30.8.
+
+End-of-day sweep. One real gap turned up: the evaluator was still grading the
+rod-end angle with the ideal bolt direction and reporting 4.2°. The arm I'm
+building has a straight bolt, where the joint sees 25.1°. It now checks what's
+built by default (`Requirements.base_bolt`), and 25.1° passes against the ~30°
+the insert spacers allow. `demo.py` had also fallen behind. It still ran on the
+deliberately wrong smoke geometry and described the kinematics as stubs. It now
+runs the design to build, and ik→fk round-trips exactly.
+
 **Shaft height: 28 mm** above the base-plate top, the same for all six. The
 kinematics don't see it (everything is measured from the shaft plane), so
 it's purely a packaging choice. The horn swinging to an end stop reaches

@@ -7,7 +7,7 @@ kinematics, numerical forward kinematics, and plotting.
 **Where it stands.** The kinematics are done and tested, the servos are
 bench-measured, and a geometry has been chosen that passes every requirement:
 
-    r_b = 80, beta = 10, delta = 0, r_p = 70, beta_p = 35, a = 22, d = 70
+    r_b = 80, beta = 10, delta = 0, r_p = 70, beta_p = 35, a = 22.5, d = 70
 
 Requirements are derived from the ball rather than picked: a 50 mm disturbance
 recovered in 0.7 s and held to ±8 mm gives tilt range ≥ 4.5°, tilt precision
@@ -34,7 +34,8 @@ in [docs/design-log.md](docs/design-log.md).
 
     python -m pip install -r requirements.txt
     python test_kinematics.py                  # unit checks
-    python demo.py                             # writes demo.png, prints the round-trip report
+    python demo.py                             # evaluates the design, writes demo.png, round-trips ik/fk
+    python layout.py                           # base-plate plan and M3 hole positions -> base-layout.png
 
 ## Layout
 
@@ -45,7 +46,8 @@ in [docs/design-log.md](docs/design-log.md).
       plotting.py        drawing only - never solves kinematics
       roundtrip.py       pose -> ik -> fk -> pose harness
     test_kinematics.py
-    demo.py
+    demo.py              the design to build: evaluate, draw, round-trip
+    layout.py            base-plate plan: servos, brackets, drill holes
     firmware/
       servo_test/        Arduino bench-test sketch for one MG90S
     archive/             frozen: old docs, Phase 0 diagnostics and sweep outputs

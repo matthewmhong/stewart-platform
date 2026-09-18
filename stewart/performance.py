@@ -73,8 +73,9 @@ class Requirements:
     precision_deg: float = 0.25  # R2
     rate_dps: float = 65.0  # R3
     joint_play_mm: float = 0.1  # total per leg
-    cone_deg: float = 13.0  # rod-end misalignment limit, MEASURE THIS
+    cone_deg: float = 30.0  # rod-end limit, ~30 by hand with insert spacers (2026-09-18)
     n_azimuth: int = 24  # envelope resolution
+    base_bolt: str = "shaft"  # arm-end bolt: "shaft" = parallel to the shaft (as built), "best" = optimum
 
 
 @dataclass
@@ -275,7 +276,10 @@ def misalignment(geom: Geometry, req: Requirements, z: float):
 
     The bolt orientation at each end is a **design choice**, not a given - a
     tab can be drilled at any angle - so this searches for the best axis per
-    leg per end and reports what that best mounting still costs.  Each end is
+    leg per end and reports what that best mounting still costs.  The arm end
+    is the exception when ``req.base_bolt == "shaft"`` (the default, as built
+    2026-09-18): the bolt runs parallel to the servo shaft, and the rod end
+    takes the whole lean of the rod out of the servo plane.  Each end is
     worked in the frame the bolt is fixed to, because that is the frame the
     rod sweeps relative to:
 
@@ -308,7 +312,14 @@ def misalignment(geom: Geometry, req: Requirements, z: float):
     axes_base = np.zeros((3, 6))
     axes_plat = np.zeros((3, 6))
     for i in range(6):
-        axes_base[:, i], dev_b = _best_axis(np.array(base_dirs[i]).T)
+        if req.base_bolt == "shaft":
+            dirs = np.array(base_dirs[i]).T
+            axes_base[:, i] = (0.0, 0.0, 1.0)  # along n in the arm frame (u, v, n)
+            dev_b = float(np.degrees(np.arcsin(np.clip(np.abs(dirs[2]), 0.0, 1.0))).max())
+        elif req.base_bolt == "best":
+            axes_base[:, i], dev_b = _best_axis(np.array(base_dirs[i]).T)
+        else:
+            raise ValueError(f"base_bolt must be 'shaft' or 'best'; got {req.base_bolt!r}")
         axes_plat[:, i], dev_p = _best_axis(np.array(plat_dirs[i]).T)
         worst = max(worst, dev_b, dev_p)
     return worst, axes_base, axes_plat
@@ -406,24 +417,29 @@ class Body:
     Axes are the servo frame's own: ``n`` along the shaft, ``u`` in-plane, and
     ``v = n x u`` (vertical under horizontal shafts).  The MG90S lies on its
     side with the case running back along the shaft from the horn (confirmed
-    2026-09-18 from a photo of the intended mounting): 35.3 mm along the shaft,
-    12.3 mm thick (along ``u``), and the 32.2 mm tab span vertical, the case
-    hanging below the shaft.
+    2026-09-18 from a photo of the intended mounting), the case hanging below
+    the shaft.  Measured 2026-09-18: 28.65 mm from the gear-boss top to the case
+    bottom, body 22.75 x 12.3 mm with the shaft 16 mm from the far end (so
+    6.75 / 16 mm above / below it), tabs 32.2 mm across (11.5 / 20.7 mm).  The
+    box takes the tab envelope over the full length, so it is conservative.
 
     The kinematics only fix the shaft *line*; which way along it each case runs
     is a build choice, ``sides[i] * n_i``.  The default puts every pair's horns
     facing each other and the cases pointing away: the pair is 27.8 mm apart at
     ``r_b = 80, beta = 10``, so cases pointing inward would overlap.
 
-    ``above`` / ``below`` assume the shaft ~6 mm from the body end and the tabs
-    4.7 mm past each end (generic MG90S drawing, NOT measured).
+    ``front`` / ``back`` are measured from the rod-end ball plane (2026-09-18):
+    ball centre 6.21 mm out from the arm face (4.02 insert + half the 4.37
+    ball), arm face 16.0 mm from the bracket's window face, where the tabs'
+    far face sits.  So the window face is 22.21 behind the ball plane, the
+    gear-boss top 22.21 - 4.55 - 6 = 11.66, and the case bottom 22.21 + 18.
     """
 
-    front: float = 2.5  # case face behind the horn mid-plane, along the case side
-    back: float = 35.3  # case far end behind the horn mid-plane
+    front: float = 11.66  # gear-boss top behind the ball plane, along the case side
+    back: float = 40.21  # case bottom behind the ball plane
     along_u: float = 12.3  # full thickness, centred on the shaft
-    below: float = 22.0  # tab/case bottom below the shaft centre
-    above: float = 11.0  # tab/case top above the shaft centre
+    below: float = 20.7  # lower tab below the shaft centre (body: 16)
+    above: float = 11.5  # upper tab above the shaft centre (body: 6.75)
     sides: tuple = (-1, 1, -1, 1, -1, 1)  # case runs along sides[i] * n_i
 
 
@@ -497,12 +513,15 @@ class Horn:
     centre; the rest of ``length`` reaches outward past the ``a = 22 mm`` bolt.
     ``behind`` is set so the far corner sits 26.5 mm from the shaft axis, the
     reach measured on the part 2026-09-18: ``hypot(length - behind, width / 2)``.
+    ``offset`` places the arm's mid-plane behind the rod-end ball plane (toward
+    the servo case); the ball sits out on an insert spacer.
     """
 
     length: float = 32.3
     width: float = 12.0
     thickness: float = 4.95
     behind: float = 6.49
+    offset: float = 8.685  # arm mid-plane behind the ball plane: 6.21 + 4.95 / 2
 
     def points(self, n_r: int = 7, n_w: int = 3, n_t: int = 2) -> np.ndarray:
         """A ``(3, k)`` grid over the box in arm-frame ``(radial, across, axial)``."""
@@ -545,8 +564,9 @@ def horn_clearance(geom: Geometry, req: Requirements, z: float,
             ca, sa = np.cos(alphas[i]), np.sin(alphas[i])
             radial = ca * geom.u[:, i] + sa * v[:, i]
             across = -sa * geom.u[:, i] + ca * v[:, i]
+            axial = box[2] + body.sides[i] * horn.offset  # the arm sits behind the ball, case side
             horns.append(geom.b[:, i, None] + np.outer(radial, box[0])
-                         + np.outer(across, box[1]) + np.outer(geom.n[:, i], box[2]))
+                         + np.outer(across, box[1]) + np.outer(geom.n[:, i], axial))
         for i in range(6):
             for j in range(6):
                 if i == j:
