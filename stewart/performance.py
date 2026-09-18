@@ -401,34 +401,42 @@ def search(candidates, servo: Servo | None = None, req: Requirements | None = No
 
 @dataclass(frozen=True)
 class Body:
-    """The servo case as a box around the shaft centre, in the servo frame.
+    """The servo case as a box behind the horn, in the servo frame.
 
     Axes are the servo frame's own: ``n`` along the shaft, ``u`` in-plane, and
-    ``v = n x u`` (vertical under horizontal shafts).  Defaults are the MG90S
-    measured 2026-09-16 - 12.3 mm along the shaft, 32.2 mm across the mounting
-    tabs, 35.3 mm tall - with the case hanging below the shaft.
+    ``v = n x u`` (vertical under horizontal shafts).  The MG90S lies on its
+    side with the case running back along the shaft from the horn (confirmed
+    2026-09-18 from a photo of the intended mounting): 35.3 mm along the shaft,
+    12.3 mm thick (along ``u``), and the 32.2 mm tab span vertical, the case
+    hanging below the shaft.
 
-    ``STATUS.md`` flags that which measured span is which was never confirmed.
-    If 35.3 is the tab span rather than the height, swap ``along_u`` and
-    ``below``; the check is only as good as these four numbers.
+    The kinematics only fix the shaft *line*; which way along it each case runs
+    is a build choice, ``sides[i] * n_i``.  The default puts every pair's horns
+    facing each other and the cases pointing away: the pair is 27.8 mm apart at
+    ``r_b = 80, beta = 10``, so cases pointing inward would overlap.
+
+    ``above`` / ``below`` assume the shaft ~6 mm from the body end and the tabs
+    4.7 mm past each end (generic MG90S drawing, NOT measured).
     """
 
-    along_n: float = 12.3  # full thickness, centred on the shaft
-    along_u: float = 32.2  # full width across the tabs, centred
-    below: float = 30.0  # case bottom below the shaft centre
-    above: float = 5.0  # case top above the shaft centre
+    front: float = 2.5  # case face behind the horn mid-plane, along the case side
+    back: float = 35.3  # case far end behind the horn mid-plane
+    along_u: float = 12.3  # full thickness, centred on the shaft
+    below: float = 22.0  # tab/case bottom below the shaft centre
+    above: float = 11.0  # tab/case top above the shaft centre
+    sides: tuple = (-1, 1, -1, 1, -1, 1)  # case runs along sides[i] * n_i
 
 
-def _point_box_distance(pts_frame: np.ndarray, body: Body) -> np.ndarray:
-    """Distance from points to the axis-aligned case box, in the servo frame.
+def _point_box_distance(pts_frame: np.ndarray, body: Body, leg: int) -> np.ndarray:
+    """Distance from points to leg ``leg``'s case box, in that servo's frame.
 
     ``pts_frame`` is ``(3, k)`` in ``(n, u, v)`` components.  Zero inside.
     """
-    half = np.array([body.along_n / 2.0, body.along_u / 2.0])
-    outside = np.abs(pts_frame[:2]) - half[:, None]
-    lo, hi = -body.below, body.above
-    outside_v = np.maximum(lo - pts_frame[2], pts_frame[2] - hi)
-    gaps = np.vstack([outside, outside_v])
+    along = body.sides[leg] * pts_frame[0]
+    outside_n = np.maximum(body.front - along, along - body.back)
+    outside_u = np.abs(pts_frame[1]) - body.along_u / 2.0
+    outside_v = np.maximum(-body.below - pts_frame[2], pts_frame[2] - body.above)
+    gaps = np.vstack([outside_n, outside_u, outside_v])
     return np.linalg.norm(np.maximum(gaps, 0.0), axis=0)
 
 
@@ -472,7 +480,7 @@ def clearance(geom: Geometry, req: Requirements, z: float,
                                          float(np.linalg.norm(diff, axis=0).min()))
                 rel = rods[i] - geom.b[:, j, None]
                 frame = np.vstack([geom.n[:, j] @ rel, geom.u[:, j] @ rel, v[:, j] @ rel])
-                dist = float(_point_box_distance(frame, body).min())
+                dist = float(_point_box_distance(frame, body, j).min())
                 key = "rod_body_own" if i == j else "rod_body_other"
                 out[key] = min(out[key], dist)
     return out
@@ -487,12 +495,14 @@ class Horn:
     plane, and ``thickness`` along the shaft, since the part is a sandwich over
     the stock horn.  ``behind`` is how far it reaches back past the spline
     centre; the rest of ``length`` reaches outward past the ``a = 22 mm`` bolt.
+    ``behind`` is set so the far corner sits 26.5 mm from the shaft axis, the
+    reach measured on the part 2026-09-18: ``hypot(length - behind, width / 2)``.
     """
 
     length: float = 32.3
     width: float = 12.0
     thickness: float = 4.95
-    behind: float = 8.0
+    behind: float = 6.49
 
     def points(self, n_r: int = 7, n_w: int = 3, n_t: int = 2) -> np.ndarray:
         """A ``(3, k)`` grid over the box in arm-frame ``(radial, across, axial)``."""
@@ -544,7 +554,7 @@ def horn_clearance(geom: Geometry, req: Requirements, z: float,
                 rel = horns[i] - geom.b[:, j, None]
                 frame = np.vstack([geom.n[:, j] @ rel, geom.u[:, j] @ rel, v[:, j] @ rel])
                 out["horn_body"] = min(out["horn_body"],
-                                       float(_point_box_distance(frame, body).min()))
+                                       float(_point_box_distance(frame, body, j).min()))
                 diff = horns[i][:, :, None] - rods[j][:, None, :]
                 out["horn_rod"] = min(out["horn_rod"],
                                       float(np.linalg.norm(diff, axis=0).min()))

@@ -2184,6 +2184,60 @@ strength of servo 1 alone — a guess that happened to be right, which is worth
 noting because R1 only needs ±14.6° of it. Travel was never going to be the
 binding constraint; precision was.
 
+<!-- TODO(author): drafted for you - rewrite in your own voice -->
+
+Before starting the base plate I checked what it depends on, and found the
+clearance model had the servo lying the wrong way. `Body` treated the case as
+12.3 mm along the shaft, centred on it. The real MG90S runs 35.3 mm back along
+the shaft from the horn, which is how it sits in the mounting I'm copying. Two
+consequences:
+
+- **In each pair, the horns face each other and the cases point away.** The
+  pair's shafts are only 27.8 mm apart, so cases pointing inward overlap. The
+  kinematics don't care which way a servo faces along its shaft line, but the
+  build does.
+- The clearances got *better*: horn to neighbouring case went from 13.6 to
+  25.1 mm, rod to case from 16.4 to 29.3 mm. Opening `beta` to 10° was chosen
+  on the wrong model, since `beta = 5` would have cleared too. It costs nothing,
+  so it stays.
+
+Two other things for the plate. With the cases pointing outward, the six of
+them fill a 177–180 mm square, the whole print bed, so the plate gets cut from
+sheet or made in pieces rather than printed in one go. And the joint-play
+budget I'd been quoting (0.28 mm) belonged to the old `r_b = 90` candidate. At
+80 it is 0.24 mm, so the rod-end play still decides whether this base radius
+stands.
+
+Asked myself how each number was justified, and `r_p = 70, beta_p = 35,
+d = 70, delta = 0` had the weakest paper trail: they came out of the
+16 September search, whose grid I never saved. So I checked them one at a
+time instead. Every value of `r_p` from 55 to 80, `beta_p` from 20 to 50, `d`
+from 55 to 90 and `delta` from 0 to 40 passes. `d` doesn't touch R1–R3 at all
+and only sets the height. The one edge nearby is the arm: `a = 18` fails R3.
+The design is a passing point in a flat region rather than a tuned optimum,
+which is what I asked for.
+
+**Shaft height: 28 mm** above the base-plate top, the same for all six. The
+kinematics don't see it (everything is measured from the shaft plane), so
+it's purely a packaging choice. The horn swinging to an end stop reaches
+24.9 mm below the shaft, and the case about 22 mm. Going higher only makes
+the bracket wall a longer cantilever, and its flex grows with the cube of
+its height, so I took the lowest height that clears with a few millimetres
+spare.
+
+Then measured the printed arm itself: its lowest point is **26.5 mm** from the
+shaft axis, not the 24.9 the model had guessed. At the ±83° end stop that
+leaves 1.65 mm between the arm and the plate at 28 mm, which is enough for a
+bare plate and not enough for a screw head. **Shaft height is now 30 mm**:
+3.65 mm of clearance, room for M3 pan heads. The bracket flexes about 23% more
+at that height, which a thicker wall wins back. The platform's ball centres
+sit 93.2 mm above the plate at home.
+
+The arm extension isn't pinned and glued as the spec first imagined. I pause
+the print partway, drop the stock horn into a pocket and print over it, so the
+horn ends up fully enclosed. It fits with zero wiggle, it needs no drilling,
+pins or epoxy, and the moulded spline still does the indexing.
+
 ---
 
 ## Where Phase 0 stands

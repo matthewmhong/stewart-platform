@@ -592,6 +592,14 @@ moulded spline does the indexing.
 | H7 | load in-plane with the print layers | flat on the bed; layer adhesion is the weak axis |
 | H8 | the six assemblies identical to within the R2 budget | any per-leg difference is a fixed offset — trimmable in firmware, unlike play |
 
+**As built (2026-09-18): over-printed, not pinned.**  The print pauses partway,
+the stock horn is dropped into a pocket, and the rest of the part prints over
+it, fully enclosing the horn's arm.  That meets H3 (no drilling) and H4 (shear
+carried by the enclosure, zero play on assembly) without pins, and makes H5's
+epoxy unnecessary.  To keep an eye on: the spline bore and the horn's centre
+screw must stay open; the layer printed onto the horn is the weakest
+interface; every part should use the same pause layer and pocket so H8 holds.
+
 Permanence is acceptable: each MG90S ships with spare horns, and the 18°
 spline granularity is trimmed in firmware (§6), so nothing needs re-indexing.
 
@@ -610,7 +618,8 @@ the CAD.
 | B3 | case hangs below the shaft, tabs on the base side | matches `Body` in `performance.py`, which the clearance figures assume |
 | B4 | compliance at the arm tip ≤ **~60 µm** under the load case below, shared with the horn extension's 54 µm (§12 H2) | bracket flex enters R2 exactly like gearing error; the split between bracket and horn is still to be allocated |
 | B5 | mounts with the MG90S tab pattern (footprint 35.3 / 12.3 / 32.2 mm, spans unconfirmed) | measured 2026-09-16 |
-| B6 | leaves the horn's swept volume clear: 32.3 × 12 × 4.95 mm turning about the shaft | `horn_clearance()`; at `beta = 10` the nearest approach to a neighbour is 13.6 mm |
+| B6 | leaves the horn's swept volume clear: 32.3 × 12 × 4.95 mm turning about the shaft | `horn_clearance()`; at `beta = 10` the nearest approach to a neighbouring case is 25.1 mm (corrected case model, 2026-09-18) |
+| B7 | **shaft centre 30 mm above the base-plate top, the same on all six** | the printed arm reaches 26.5 mm from the shaft axis (measured 2026-09-18), 26.35 mm below it at the ±83° end stop, so **3.65 mm** to the plate: room for M3 pan heads (~2.4 mm) and print tolerance.  The case hangs ~22 mm (generic drawing, unmeasured).  28 was tried first and left only 1.65 mm.  Lower is stiffer (bracket flex ~ height³), so thicken the wall rather than go higher |
 
 **Load case for the FEA** (all at one servo):
 

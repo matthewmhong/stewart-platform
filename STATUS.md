@@ -75,7 +75,7 @@ below are that unit; per-unit numbers go in the calibration table that follows.
 |---|---|---|---|
 | stock horn hole distances | — | **7 holes, 4.15 → 15.95 mm in 1.967 mm steps**: 4.15, 6.12, 8.08, 10.05, 12.02, 13.99, 15.95 | calipers, spline centre to each hole |
 | spline tooth count | 20 or 21 (listings disagree) | **20** (counted 2026-09-16) → horn fits every 18°, so up to 9° of trim per leg (≈ 207 µs) | count |
-| body + mounting-tab footprint | — | **35.3 mm along the shaft axis, 12.3 thick, 32.2** (which span is 32.2 needs confirming) | calipers (bounds `beta`) |
+| body + mounting-tab footprint | — | **35.3 mm along the shaft axis, 12.3 thick, 32.2 across the tabs** (orientation confirmed 2026-09-18: case runs back along the shaft from the horn) | calipers (bounds `beta`) |
 | degrees per µs | ~0.09 (estimated, not published) | **0.087** (133° / 90° / 46° at 1000 / 1500 / 2000 µs; linear to ±2%) | protractor at 1000 / 1500 / 2000 µs |
 | usable travel | ~90–180° (listings vary) | **530–2480 µs = 169.7°**, centred on 1505 µs (within 5 µs of nominal centre); working limits 550–2460 µs = ±83° | same test, find the ends |
 | deadband | 5 µs (≈ 0.45°) | **4 µs = 0.35°** | smallest µs step that moves a 100 mm pointer |
@@ -115,7 +115,11 @@ the trim table.
 ### DESIGN TO BUILD (2026-09-18)
 
     r_b = 80, beta = 10, delta = 0, r_p = 70, beta_p = 35, a = 22, d = 70
-    home height 63.2 mm
+    home height 63.2 mm above the shaft plane
+    shaft height 30 mm above the base-plate top (chosen 2026-09-18), so the
+    platform ball centres sit 93.2 mm above the plate at home.  The printed
+    arm reaches 26.5 mm from the shaft axis (measured 2026-09-18), 26.35 mm
+    below it at the ±83° end stop: 3.65 mm to the plate, room for M3 pan heads.
 
 | check | value | limit | |
 |---|---|---|---|
@@ -124,13 +128,35 @@ the trim table.
 | R3 tilt rate | 78.9°/s | ≥ 65°/s | PASS |
 | rod-end misalignment | 4.2° | ≤ 13° | PASS |
 | rod–rod | 20.3 mm | — | clear |
-| rod–other case | 16.4 mm | — | clear |
-| horn–other case | 13.6 mm | — | clear |
+| rod–other case | 29.3 mm | — | clear |
+| horn–other case | 25.1 mm | — | clear |
 | horn–horn | 14.2 mm | — | clear |
 
 Supersedes the 2026-09-16 candidate (`r_b = 90, beta = 5`): the **horn
 extension** (32.3 × 12 × 4.95 mm, measured 2026-09-18) turned out to be the
 tight part, not the rods, and `beta` is what governs it.
+
+**Case clearances re-run 2026-09-18** with `Body` corrected (it had the case
+12.3 mm along the shaft, centred on it; the real case runs 35.3 mm back from
+the horn).  **Build constraint: in each pair the horns face each other and the
+cases point away.**  The pair's shafts are 27.8 mm apart, so cases pointing
+inward collide (horn–case 0.0 mm).  `Body.sides` encodes the choice.
+
+**Sensitivity (2026-09-18), one parameter at a time about the design above.**
+The grid of the 540-candidate search that produced `r_p = 70, beta_p = 35,
+d = 70, delta = 0` was never recorded, so these are checked after the fact:
+
+| varied | range tried | result |
+|---|---|---|
+| `r_p` | 55–80 | all pass; R3 falls from 100 to 69°/s as `r_p` grows |
+| `beta_p` | 20–50 | all pass; R2 0.180° at 20, flat at 0.135° from 40 up |
+| `d` | 55–90 | all pass; R1–R3 unchanged, only the home height moves (46–85 mm) |
+| `delta` | 0–40 | all pass; R2 improves slightly (0.124° at 40) |
+| `a` | 18–26 | **18 fails R3** (64.5°/s); 20–26 pass, R2 rising with `a` |
+
+So the design sits in a flat passing region: the values are *a* passing
+point, not an optimum, which is what "simplest that passes" asked for.
+`delta = 0` (servo planes tangent) is the simplest to build.
 
 ### Mounting: shafts horizontal (assumption, load-bearing)
 
@@ -185,19 +211,27 @@ joint play is not measured yet.
 
 | beta | 2° | 5° | 10° | 15° |
 |---|---|---|---|---|
-| horn–case | **0.0 — collides** | 2.7 mm | 13.6 mm | 24.1 mm |
+| horn–case, old `Body` | **0.0 — collides** | 2.7 mm | 13.6 mm | 24.1 mm |
+| horn–case, corrected `Body` | 5.2 mm | 12.8 mm | 25.1 mm | 36.6 mm |
 
-`beta = 10` costs 0.002° of R2 and nothing in R3 or the cone, and roughly
-doubles every clearance — hence the design above.  How far the horn reaches
+With the case modelled correctly `beta = 5` would also have cleared, so
+`beta = 10` was chosen on a wrong model.  It still costs only 0.002° of R2 and
+nothing in R3 or the cone, so it stays.  How far the horn reaches
 back past the spline (`Horn.behind`) changes none of this: 4 mm and 16 mm give
 the same answer to 0.1 mm, because what nearly touches is the horn's flank
 against the neighbour, not its tail.
 
 Clearances come from `clearance()`, which models the servo case as a box
 (`Body`, defaults from the 2026-09-16 measurements) and samples each rod at
-25 points.  **Not yet modelled:** the base plate itself and the plate underside.  The `Body`
-defaults also assume the case hangs below the shaft and that 32.2 mm is the tab
-span — the span labelling is still unconfirmed.
+25 points.  **Not yet modelled:** the base plate itself and the plate underside.
+`Body.above` / `below` (11 / 22 mm about the shaft) come from the generic MG90S
+drawing, not a measurement.
+
+**Base footprint (2026-09-18).**  With the cases pointing away from their
+partners, the case ends reach a radius of 92–93 mm, and the smallest square
+around all six is 177–180 mm, the whole print bed.  So the plate does not have
+to be printed: cut it from sheet, or print it in pieces, or stop the plate at
+the bracket feet and let the case ends overhang (the case is held by its tabs).
 
 ### Leading candidate (2026-09-16, from `stewart/performance.py`)
 
@@ -226,7 +260,8 @@ can take:
 | R2, quadrature | 0.117° | 0.187° | 0.222° | **0.250° — limit** |
 
 So **anything under ~0.28 mm passes**, which ordinary M3 rod ends should clear
-comfortably.  (On the worst-case reading the limit would have been 0.06 mm, and
+comfortably.  (**Superseded:** at the design to build, `r_b = 80`, the limit
+is **0.24 mm**; see Open → Ball joints.)  (On the worst-case reading the limit would have been 0.06 mm, and
 no geometry in a 540-candidate sweep met it.  The cost of the looser reading is
 0.6 mm of extra ball wander if the six errors ever do align: ±8.6 mm instead of
 ±8 mm.)
@@ -304,7 +339,7 @@ on reach alone.
 - **Ball joints:** M3 rod ends chosen and ordered (spherical bearings, M3
   female shank, 3 mm bore) — metal-on-metal, and the M3 threaded push-rod makes
   `d` adjustable per leg.  **Two measurements outstanding on arrival:**
-  play (budget 0.28 mm total per leg, so ≤ 0.14 mm each) and the **bind angle**
+  play (budget **0.24 mm** total per leg at `r_b = 80`, so ≤ 0.12 mm each; `r_b = 90` would allow 0.29 mm, so play of 0.24–0.29 mm means going back to a bigger base) and the **bind angle**
   (the evaluator assumes a 13° cone; it reports 4.2° used, so there is room,
   but the real number is unmeasured).  Bolt axes are a design choice and the
   evaluator picks the best ones: `evaluate().axes_base` / `.axes_platform`.
