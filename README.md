@@ -26,6 +26,15 @@ stage 2: a camera and closed-loop balancing.
 Details in [STATUS.md](STATUS.md); the reasoning, including the wrong turns, is
 in [docs/design-log.md](docs/design-log.md).
 
+<p align="center">
+  <img src="docs/img/design-tilted.png" width="48%" alt="The design to build, tilted 4.5 degrees: base ring, servo arms, rods and platform">
+  <img src="docs/img/base-layout.png" width="48%" alt="Base plate from above: six servos in brackets, arm extensions and the twelve M3 holes">
+</p>
+
+Left: the design to build at 4.5° of tilt (R1), from `demo.py`.  Right: the
+base plate from above, with servos, brackets, arms and the twelve M3 holes, from
+`layout.py`.
+
 ## Conventions
 
 - **Millimetres and radians** internally.  Degrees appear only when printing a

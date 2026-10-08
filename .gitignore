@@ -5,3 +5,4 @@ __pycache__/
 .DS_Store
 sweep-run.npz
 sweep-report.txt
+!docs/img/*.png
