@@ -634,10 +634,10 @@ spline granularity is trimmed in firmware (§6), so nothing needs re-indexing.
 
 ---
 
-## 13. Servo bracket — the spec, ahead of the FEA (2026-09-18)
+## 13. Servo bracket — the spec (2026-09-18)
 
-Design is the user's; this is the requirement list.  Written before the FEA so
-the analysis has thresholds that came from the error budget rather than from
+Design is the user's; this is the requirement list.  Written before the stiffness check so
+the check has thresholds that came from the error budget rather than from
 the CAD.
 
 | # | constraint | why |
@@ -714,7 +714,7 @@ footprint reaches r = 104.1 mm with the lugs, so the plate is at least
 15.8 mm, rod to other brackets 44.8, arm to arm 30.8, rod to rod 20.1.
 Regenerate the table and plan with `python layout.py` (writes `base-layout.png`).
 
-**Load case for the FEA** (all at one servo):
+**Load case** (all at one servo):
 
 1. reaction torque about the shaft, `rod force × a` ≈ 22 N·mm at ~1 N of rod
    force, higher transiently during a slew;
@@ -728,3 +728,110 @@ per rod, compressive, over the whole envelope (computed 2026-09-18); at the
 margin.  Buckling is not a concern and
 does not need FEA: Euler for a 70 mm M3 steel rod is ~650 N against ~1 N
 working load.
+
+**Load case from the kinematics (2026-09-18).**  Platform taken as 250 g
+(W = 2.45 N), and for the slew as a 170 mm disc tilting 9° in 0.14 s
+(bang-bang, 32 rad/s² peak):
+
+| | value |
+|---|---|
+| rod force, static, over the R1 envelope | 0.440–0.464 N (0.179–0.189 W), always compression |
+| rod force during an R3 slew | 0.345–0.557 N, still compression |
+| direction at the arm tip | 90% tangential, **42% along the shaft** (0.420–0.423 over the envelope), 8.5% radial |
+| shaft torque | 8.5–9.5 N·mm static, 11.3 in a slew |
+
+In the bracket frame (window face at Y = 0, C opening toward +Y, Z up, origin
+on the shaft line at the window face), per **1 N** of rod compression, at home:
+
+| legs | ball centre (X, Y, Z) mm | force on the ball (X, Y, Z) N |
+|---|---|---|
+| 1, 3, 5 | (+22.50, −22.21, 0) | (+0.085, −0.423, −0.902) |
+| 2, 4, 6 | (−22.50, −22.21, 0) | (−0.085, −0.423, −0.902) |
+
+Resolved at the origin (leg 1) that is 20.0 N·mm about X, 20.3 about Y (the
+shaft torque) and −7.6 about Z.  The −Y component and the 22.21 mm lever pull
+the servo off the wall: the **upper tab screw is in tension**, ~1 N per newton
+of rod force, and the case's back end lifts toward the top arm rather than
+bearing on the foot.
+
+**Hand calc (2026-09-18).**  Servo rigid, hinged at the lower tab screw (the
+foot is rigid by comparison), upper screw carried by the two 4 × 4 mm posts
+beside the window (23 mm tall), servo case not touching the top arm (0.25 mm
+gap).  In **eSUN PLA+** (E = 1900 MPa: its datasheet flexural modulus,
+~1970 MPa on moulded bars, rounded down for printing; toughened, so softer than
+plain PLA's ~2.3 GPa), the ball moves **67 µm along the rod per newton**.  The
+model leaves out the lugs, the foot and the screw threads, which add
+compliance.  Stress is ~1 MPa against ~50 MPa yield, so strength is not a
+question.
+
+**B4 is exceeded only at its 1 N design load**, which is about twice what the
+rods carry: 0.46 N static gives 31 µm, and the 0.56 N slew peak 37 µm.  R2
+passes even counting all of the flex as random error (quadrature, 0.1 mm joint
+play):
+
+| flex counted | R2 |
+|---|---|
+| none | 0.140° |
+| 31 µm (static load) | 0.170° |
+| 37 µm (slew peak) | 0.176° |
+| 67 µm (B4's 1 N) | 0.204° |
+
+against 0.25°.  Most of it does not count at all: the static rod force varies
+5% over the envelope, so the deflection is nearly a fixed offset that trim and
+the camera absorb.  Play and flex share one budget, so if the joint play turns
+out near its 0.23 mm ceiling, R2 is tight whatever the bracket does.
+
+**Accepted as printed, 4 mm spine (decided 2026-09-18).**  No FEA and no bench
+check.  Not verified: the lugs, the foot and the screw threads, which the hand
+calc treats as rigid.  If R2 comes up short on the assembled platform, check
+them first.
+
+## 14. Top-plate anchors — the spec (2026-09-18)
+
+Design is the user's; this is the requirement list.  Six rod-end mounts hanging
+under the top plate, one per leg.
+
+**Anchor positions** (ball centres), plate frame: origin at the plate centre
+in the plane of the six ball centres, +x toward the midpoint of anchors 1 and
+2, the same frame as the base-plate table in §13 at home.  `r_p = 70`,
+`beta_p = 35`:
+
+| leg | x | y | bolt axis (horizontal) |
+|---|---|---|---|
+| 1 | 57.34 | −40.15 | along 0° (x) |
+| 2 | 57.34 | 40.15 | along 0° |
+| 3 | 6.10 | 69.73 | along 120° |
+| 4 | −63.44 | 29.58 | along 120° |
+| 5 | −63.44 | −29.58 | along 240° |
+| 6 | 6.10 | −69.73 | along 240° |
+
+**Bolt: horizontal, parallel to the pair's bisector** (the line from the plate
+centre to the midpoint of the pair).  Worst rod-end misalignment over the
+envelope is **4.2°**, the same as the optimum axis (which is 2.1° off the
+bisector and 0.7° off horizontal).  So both mounts of a pair face the same
+way and all six are one part.  For comparison: a vertical bolt gives 69°
+(binds), a bolt along the anchor's own radius 18.3°, tangential 24.6°.
+
+At home each rod leaves its ball 64.5° below horizontal, heading 126° from
+radially outward.  4.2° is well inside the rod end's ~12° flat-face limit
+(§12, rod-end seat), so **no insert spacers are needed at this end**: the rod
+end bolts flat against the mount.
+
+| # | constraint | why |
+|---|---|---|
+| T1 | ball centres at the positions above, all six in one plane | the kinematics' `p`; a height difference between anchors is a fixed tilt offset, trimmable but better avoided |
+| T2 | bolt horizontal and parallel to the pair bisector, within a few degrees | 4.2° used of ~12° (flat face) or ~22° (bare bind) |
+| T3 | the mount must not reach into the rod's path below and beside the ball | the rod leaves steeply downward; keep the mount above the ball centre plus the housing radius (Ø9.89) |
+| T4 | ball-centre depth below the plate underside: the user's choice, the same for all six | free as far as the kinematics go (it sets the plate height, not `p`); shallower means a stiffer tab.  About 8 mm clears the housing (radius 4.95) with 3 mm to spare |
+
+**Tab shape (2026-09-18).**  The rod-end shank starts 4.95 mm from the ball
+centre and the rod leaves steeply downward, so a tab whose rounded end is
+wider than ~4 mm in radius meets the shank.  Checked over the envelope with the
+shank as a cylinder of radius 2.5–3.5 (not measured): a tab radius of 4.5 mm
+clears by only 0.2 mm, **4.0 by ~0.7 mm**.  A **1 mm seat boss** (Ø5, no
+wider than the ball's flat face) between tab and ball keeps the housing clear
+as well.
+
+**Loads** are the same rod force as the base end, 0.44–0.56 N compression,
+so a short printed tab is ample.  The top end sees 4.2° of misalignment
+against the base end's 25.1°, so it is the easier end of the rod.

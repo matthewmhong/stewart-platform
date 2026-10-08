@@ -14,7 +14,7 @@ servo plane, then a fixed-length push-rod `d` to the platform.
   checked at construction.
 - **Validate at construction:** shapes, positive lengths, unit norms on `n`
   and `u`, `u . n = 0`.  Name failing legs **1-indexed** in messages.
-- **Deps:** Python 3, numpy + matplotlib only.
+- **Deps:** Python 3, numpy + matplotlib only; `joystick.py` and `motion.py` also need pyserial (decided 2026-09-19).
 
 ## Layout
 
@@ -28,6 +28,9 @@ servo plane, then a fixed-length push-rod `d` to the platform.
 | `test_kinematics.py`, `demo.py` | DONE - `demo.py` runs on the design to build (`DESIGN` lives there) |
 | `layout.py` | DONE - base-plate plan and the twelve M3 hole centres, from `DESIGN` + the bracket dimensions |
 | `firmware/servo_test/` | DONE - MG90S bench-test sketch (Arduino, `writeMicroseconds`, serial commands) |
+| `joystick.py`, `firmware/joystick/` | stage 1 control: Arduino streams the stick and outputs pulses, PC runs `ik`; `--selftest` needs no hardware |
+| `motion.py` | DONE - oscillates one DOF at a time (roll/pitch/yaw/surge/sway/heave); amplitude limits measured 2026-09-24 |
+| `firmware/servo_cal/` | DONE - six-servo calibration: per-leg zero (arm level) and direction, saved in EEPROM |
 | `cad/` | the user's CAD - not in the repo yet.  Arm extension: `docs/hardware.md` §12; servo bracket and base-plate holes: §13 |
 | `archive/` | frozen: old docs, the Phase 0 diagnostics and sweep outputs - do not edit or build on |
 
@@ -62,3 +65,5 @@ later.
 
     python demo.py
     python layout.py
+    python joystick.py            # platform connected; --selftest without
+    python motion.py              # one-DOF oscillations; --selftest without

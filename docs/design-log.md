@@ -2328,6 +2328,163 @@ the print partway, drop the stock horn into a pocket and print over it, so the
 horn ends up fully enclosed. It fits with zero wiggle, it needs no drilling,
 pins or epoxy, and the moulded spline still does the indexing.
 
+<!-- TODO(author): drafted for you - rewrite in your own voice -->
+
+Before the bracket FEA I worked out the load case from the kinematics instead
+of trusting the "~1 N, ~40% out of plane" I'd written down. The estimate held
+up. With a 250 g platform every rod carries 0.44–0.46 N of compression across
+the whole tilt envelope, and 0.35–0.56 N during a full-speed slew, so no rod
+ever goes into tension. At the arm tip the force is 90% tangential and 42%
+along the shaft, and that split hardly changes with pose.
+
+The part I hadn't pictured is where that force lands on the bracket. The ball
+sits 22.21 mm in front of the window face, so the rod force pries the servo
+off the wall, and the upper tab screw ends up pulling out with about 1 N for
+every newton on the rod. A hand calc with the servo as a rigid block hinged at
+the lower screw and the upper screw held by the two 4 × 4 mm posts beside the
+window puts the ball at **67 µm along the rod per newton** in eSUN PLA+
+(E ≈ 1.9 GPa, softer than plain PLA). B4 allows 60, so on paper the bracket
+fails.
+
+It fails only at B4's 1 N, though, and the rods never carry that: 0.46 N
+holding, 0.56 N at the peak of a fast tilt, which gives 31–37 µm. Even if I
+count every micron of it as random error, R2 comes out at 0.176°, or 0.204° at
+the full 1 N, against 0.25°. And most of it isn't random: the rod force varies
+by 5% across the envelope, so the bracket sits at nearly the same deflection
+all the time, and trim and the camera loop remove a fixed offset.
+
+**So the 4 mm brackets I've already printed stay, with no FEA and no bench
+test.** An FEA would mostly model the parts I'm least sure of, the lugs and the
+screw threads, with guesses. If tilt precision comes up short once it's
+assembled, they're the first thing to check. The load case and the numbers
+are in `docs/hardware.md` §13.
+
+<!-- TODO(author): drafted for you - rewrite in your own voice -->
+
+Next, the top-plate end of the rods. The evaluator had only ever reported the
+ideal bolt axis there (4.2°), never one I'd actually build. The simple choice
+turns out to be the ideal one: a **horizontal bolt parallel to the line from
+the plate centre to the middle of the pair** gives the same 4.2°. The true
+optimum is just 2.1° off that line and 0.7° off horizontal. So both mounts in
+a pair face the same way, one part does all six, and at 4.2° the rod end can
+bolt flat against it without the insert spacers the arm end needs. The other
+obvious choices are worse: a vertical bolt binds at 69°, and a bolt along the
+anchor's own radius costs 18°. The spec is `docs/hardware.md` §14.
+
+Turning that into a part turned up one more constraint. The rod end's shank
+starts 4.95 mm from the ball centre, and the rod heads steeply downward, so
+a tab with a rounded end wider than about 4 mm in radius runs into it. At
+4.5 mm it clears by 0.2 mm, at 4.0 by about 0.7. A 1 mm boss between the tab
+and the ball holds the housing off the tab too.
+
+## 19 September
+
+<!-- TODO(author): drafted for you - rewrite in your own voice -->
+
+The base plate came out 223 mm corner to corner once it cleared every lug by
+5 mm, too big for the 180 mm bed. Rather than wait for acrylic, I'm printing
+it as three identical wedges split along the gaps between the servo pairs, so
+each wedge carries one pair of brackets whole and only the empty gaps get
+glued. If the acrylic arrives, it replaces the print.
+
+Settled the control path for stage 1: **IK runs on the PC**, and the Arduino
+only turns six pulse widths into `writeMicroseconds()` calls. The kinematics
+are already written and tested in Python, porting them would mean testing
+them all over again, and stage 2's camera needs a PC anyway. The servos run
+off **4× AA**, with the ground shared with the Arduino.
+
+## 21 September
+
+<!-- TODO(author): drafted for you - rewrite in your own voice -->
+
+The blade came and all six rods are cut to 54.1 mm, so they bottom out in both
+rod ends at 70 mm centre to centre. All six brackets are printed and the
+servos are screwed down to the base. Everything for stage 1 is now on the
+bench except the control software.
+
+Home on this design is the arms flat: `alpha = 0` on every leg, arm level and
+pointing inward, so the rod-end balls sit at the shaft height. That makes
+zeroing a spirit-level job. Each servo goes to its centre pulse, the arm goes
+on at the spline tooth closest to level (18° per tooth, so at most 9° off),
+and the rest is trimmed in microseconds and written down per leg, before any
+rod goes on.
+
+## 22 September
+
+<!-- TODO(author): drafted for you - rewrite in your own voice -->
+
+Zeroed all six arms with a new calibration sketch (`firmware/servo_cal/`):
+every servo held at 1500 µs, arm pressed on at the tooth nearest level, then
+trimmed in microseconds until level and saved to the Arduino's EEPROM. The
+zeros came out at 1550, 1500, 1410, 1590, 1560 and 1470 µs, so the biggest
+correction was 90 µs, about 8°, inside the 9° a 20-tooth spline can leave.
+The direction check came out the way the geometry says it should: in every
+pair one servo raises its arm on +µs and the other lowers it, because the
+two face each other.
+
+The base plate ended up as **laser-cut 5 mm acrylic** after all, not the
+three printed wedges: one flat piece, no glue seams, and the twelve bracket
+holes cut straight from the layout. The servos are mounted on it. The top
+plate is **3D-printed in PLA**, with the six rod-end anchors from
+`docs/hardware.md` §14.
+
+With the zeros saved I put it together: arms held at home, rods on, top plate
+on with its notch over servos 1 and 2. **The platform is assembled.**
+
+At home the plate sits level, 105 mm from the top of the base plate to the
+top of the platform, and nothing binds.
+
+Then the stage 1 control code: the Arduino streams the joystick and outputs
+six pulses, the PC turns the stick into a tilt, runs the IK and sends the
+pulses back. Checking it before the first run caught a real bug. The
+docstring of `tilt_pose` said the plate's *high* side faces the azimuth; the
+maths actually lowers that side. Everything before this swept every
+azimuth, so no result depended on which way round it was, but the joystick
+would have tilted the plate away from the stick. I only found it by pushing
+the pulses back through the forward kinematics and asking which edge went
+down.
+
+One scare on the way: a faint buzz I first pinned on servo 6. Every leg
+turned out to be commanded to the same 1500 µs with the arms off, so it
+wasn't the code, and it was only the normal hum of servos holding position.
+
+## 24 September
+
+<!-- TODO(author): drafted for you - rewrite in your own voice -->
+
+Wrote `motion.py` to exercise the platform one degree of freedom at a time:
+type `yaw` and it oscillates in yaw until I type `stop`, eased in and out so
+nothing starts with a jerk.
+
+Before letting it run I measured how far each DOF can actually go, because
+the machine was only ever sized for tilt. Roll and pitch reach 9.0° and 9.8°,
+and heave 11 mm, all stopped by the servos. **Yaw, surge and sway stop at
+about 3° and 3 mm, and what stops them is the rod ends, not the servos.** That
+follows from a decision I'd already made and had not thought about in these
+terms: the arm-end bolt is straight, parallel to the shaft, which costs 25.1°
+of the joint's ~30° cone at home. Tilt keeps the rod sweeping in a plane the
+joint likes; yaw and the in-plane translations push it the other way, and the
+remaining 5° goes quickly. If the off-tilt DOFs ever matter, the fix is the
+tilted arm bolt I dropped on 18 September, not more servo travel.
+
+The demo runs each motion at about two thirds of its measured limit.
+
+## 2 October
+
+<!-- TODO(author): drafted for you - rewrite in your own voice -->
+
+First run with the platform assembled: **the joystick drives the tilt and the
+plate follows it**, with the stick orientation left at the defaults. That is
+the stage 1 loop working end to end, from the stick on the Arduino, through
+the IK on the PC, back to six pulse widths.
+
+What it is not yet is a measurement. Every performance number in this log is
+still a prediction from the evaluator: how much tilt the plate actually
+reaches, how precisely it holds an angle and how fast it slews are all
+unmeasured on the machine. That is the next job, and R1 (4.5°) is the first
+one to check, since it is the cheapest to measure and the one the whole
+geometry was sized for.
+
 ---
 
 ## Where Phase 0 stands

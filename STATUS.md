@@ -1,7 +1,7 @@
 # Status
 
 Where the project stands right now. **Edit this file in place each session**;
-`git log -p STATUS.md` is the history. Last updated 2026-09-18.
+`git log -p STATUS.md` is the history. Last updated 2026-10-02.
 
 ## Direction (since 2026-09-13)
 
@@ -116,14 +116,14 @@ left to the bracket CAD.
 Label the servos 1–6 with tape **before** assembly; each leg's firmware needs
 its own centre and deg/µs.  Servo 1 is the unit bench-tested 2026-09-16.
 
-| servo | low end µs | high end µs | centre µs | travel ° | deg/µs | deadband µs | notes |
-|---|---|---|---|---|---|---|---|
-| 1 | 530 | 2480 | 1505 | 169.7 | 0.087 | 4 | full bench test 2026-09-16 |
-| 2 | 520 | 2480 | 1500 | 170.5* | | 4 | measured 2026-09-18 |
-| 3 | 520 | 2480 | 1500 | 170.5* | | 4 | measured 2026-09-18 |
-| 4 | 510 | 2480 | 1495 | 171.4* | | 4 | measured 2026-09-18 |
-| 5 | 510 | 2490 | 1500 | 172.3* | | 4 | measured 2026-09-18 |
-| 6 | 510 | 2490 | 1500 | 172.3* | | 4 | measured 2026-09-18 |
+| servo | low end µs | high end µs | centre µs | travel ° | deg/µs | deadband µs | zero µs (arm level) | +µs raises tip? | notes |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | 530 | 2480 | 1505 | 169.7 | 0.087 | 4 | 1550 | yes | full bench test 2026-09-16 |
+| 2 | 520 | 2480 | 1500 | 170.5* | | 4 | 1500 | no | measured 2026-09-18 |
+| 3 | 520 | 2480 | 1500 | 170.5* | | 4 | 1410 | yes | measured 2026-09-18 |
+| 4 | 510 | 2480 | 1495 | 171.4* | | 4 | 1590 | no | measured 2026-09-18 |
+| 5 | 510 | 2490 | 1500 | 172.3* | | 4 | 1560 | yes | measured 2026-09-18 |
+| 6 | 510 | 2490 | 1500 | 172.3* | | 4 | 1470 | no | measured 2026-09-18 |
 
 \* travel ° computed with servo 1's 0.087 deg/µs until each unit's own
 figure is measured.
@@ -280,6 +280,7 @@ on reach alone.
   thick and Ø9.89, 18.05 overall (housing edge to shank end, so ball centre →
   shank end **13.1**), thread 5.17 deep.  For `d = 70` centre to centre the
   exposed rod is 43.8, so an **M3 rod cut to 54.1** bottoms out in both ends.
+  **Six rods cut 2026-09-21.**
   **Bind angle ~22°** bare; **~30° at both ends with an M3 threaded insert
   on each side of the ball as a spacer** (2026-09-18, by hand; inserts 4.02
   long, so the ball centre sits 4.02 + 2.19 = **6.21 mm** out from the arm's
@@ -308,19 +309,45 @@ on reach alone.
   to 18.6° (stiffness cond 4.8 against 3.8).
 - **Servo bracket:** designed 2026-09-18 (C bracket, dimensions in
   `docs/hardware.md` §13) and placed on the base plate (twelve M3 holes,
-  §13).  **FEA NEXT** (the rod-end measurements are in): against B4
-  (~60 µm at the arm tip, shared with the arm extension).  Rod force from
-  weight is 0.18–0.19 × the platform weight per rod; ~1 N with margin.
+  §13).  Load case (§13): per 1 N of rod force (±0.085, −0.423, −0.902) N
+  at the ball, 22.21 mm in front of the window face, which pulls the upper
+  tab screw out.  Filament **eSUN PLA+** (E ≈ 1.9 GPa).  Hand calc: **67 µm
+  along the rod at 1 N**, over B4's 60 only at that design load; 31–37 µm at
+  the real 0.46–0.56 N.  R2 passes even counting all of it as random (0.204°
+  at 1 N, against 0.25°).  **Accepted as printed, 4 mm spine; no FEA, no
+  bench check** (2026-09-18).  Lugs, foot and screws are unverified; suspect
+  them first if R2 falls short on the assembled platform.
+- **Top plate: 3D-printed in PLA** (as of 2026-09-22), anchors to
+  `docs/hardware.md` §14 (spec written 2026-09-18, CAD the user's).  Bolt horizontal, parallel to the pair's bisector: 4.2°
+  of misalignment (the optimum), one part for all six, no insert spacers.
+  Ball-centre depth below the plate is the user's choice (~8 mm suggested).
+  Tab radius ≤ 4 mm and a 1 mm seat boss keep the rod-end shank clear.
+- **Base plate: laser-cut 5 mm acrylic** (as of 2026-09-22), servos
+  mounted on it.  Supersedes the three printed PLA+ wedges planned
+  2026-09-19.
 - **Check `e = ±8 mm` against camera noise `σ`** in stage 2 (`e ≥ 3σ`).  The
   rest of `e` is settled.
-- **Joystick control path** not chosen: IK on the Arduino (port `ik`) or on a
-  PC sending servo commands over serial.
+- **Joystick control path: IK on the PC** (decided 2026-09-19).  The Python
+  `ik` computes the six pulse widths and sends them over USB serial; the
+  Arduino only outputs them.  The joystick is the Arduino kit's analog
+  stick, read by the Arduino and streamed to the PC, so the PC side needs
+  only a serial library (pyserial) beyond numpy + matplotlib.  **Control
+  software written 2026-09-22** (`joystick.py`, `firmware/joystick/`).
+  The Arduino reads the calibration from EEPROM and sends it to the PC,
+  refuses any pulse > 350 µs from a leg's zero, ramps every move, and
+  returns to level if the PC goes quiet for 0.5 s.
 - **Servo controller** not chosen. Its command step must be finer than the
   deadband: Arduino `Servo.write()` moves in ~11 µs, so use
   `writeMicroseconds()`; a PCA9685 board steps in ~4.9 µs.
 - **Camera** not chosen (stage 2). A 30 fps camera uses 33 ms of R4's 70 ms
   by itself.
-- **Platform mass** unknown; needed for R5.
+- **Platform mass: printed PLA top plate 50.15 g** (weighed 2026-09-22),
+  against the 200–250 g the load case assumed.  Rod force from weight is
+  ~0.09 N per rod, not ~0.45.  **Stage 1 runs on the printed plate alone**
+  (decided 2026-09-22).  A larger plywood deck comes with stage 2; before
+  it goes on, check the rod forces over the envelope with its real size and
+  mass (a big deck adds inertia faster than weight, and could unload rods
+  during an R3 slew, bringing the joint play back).
 - **Rotation convention** behind roll/pitch/yaw not chosen.
 - **Naming clashes** with no agreed answer: `R` (sinusoid amplitude), `s`
   (screw direction), `t` (plate thickness), `a` / `A_i`, `p` (pitch).
@@ -329,8 +356,8 @@ on reach alone.
 
 1. ~~Measure the horn holes, spline and servo footprint~~ **DONE** (servo
    test sketch: `firmware/servo_test/`).
-2. **Battery check:** MG90S is 4.8–6 V. 4× AA is fine; 2S LiPo needs a
-   regulator. Common ground with the Arduino; don't power servos from USB.
+2. ~~Battery check~~ **DONE 2026-09-19: 4× AA** for the servos (MG90S is
+   4.8–6 V).  Common ground with the Arduino; don't power servos from USB.
 3. ~~Bench-test one MG90S~~ **DONE 2026-09-16.**  Re-tests that decide whether
    the servo can pass at all:
    - ~~Backlash under preload~~ **DONE 2026-09-16: negligible.**
@@ -350,11 +377,50 @@ on reach alone.
 7. CAD, then order the remaining parts.
    - ~~Rod ends: measure play, bind angle, dimensions, ball offset~~ **DONE
      2026-09-18.**
-   - **NEXT: FEA of the servo bracket** (B4), before printing all six.
-     Reminder requested by the user.
+   - ~~FEA of the servo bracket~~ **dropped 2026-09-18** for a hand calc.
+     ~~Print the other five brackets~~ **DONE; all six servos mounted on
+     the base 2026-09-21.**
+   - ~~Assembly~~ **DONE 2026-09-22** (step 8).  Home pose: **plate
+     level, no binding, 105 mm from base-plate top to platform top.**
+     Expected ball centres at 93.2, so anchor depth + plate thickness
+     should total ~11.8 mm; not yet checked against the CAD.
+   - **Joystick control written 2026-09-22**, not yet run on the platform:
+     `firmware/joystick/` + `joystick.py` (`--selftest` passes: home =
+     the zeros, 4.5° uses ≤ 165 µs; direction checked through `fk`).
+     **First run 2026-10-02: the joystick drives the tilt and the platform
+     follows** (stick orientation left at the defaults).  **The tilt angle
+     itself is not yet measured**, so R1–R3 remain predictions.
+   - **`motion.py` 2026-09-24**: oscillates one DOF at a time.  **Envelope
+     measured** (firmware's 350 µs and a 28° rod-end cone, 2° inside the
+     ~30° bind): roll **9.0°**, pitch **9.8°**, yaw **3.0°**, surge/sway
+     **3.0 mm**, heave **11.0 mm**.  Roll, pitch and heave are servo-limited;
+     **yaw, surge and sway are limited by the rod-end cone** — the arm end
+     already sits at 25.1° of ~30° at home (straight bolt), so off-tilt DOFs
+     have little room.  Defaults run at ~2/3 of each limit.
    - ~~Base-plate drill positions~~ **DONE 2026-09-18**: twelve M3 holes in
      `docs/hardware.md` §13, plate ≥ ~210 mm across.
-8. Stage 1 done when: the platform follows a joystick through ±R1 tilt in
+8. **Assembly (from 2026-09-21).**  Home is `alpha = 0` on every leg: arm
+   horizontal, pointing along `u_i` (inward), rod-end ball centre at the
+   shaft height, 30 mm above the plate.  Per servo, before any rod goes on:
+   check the shaft is level (≤ 1° cant); drive it to its centre µs; fit the
+   arm at the spline tooth nearest horizontal-inward (≤ 9° off); nudge the
+   µs until the arm is level and record that as the leg's **zero µs**; note
+   whether +µs raises the tip (the two servos in a pair should be opposite).
+   Then rods, then the top plate, with every servo held at its zero: ball
+   centres should sit 93.2 mm above the plate and the plate should be level.
+   Zero µs and sign go in the calibration table (**arms zeroed
+   2026-09-22**, 10 µs steps ≈ 0.9°; all offsets within the ±9° a tooth
+   allows; directions alternate in every pair).  PC side:
+   `ZERO_US = [1550, 1500, 1410, 1590, 1560, 1470]`,
+   `SIGN = [+1, -1, +1, -1, +1, -1]` (+1: +µs raises the tip = +alpha),
+   so `us = ZERO_US + SIGN · alpha_deg / 0.087`.  Tool:
+   `firmware/servo_cal/` (written 2026-09-21; `save`, then `table`).
+   **Wiring (2026-09-21):** legs 1–6 signal on D2–D7; joystick VRx/VRy on
+   A0/A1, button on D8 (`INPUT_PULLUP`); servo power from the 4× AA rail
+   with the Arduino GND tied to it; D0/D1/D13 free.  No capacitor on hand:
+   short power leads, star ground at the battery −, moves ramped in
+   firmware; add ≥ 100 µF if the servos jitter.
+9. Stage 1 done when: the platform follows a joystick through ±R1 tilt in
    every direction.
-9. Stage 2: camera, latency measurement, confirm `e` and the latency
+10. Stage 2: camera, latency measurement, confirm `e` and the latency
    fraction, closed-loop balancing.
