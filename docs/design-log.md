@@ -2485,6 +2485,19 @@ unmeasured on the machine. That is the next job, and R1 (4.5°) is the first
 one to check, since it is the cheapest to measure and the one the whole
 geometry was sized for.
 
+## 8 October
+
+<!-- TODO(author): drafted for you - rewrite in your own voice -->
+
+Wrote `tilt_test.py` to turn the predictions into measurements. Neither the
+joystick nor `motion.py` holds a pose still long enough to read, so this one
+holds a commanded tilt and waits while I read it off a level on the plate.
+It runs two tests. `r1` commands 4.5° toward every 30° of azimuth and
+compares what I measure with what was asked. `r2` goes to the same 3° tilt
+ten times, half from level and half from 6°. The scatter within each half is
+repeatability, and the gap between the halves is the deadband the loop will
+never see. Neither has been run yet.
+
 ---
 
 ## Where Phase 0 stands

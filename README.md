@@ -46,6 +46,7 @@ in [docs/design-log.md](docs/design-log.md).
     python layout.py                           # base-plate plan and M3 hole positions -> base-layout.png
     python joystick.py                         # drive the tilt from the joystick (--selftest: no hardware)
     python motion.py                           # oscillate one DOF at a time (--selftest: no hardware)
+    python tilt_test.py                        # measure the plate's tilt against commanded (--selftest: no hardware)
 
 ## Layout
 
@@ -60,6 +61,7 @@ in [docs/design-log.md](docs/design-log.md).
     layout.py            base-plate plan: servos, brackets, drill holes
     joystick.py          stage 1: joystick -> tilt -> ik -> pulse widths over serial
     motion.py            one-DOF oscillations (roll/pitch/yaw/surge/sway/heave)
+    tilt_test.py         holds commanded tilts to read with a level; R1 and R2 on the machine
     firmware/
       servo_test/        Arduino bench-test sketch for one MG90S
       servo_cal/         six-servo calibration: per-leg zero and direction, in EEPROM

@@ -1,7 +1,7 @@
 # Status
 
 Where the project stands right now. **Edit this file in place each session**;
-`git log -p STATUS.md` is the history. Last updated 2026-10-02.
+`git log -p STATUS.md` is the history. Last updated 2026-10-08.
 
 ## Direction (since 2026-09-13)
 
@@ -390,6 +390,11 @@ on reach alone.
      **First run 2026-10-02: the joystick drives the tilt and the platform
      follows** (stick orientation left at the defaults).  **The tilt angle
      itself is not yet measured**, so R1–R3 remain predictions.
+     **`tilt_test.py` written 2026-10-08** to measure it: `r1` holds 4.5°
+     toward every 30° of azimuth, `r2` approaches 3.0° five times from each
+     side; readings go to `tilt-test-*.csv`.  Not yet run.  `DEG_PER_US` is
+     servo 1's value used for all six, so a measured/commanded ratio away
+     from 1, or one that varies with azimuth, points there first.
    - **`motion.py` 2026-09-24**: oscillates one DOF at a time.  **Envelope
      measured** (firmware's 350 µs and a 28° rod-end cone, 2° inside the
      ~30° bind): roll **9.0°**, pitch **9.8°**, yaw **3.0°**, surge/sway

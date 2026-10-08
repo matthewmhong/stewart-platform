@@ -30,6 +30,7 @@ servo plane, then a fixed-length push-rod `d` to the platform.
 | `firmware/servo_test/` | DONE - MG90S bench-test sketch (Arduino, `writeMicroseconds`, serial commands) |
 | `joystick.py`, `firmware/joystick/` | stage 1 control: Arduino streams the stick and outputs pulses, PC runs `ik`; `--selftest` needs no hardware |
 | `motion.py` | DONE - oscillates one DOF at a time (roll/pitch/yaw/surge/sway/heave); amplitude limits measured 2026-09-24 |
+| `tilt_test.py` | holds commanded tilts for a level to read: `r1` (every 30° of azimuth), `r2` (repeatability from both sides); logs a CSV |
 | `firmware/servo_cal/` | DONE - six-servo calibration: per-leg zero (arm level) and direction, saved in EEPROM |
 | `cad/` | the user's CAD - not in the repo yet.  Arm extension: `docs/hardware.md` §12; servo bracket and base-plate holes: §13 |
 | `archive/` | frozen: old docs, the Phase 0 diagnostics and sweep outputs - do not edit or build on |
@@ -67,3 +68,4 @@ later.
     python layout.py
     python joystick.py            # platform connected; --selftest without
     python motion.py              # one-DOF oscillations; --selftest without
+    python tilt_test.py           # measure tilt against commanded; --selftest without
