@@ -1876,17 +1876,16 @@ recomputation, not by re-checking the linear solve, worst residual
 
 ### I was optimising the wrong thing
 
-The sweep ranked geometries by reach margin: how far the platform is from a leg
-being unable to reach. That is a real quantity, but it is not what balancing a
-ball depends on. What matters for a Stewart platform doing this job is **tilt
-resolution** (how finely the plate can be set), **bandwidth** (how fast it
-responds) and **repeatability** (whether the same command gives the same
-tilt). The sweep measured none of them.
+The sweep ranked geometries by reach margin — how far the platform is from a
+leg being unable to reach. Balancing a ball doesn't depend on that. It depends
+on **tilt resolution** (how finely the plate can be set), **bandwidth** (how
+fast it responds) and **repeatability** (whether the same command gives the
+same tilt), and the sweep measured none of them.
 
-It also showed in the result. The winning `a = 60.4 mm` sat at the top of an
-aftermarket horn catalogue: the objective kept asking for more arm until the
-catalogue ran out. A longer arm gives more reach and *worse* resolution, so
-reach margin was actively pushing the design the wrong way.
+The result gave it away. The winning `a = 60.4 mm` sat at the top of an
+aftermarket horn catalogue, because the objective kept asking for more arm until
+the catalogue ran out. A longer arm gives more reach and *worse* resolution, so
+reach margin was pushing the design the wrong way.
 
 ### Two decisions
 
@@ -1894,10 +1893,10 @@ reach margin was actively pushing the design the wrong way.
 TowerPro MG90S; `a` is now whichever hole on its own horn works, a handful of
 values instead of a continuous axis.
 
-**Pick the easiest design to build that passes, not the optimum.** The final
+**Pick the easiest design to build that passes, and stop optimising.** The
 goal is a ball balanced on the plate. Once a design clears every requirement,
 extra margin buys nothing and a harder build costs real time. So the design
-question becomes a set of pass/fail requirements, then a search through
+question turned into a set of pass/fail requirements and a search through
 simple-to-build candidates for one that passes.
 
 ### Requirements, worked back from the ball
@@ -1950,14 +1949,14 @@ pack, then bench-test backlash, deadband, degrees per µs and loaded speed.
 
 <!-- TODO(author): drafted for you - rewrite in your own voice -->
 
-**Build in two stages.** Stage 1 is the platform, moved by a joystick. Stage 2
-adds a camera and closes the loop to balance the ball. The camera was too far
+**Build in two stages.** Stage 1 is the platform moved by a joystick; stage 2
+adds a camera and closes the loop to balance the ball. The camera is too far
 ahead of everything else to plan around yet.
 
-The requirements stay as they are for the hardware. A joystick doesn't need
+The hardware is still sized to the full requirements. A joystick doesn't need
 0.3° precision or 140°/s, but the horn hole and `r_p` set `G`, and `G` decides
-whether stage 2 can pass without a rebuild. What waits for stage 2 is only
-what needs a camera: the latency requirement, its 10% rule of thumb, and the
+whether stage 2 can pass without a rebuild. Only the parts that need a camera
+wait for stage 2: the latency requirement, its 10% rule of thumb, and the
 camera noise check on the ±5 mm tolerance.
 
 ### Slew fraction vs tilt range (UNVERIFIED quick calculation)
@@ -1974,8 +1973,8 @@ swing across, the ball spends less time at full tilt, so reaching 50 mm in
 | 0.2 | 8.20° |
 | 0.3 | 9.38° |
 
-A 7° range only allows `k ≈ 0.08`, not the proposed 0.2. Open: raise R1 to
-about 8.5°, or ask for a faster swing.
+A 7° range only allows `k ≈ 0.08`, well short of the proposed 0.2. Still open:
+raise R1 to about 8.5°, or ask for a faster swing.
 
 ### Servo bench-test sketch
 
@@ -2013,7 +2012,7 @@ Raising the range is the cheaper side to give: it costs servo travel, of which
 there is plenty (85° per side), while tightening `k` would have demanded a
 faster swing than the servo has. R3 follows: 17° in 0.1 s, **170°/s**.
 
-### The backlash result kills the design as specified
+### What the backlash does to the design
 
 Precision needs `G (deadband + backlash) + play / r_p ≤ 0.3°` and speed needs
 `G ω ≥ 170°/s`. Both contain `G`, so eliminating `r_p` gives the fastest tilt
@@ -2024,31 +2023,30 @@ rate that still holds precision, for *any* geometry:
 At `ω = 250°/s`, `a = 15.95 mm` and 0.1 mm of joint play, that is 44°/s at 1°
 of backlash and 28°/s at 2°. R3 asks for 170. **The design is 4–6× short, and
 no choice of `r_p` changes it** — `r_p` trades speed for precision one for one,
-which is exactly what the formula above cancels out. Even with zero backlash it
+which is why it cancels out of the formula above. Even with zero backlash it
 is 1.6× short: the 0.35° deadband and the joint play nearly spend the whole
 0.3° budget on their own.
 
 Phase 0's appendix said geometry doesn't change how many distinguishable tilt
-steps exist, only how they are spent. This is that statement with numbers in
-it, and the number is too small.
+steps exist, only how they are spent. This is the same result with numbers
+in it, and they come out too small.
 
 ### Preload rescues it
 
 Re-measured with ~100 g hanging from the horn so the load never reverses:
 **backlash is negligible**. The 1–2° is free play in an unloaded gear train,
 and the real platform never unloads it — its own weight holds every servo
-against one flank. That is the 3.9× back, for nothing.
+against one flank, which wins back the 3.9× for free.
 
 What binds now is `deadband + joint play / a`, and at 0.1 mm the ball joints
-contribute 0.36° — as much as the whole deadband. The dominant unknown is no
-longer something I can measure on the bench; it's which joints I buy.
+contribute 0.36° — as much as the whole deadband. So the biggest unknown is
+now which joints I buy, and the servo bench can't tell me that.
 
-The other thing that emerged: passing the inequality isn't the same as being
-buildable. R3 goes as `1/τ³` and sets a floor on `G`, which caps `r_p = a / G`.
+Passing the inequality also doesn't make a design buildable. R3 goes as `1/τ³` and sets a floor on `G`, which caps `r_p = a / G`.
 Holding the 0.5 s recovery forces an anchor circle of about 22 mm — a plate
 balanced on a stub. Letting `τ` out to 0.7 s drops R1 to 4.2° and R3 to 60°/s,
-and `r_p` lands at 42–67 mm, which is a real platform. The fast spec was
-writing cheques the servo could only cash as a miniature.
+and `r_p` lands at 42–67 mm, which is a real platform. The fast spec could
+only ever have been met by a miniature.
 
 ### The horn rule falls
 
@@ -2056,8 +2054,8 @@ The M3 rod ends I found need a 3 mm bolt; the stock horn's holes are 1.3 mm and
 its arm is ~4 mm wide, so drilling one out would leave almost no material. The
 obvious fix, an aluminium horn, turns out not to exist for this servo: micro
 metal horns are cut for 21T/23T/25T splines, and sources can't even agree
-whether the MG90S is 20T or 21T (I counted 20). Ordering one is a bet on a fit
-you only discover on arrival, and a loose spline is the worst possible place to
+whether the MG90S is 20T or 21T (I counted 20). Ordering one would be a bet on
+a fit I'd only find out about on arrival, and a loose spline is a bad place to
 lose precision.
 
 Printing the whole horn is worse — 20 teeth on a 4.8 mm shaft is a 0.75 mm
@@ -2066,8 +2064,8 @@ pitch, finer than FDM holds.
 So: **keep the moulded spline, print an arm that clamps to it.** Two plates
 sandwich the stock horn, two M2 bolts pass through holes that already exist,
 and the printed arm carries the M3 rod-end bolt at `a ≈ 22 mm`. The longer arm
-is a bonus rather than a cost — the joint-play term is `play / a`, so it
-*shrinks* as the arm grows, and `r_p` moves to a comfortable 58–70 mm.
+helps too: the joint-play term is `play / a`, so it *shrinks* as the arm grows,
+and `r_p` moves to a comfortable 58–70 mm.
 
 It does add one new error source, the flex of a printed part under reversing
 load. The R2 budget leaves 0.047° for it, which at 22 mm is 54 µm of hysteresis
@@ -2090,17 +2088,17 @@ each buy their factor linearly.
 ### The evaluator, and what it says
 
 Wrote `stewart/performance.py`: R1, R2, R3 and a rod-end cone check, every
-sensitivity a numerical derivative of `ik` or `fk` rather than the `G ~ a/r_p`
-caricature. 540 candidates in under three seconds.
+sensitivity a numerical derivative of `ik` or `fk` instead of the `G ~ a/r_p`
+approximation. 540 candidates in under three seconds.
 
 The leading design is `r_b = 90, beta = 5, r_p = 70, beta_p = 35, a = 22,
 d = 70`, sitting 60 mm high and using only ±14.6° of the ±83° of servo travel
-available. R1, R3 and the joint cone pass with room. R2 is the whole question:
+available. R1, R3 and the joint cone pass with room. R2 is the open one:
 0.287° worst case against a 0.25° budget, or 0.117° if the six legs' errors are
 treated as independent rather than conspiring. Joint play is 60% of that error,
 so tomorrow's measurement decides it — 0.06 mm passes outright, 0.1 mm passes
-only on the generous reading. No geometry in the sweep escapes this; it is a
-joints problem.
+only on the generous reading. No geometry in the sweep gets around this, so
+it comes down to the joints.
 
 **Decided: judge R2 in quadrature.** Summing the six legs assumes their
 independent errors all point the same way at the same instant; they don't, and
@@ -2126,8 +2124,8 @@ the play.
 rods lean about 31° out of the servo plane, so a shaft-parallel bolt sits 31°
 off perpendicular and the joint binds — against a cone of maybe 13°. Tilt the
 bolt ~30° toward the direction of arm rotation and the worst misalignment over
-the whole envelope drops to 4.2°. That is a hole angle in the printed horn
-extension, and I nearly specified it wrong.
+the whole envelope drops to 4.2°. That's a hole angle in the printed horn
+extension, and without the check I'd have drawn it parallel.
 
 ## 18 September
 
@@ -2141,24 +2139,25 @@ anything is assembled, because afterwards they are identical.
 Found the travel ends of all six. They agree closely: low ends 510–530 µs,
 high ends 2480–2490, centres 1495–1505. The range every unit reaches is
 530–2480 µs, so a common 550–2460 µs (±83° about 1500) drives the whole set and
-per-leg trim mops up the rest.
+per-leg trim mops up the rest. That confirms the `travel_deg = 83` the
+evaluator had been assuming from servo 1 alone. R1 only needs ±14.6° of it, so
+travel is nowhere near the limit; precision is what's tight.
 
 Also added a clearance check — rod against rod, rod against every servo case —
-because nothing in the project modelled interference, and that is the classic
-way a platform that passes on paper binds on the bench. At `r_b = 80` the
-closest approaches are 10.2 mm rod-to-rod and 7.3 mm rod-to-neighbouring-case,
-which is comfortable rather than lucky. It also settled the base radius: `r_b`
+because nothing in the project modelled interference, and a platform that
+passes on paper can still bind on the bench. At `r_b = 80` the closest
+approaches are 10.2 mm rod-to-rod and 7.3 mm rod-to-neighbouring-case, which is
+comfortable. It also settled the base radius: `r_b`
 turns out not to matter to R3 or the joint cone at all, so 90 mm — which would
 have put the shafts on a circle as wide as the print bed — buys only 0.018° of
 precision over 80 mm. Taking 80.
 
 Then the horn extension came off the CAD at 32.3 × 12 × 4.95 mm, and modelling
-*that* rather than a bare rod changed the design. The rods were never the tight
-part: at `beta = 5` the horn passes 2.7 mm from the neighbouring servo case,
-and at `beta = 2` it collides outright. `beta` — the angular spacing within a
-servo pair — governs the whole thing, and opening it to 10° costs 0.002° of R2,
-nothing in speed or the joint cone, and roughly doubles every clearance in the
-machine.
+it instead of a bare rod changed the design. The tight part is the horn: at
+`beta = 5` it passes 2.7 mm from the neighbouring servo case, and at `beta = 2`
+it collides outright. `beta` — the angular spacing within a servo pair — sets
+all of it. Opening it to 10° costs 0.002° of R2 and nothing in speed or the
+joint cone, and roughly doubles every clearance in the machine.
 
 **The design to build: `r_b = 80, beta = 10, delta = 0, r_p = 70,
 beta_p = 35, a = 22, d = 70`**, sitting 63.2 mm high.
@@ -2174,15 +2173,9 @@ a target for the mounting jig rather than a hard limit. It now sits in
 (`docs/hardware.md` §13), which I wrote ahead of the FEA so the thresholds come
 from the error budget instead of from whatever the CAD happens to give.
 
-Worth noting what nearly happened: the 16 September candidate would have been
-built with 2.7 mm between a printed part and a servo case, on the strength of a
-clearance check that modelled rods as infinitely thin lines. The part that
-mattered was the one I hadn't drawn yet.
-
-That confirms the `travel_deg = 83` the evaluator has been assuming on the
-strength of servo 1 alone — a guess that happened to be right, which is worth
-noting because R1 only needs ±14.6° of it. Travel was never going to be the
-binding constraint; precision was.
+The 16 September candidate would have been built with 2.7 mm between a
+printed part and a servo case, because the clearance check modelled the rods as
+thin lines and the horn extension hadn't been drawn yet.
 
 <!-- TODO(author): drafted for you - rewrite in your own voice -->
 
@@ -2214,12 +2207,11 @@ d = 70, delta = 0` had the weakest paper trail: they came out of the
 time instead. Every value of `r_p` from 55 to 80, `beta_p` from 20 to 50, `d`
 from 55 to 90 and `delta` from 0 to 40 passes. `d` doesn't touch R1–R3 at all
 and only sets the height. The one edge nearby is the arm: `a = 18` fails R3.
-The design is a passing point in a flat region rather than a tuned optimum,
-which is what I asked for.
+So the design sits in a flat region where everything nearby passes, which is
+what I asked for on 13 September.
 
-`delta` was the exception, and a good one. Its performance numbers pass
-everywhere, and R2 even improves a little as it grows. The clearance check tells
-a different story. Yaw the servos one way and each pair's horns swing into
+`delta` was the exception. Its performance numbers pass everywhere, and R2
+even improves a little as it grows, but the clearance check fails it. Yaw the servos one way and each pair's horns swing into
 each other: 5.0 mm apart at 10°, 0.5 mm at 20°. Yaw them the other way and
 each horn swings into its partner's case. `delta = 0` was picked because it's
 the simplest layout, every servo square to its radius, and it turns out to be
@@ -2337,7 +2329,7 @@ the whole tilt envelope, and 0.35–0.56 N during a full-speed slew, so no rod
 ever goes into tension. At the arm tip the force is 90% tangential and 42%
 along the shaft, and that split hardly changes with pose.
 
-The part I hadn't pictured is where that force lands on the bracket. The ball
+I hadn't pictured where that force lands on the bracket. The ball
 sits 22.21 mm in front of the window face, so the rod force pries the servo
 off the wall, and the upper tab screw ends up pulling out with about 1 N for
 every newton on the rod. A hand calc with the servo as a rigid block hinged at
@@ -2362,8 +2354,8 @@ are in `docs/hardware.md` §13.
 <!-- TODO(author): drafted for you - rewrite in your own voice -->
 
 Next, the top-plate end of the rods. The evaluator had only ever reported the
-ideal bolt axis there (4.2°), never one I'd actually build. The simple choice
-turns out to be the ideal one: a **horizontal bolt parallel to the line from
+ideal bolt axis there (4.2°), never one I'd actually build. The simplest mount
+turns out to match it: a **horizontal bolt parallel to the line from
 the plate centre to the middle of the pair** gives the same 4.2°. The true
 optimum is just 2.1° off that line and 0.7° off horizontal. So both mounts in
 a pair face the same way, one part does all six, and at 4.2° the rod end can
@@ -2428,8 +2420,9 @@ holes cut straight from the layout. The servos are mounted on it. The top
 plate is **3D-printed in PLA**, with the six rod-end anchors from
 `docs/hardware.md` §14.
 
-With the zeros saved I put it together: arms held at home, rods on, top plate
-on with its notch over servos 1 and 2. **The platform is assembled.**
+With the zeros saved I put it together — arms held at home, rods on, top
+plate on with its notch over servos 1 and 2 — so **the platform is
+assembled.**
 
 At home the plate sits level, 105 mm from the top of the base plate to the
 top of the platform, and nothing binds.
@@ -2446,7 +2439,7 @@ down.
 
 One scare on the way: a faint buzz I first pinned on servo 6. Every leg
 turned out to be commanded to the same 1500 µs with the arms off, so it
-wasn't the code, and it was only the normal hum of servos holding position.
+wasn't the code; it was the normal hum of servos holding position.
 
 ## 24 September
 
@@ -2459,8 +2452,8 @@ nothing starts with a jerk.
 Before letting it run I measured how far each DOF can actually go, because
 the machine was only ever sized for tilt. Roll and pitch reach 9.0° and 9.8°,
 and heave 11 mm, all stopped by the servos. **Yaw, surge and sway stop at
-about 3° and 3 mm, and what stops them is the rod ends, not the servos.** That
-follows from a decision I'd already made and had not thought about in these
+about 3° and 3 mm, and the rod ends are what stop them.** That
+follows from a decision I'd already made without thinking about it in these
 terms: the arm-end bolt is straight, parallel to the shaft, which costs 25.1°
 of the joint's ~30° cone at home. Tilt keeps the rod sweeping in a plane the
 joint likes; yaw and the in-plane translations push it the other way, and the
@@ -2478,7 +2471,7 @@ plate follows it**, with the stick orientation left at the defaults. That is
 the stage 1 loop working end to end, from the stick on the Arduino, through
 the IK on the PC, back to six pulse widths.
 
-What it is not yet is a measurement. Every performance number in this log is
+It isn't a measurement yet, though. Every performance number in this log is
 still a prediction from the evaluator: how much tilt the plate actually
 reaches, how precisely it holds an angle and how fast it slews are all
 unmeasured on the machine. That is the next job, and R1 (4.5°) is the first
