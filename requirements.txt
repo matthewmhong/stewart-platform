@@ -1,2 +1,3 @@
 numpy>=1.22
 matplotlib>=3.5
+pyserial>=3.5  # joystick.py and motion.py only

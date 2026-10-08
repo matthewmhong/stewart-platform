@@ -128,7 +128,7 @@ def tilt_pose(theta: float, azimuth: float, z: float):
 
     Tilt only - no translation in the plane, no yaw - which is the envelope
     ``STATUS.md`` fixes.  The rotation axis is ``(-sin az, cos az, 0)``, so the
-    plate's high side faces ``azimuth``.
+    plate's low side faces ``azimuth`` (a point at ``+x`` drops for ``az = 0``).
     """
     axis = np.array([-np.sin(azimuth), np.cos(azimuth), 0.0])
     k = np.array(
