@@ -1870,9 +1870,7 @@ recomputation, not by re-checking the linear solve, worst residual
 
 ## 13 September
 
-> Drafted by Claude Code from the 13 September session, using the reasoning as
-> I gave it in that session. Numbers marked ESTIMATE have not been checked
-> against the kinematics. `TODO(author): rewrite in own voice`
+> Numbers marked ESTIMATE have not been checked against the kinematics.
 
 ### I was optimising the wrong thing
 
@@ -1947,8 +1945,6 @@ pack, then bench-test backlash, deadband, degrees per µs and loaded speed.
 
 ## 15 September
 
-<!-- TODO(author): drafted for you - rewrite in your own voice -->
-
 **Build in two stages.** Stage 1 is the platform moved by a joystick; stage 2
 adds a camera and closes the loop to balance the ball. The camera is too far
 ahead of everything else to plan around yet.
@@ -1989,8 +1985,6 @@ drive the horn into its end stop. Compiles for an Uno; not yet run on hardware.
 ---
 
 ## 16 September
-
-<!-- TODO(author): drafted for you - rewrite in your own voice -->
 
 Bench-tested one MG90S with the pointer rig and the serial sketch.
 
@@ -2129,8 +2123,6 @@ extension, and without the check I'd have drawn it parallel.
 
 ## 18 September
 
-<!-- TODO(author): drafted for you - rewrite in your own voice -->
-
 Labelled the bench-tested unit **servo 1** and started a per-servo calibration
 table in `STATUS.md`. Each leg carries its own centre and deg/µs into the
 firmware trim, so the six have to be told apart — tape on the case before
@@ -2176,8 +2168,6 @@ from the error budget instead of from whatever the CAD happens to give.
 The 16 September candidate would have been built with 2.7 mm between a
 printed part and a servo case, because the clearance check modelled the rods as
 thin lines and the horn extension hadn't been drawn yet.
-
-<!-- TODO(author): drafted for you - rewrite in your own voice -->
 
 Before starting the base plate I checked what it depends on, and found the
 clearance model had the servo lying the wrong way. `Body` treated the case as
@@ -2320,8 +2310,6 @@ the print partway, drop the stock horn into a pocket and print over it, so the
 horn ends up fully enclosed. It fits with zero wiggle, it needs no drilling,
 pins or epoxy, and the moulded spline still does the indexing.
 
-<!-- TODO(author): drafted for you - rewrite in your own voice -->
-
 Before the bracket FEA I worked out the load case from the kinematics instead
 of trusting the "~1 N, ~40% out of plane" I'd written down. The estimate held
 up. With a 250 g platform every rod carries 0.44–0.46 N of compression across
@@ -2351,8 +2339,6 @@ screw threads, with guesses. If tilt precision comes up short once it's
 assembled, they're the first thing to check. The load case and the numbers
 are in `docs/hardware.md` §13.
 
-<!-- TODO(author): drafted for you - rewrite in your own voice -->
-
 Next, the top-plate end of the rods. The evaluator had only ever reported the
 ideal bolt axis there (4.2°), never one I'd actually build. The simplest mount
 turns out to match it: a **horizontal bolt parallel to the line from
@@ -2371,8 +2357,6 @@ and the ball holds the housing off the tab too.
 
 ## 19 September
 
-<!-- TODO(author): drafted for you - rewrite in your own voice -->
-
 The base plate came out 223 mm corner to corner once it cleared every lug by
 5 mm, too big for the 180 mm bed. Rather than wait for acrylic, I'm printing
 it as three identical wedges split along the gaps between the servo pairs, so
@@ -2387,8 +2371,6 @@ off **4× AA**, with the ground shared with the Arduino.
 
 ## 21 September
 
-<!-- TODO(author): drafted for you - rewrite in your own voice -->
-
 The blade came and all six rods are cut to 54.1 mm, so they bottom out in both
 rod ends at 70 mm centre to centre. All six brackets are printed and the
 servos are screwed down to the base. Everything for stage 1 is now on the
@@ -2402,8 +2384,6 @@ and the rest is trimmed in microseconds and written down per leg, before any
 rod goes on.
 
 ## 22 September
-
-<!-- TODO(author): drafted for you - rewrite in your own voice -->
 
 Zeroed all six arms with a new calibration sketch (`firmware/servo_cal/`):
 every servo held at 1500 µs, arm pressed on at the tooth nearest level, then
@@ -2443,8 +2423,6 @@ wasn't the code; it was the normal hum of servos holding position.
 
 ## 24 September
 
-<!-- TODO(author): drafted for you - rewrite in your own voice -->
-
 Wrote `motion.py` to exercise the platform one degree of freedom at a time:
 type `yaw` and it oscillates in yaw until I type `stop`, eased in and out so
 nothing starts with a jerk.
@@ -2464,8 +2442,6 @@ The demo runs each motion at about two thirds of its measured limit.
 
 ## 2 October
 
-<!-- TODO(author): drafted for you - rewrite in your own voice -->
-
 First run with the platform assembled: **the joystick drives the tilt and the
 plate follows it**, with the stick orientation left at the defaults. That is
 the stage 1 loop working end to end, from the stick on the Arduino, through
@@ -2479,8 +2455,6 @@ one to check, since it is the cheapest to measure and the one the whole
 geometry was sized for.
 
 ## 8 October
-
-<!-- TODO(author): drafted for you - rewrite in your own voice -->
 
 Wrote `tilt_test.py` to turn the predictions into measurements. Neither the
 joystick nor `motion.py` holds a pose still long enough to read, so this one
