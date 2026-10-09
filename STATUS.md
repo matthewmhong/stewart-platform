@@ -1,7 +1,7 @@
 # Status
 
 Where the project stands right now. **Edit this file in place each session**;
-`git log -p STATUS.md` is the history. Last updated 2026-10-08.
+`git log -p STATUS.md` is the history. Last updated 2026-10-09.
 
 ## Direction (since 2026-09-13)
 
@@ -11,7 +11,7 @@ Where the project stands right now. **Edit this file in place each session**;
 - **Servo:** TowerPro MG90S.  The stock horn is kept only as the *spline
   interface*: a printed arm is over-printed around it (print pause, horn
   dropped in) and carries the rod-end bolt at **`a = 22.5 mm`** (requirements:
-  `docs/hardware.md` §12).  Reasons: the stock holes (1 mm) are
+  `docs/hardware.md` §1).  Reasons: the stock holes (1 mm) are
   too small for an M3 rod end, aluminium 20T horns for the 4.8 mm micro spline are
   not reliably available (sources disagree 20T vs 21T), a printed spline is out
   (0.75 mm tooth pitch), and `a = 22.5 mm` beats the stock 15.95 mm.  (The
@@ -293,7 +293,7 @@ on reach alone.
   and a rough R3 slew (9° in 0.14 s) accelerates the anchors at ~0.2 g, well
   short of unloading them.  Confirm on the assembled platform.
 - **Arm extension:** 32.3 × 12 × 4.95 mm, over-printed on the stock horn,
-  straight M3 hole at 22.5 mm; requirements in `docs/hardware.md` §12.
+  straight M3 hole at 22.5 mm; requirements in `docs/hardware.md` §1.
   **Not stiffness-tested** — its flex budget is 54 µm of hysteresis at the
   tip, the only part of R2 that is not deadband or joint play.
 - ~~Rod-end ball centre along the shaft~~ **settled 2026-09-18:** ball centre
@@ -308,8 +308,8 @@ on reach alone.
   moving the top plate to `r_p 65, beta_p 30` drops the straight-bolt angle
   to 18.6° (stiffness cond 4.8 against 3.8).
 - **Servo bracket:** designed 2026-09-18 (C bracket, dimensions in
-  `docs/hardware.md` §13) and placed on the base plate (twelve M3 holes,
-  §13).  Load case (§13): per 1 N of rod force (±0.085, −0.423, −0.902) N
+  `docs/hardware.md` §2) and placed on the base plate (twelve M3 holes,
+  §2).  Load case (§2): per 1 N of rod force (±0.085, −0.423, −0.902) N
   at the ball, 22.21 mm in front of the window face, which pulls the upper
   tab screw out.  Filament **eSUN PLA+** (E ≈ 1.9 GPa).  Hand calc: **67 µm
   along the rod at 1 N**, over B4's 60 only at that design load; 31–37 µm at
@@ -318,7 +318,7 @@ on reach alone.
   bench check** (2026-09-18).  Lugs, foot and screws are unverified; suspect
   them first if R2 falls short on the assembled platform.
 - **Top plate: 3D-printed in PLA** (as of 2026-09-22), anchors to
-  `docs/hardware.md` §14 (spec written 2026-09-18, CAD the user's).  Bolt horizontal, parallel to the pair's bisector: 4.2°
+  `docs/hardware.md` §3 (spec written 2026-09-18, CAD the user's).  Bolt horizontal, parallel to the pair's bisector: 4.2°
   of misalignment (the optimum), one part for all six, no insert spacers.
   Ball-centre depth below the plate is the user's choice (~8 mm suggested).
   Tab radius ≤ 4 mm and a 1 mm seat boss keep the rod-end shank clear.
@@ -336,9 +336,9 @@ on reach alone.
   The Arduino reads the calibration from EEPROM and sends it to the PC,
   refuses any pulse > 350 µs from a leg's zero, ramps every move, and
   returns to level if the PC goes quiet for 0.5 s.
-- **Servo controller** not chosen. Its command step must be finer than the
-  deadband: Arduino `Servo.write()` moves in ~11 µs, so use
-  `writeMicroseconds()`; a PCA9685 board steps in ~4.9 µs.
+- ~~Servo controller~~ **Arduino Uno, `writeMicroseconds()`** (in use since
+  2026-09-22).  Its 1 µs command step is finer than the 4 µs deadband;
+  `Servo.write()` would move in ~11 µs, and a PCA9685 board in ~4.9 µs.
 - **Camera** not chosen (stage 2). A 30 fps camera uses 33 ms of R4's 70 ms
   by itself.
 - **Platform mass: printed PLA top plate 50.15 g** (weighed 2026-09-22),
@@ -403,7 +403,7 @@ on reach alone.
      already sits at 25.1° of ~30° at home (straight bolt), so off-tilt DOFs
      have little room.  Defaults run at ~2/3 of each limit.
    - ~~Base-plate drill positions~~ **DONE 2026-09-18**: twelve M3 holes in
-     `docs/hardware.md` §13, plate ≥ ~210 mm across.
+     `docs/hardware.md` §2, plate ≥ ~210 mm across.
 8. **Assembly (from 2026-09-21).**  Home is `alpha = 0` on every leg: arm
    horizontal, pointing along `u_i` (inward), rod-end ball centre at the
    shaft height, 30 mm above the plate.  Per servo, before any rod goes on:

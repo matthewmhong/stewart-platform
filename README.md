@@ -1,8 +1,9 @@
 # stewart-platform
 
-Design toolkit for a 6-RSS (rotary servo) Stewart platform built to balance a
-ping-pong ball: base and platform ring geometry, closed-form inverse
-kinematics, numerical forward kinematics, and plotting.
+A 6-RSS (rotary servo) Stewart platform, designed from the kinematics up, built,
+and driven from a joystick; the goal is to balance a ping-pong ball on it.  The
+repo holds the geometry, closed-form inverse and numerical forward kinematics,
+a requirements checker, the Arduino firmware and the PC control code.
 
 <p align="center">
   <img src="docs/img/build.jpg" width="100%" alt="The assembled platform: six servos in green brackets on a clear acrylic base, rods up to a white hexagonal top plate, with the Arduino, joystick, breadboard and AA battery pack beside it">
@@ -92,6 +93,7 @@ base plate from above, with servos, brackets, arms and the twelve M3 holes, from
       servo_test/        Arduino bench-test sketch for one MG90S
       servo_cal/         six-servo calibration: per-leg zero and direction, in EEPROM
       joystick/          streams the stick, outputs the six pulses, fails safe to level
+    docs/                derivation, design log, hardware specs, figures
     archive/             frozen: old docs, Phase 0 diagnostics and sweep outputs
 
 ## Documents
@@ -101,5 +103,5 @@ base plate from above, with servos, brackets, arms and the twelve M3 holes, from
 | [STATUS.md](STATUS.md) | requirements, open items, next steps - edited in place |
 | [docs/derivation.md](docs/derivation.md) | the maths, and the symbol glossary (§1) |
 | [docs/design-log.md](docs/design-log.md) | dated narrative of the design work and why |
-| [docs/hardware.md](docs/hardware.md) | sourced specs for horns, joints, servos, rods |
+| [docs/hardware.md](docs/hardware.md) | specs for the arm extension, servo bracket and top-plate anchors |
 | [archive/](archive/) | superseded material, frozen |

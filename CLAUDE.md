@@ -32,7 +32,7 @@ servo plane, then a fixed-length push-rod `d` to the platform.
 | `motion.py` | DONE - oscillates one DOF at a time (roll/pitch/yaw/surge/sway/heave); amplitude limits measured 2026-09-24 |
 | `tilt_test.py` | holds commanded tilts for a level to read: `r1` (every 30° of azimuth), `r2` (repeatability from both sides); logs a CSV |
 | `firmware/servo_cal/` | DONE - six-servo calibration: per-leg zero (arm level) and direction, saved in EEPROM |
-| `cad/` | the user's CAD - not in the repo yet.  Arm extension: `docs/hardware.md` §12; servo bracket and base-plate holes: §13 |
+| `cad/` | the user's CAD - not in the repo yet.  Arm extension: `docs/hardware.md` §1; servo bracket and base-plate holes: §2 |
 | `archive/` | frozen: old docs, the Phase 0 diagnostics and sweep outputs - do not edit or build on |
 
 ## Docs
@@ -42,7 +42,7 @@ servo plane, then a fixed-length push-rod `d` to the platform.
 | `STATUS.md` | requirements, open items, next steps |
 | `docs/derivation.md` | maths + the symbol glossary (§1) |
 | `docs/design-log.md` | dated narrative (the user's portfolio piece, in their voice) |
-| `docs/hardware.md` | sourced part specs |
+| `docs/hardware.md` | specs for the arm extension (§1), servo bracket (§2), top-plate anchors (§3); the Phase 0 parts survey is archived |
 
 **Session state lives in `STATUS.md` - update it in place.  Do not create new
 dated handoff or session-summary documents.**  **Add to `docs/design-log.md` as

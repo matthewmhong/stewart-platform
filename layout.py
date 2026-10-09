@@ -1,7 +1,7 @@
 """Plan view of the base plate: servos, brackets, lugs and drill holes.
 
 Writes ``base-layout.png`` and prints the twelve M3 hole centres.  Bracket
-dimensions are the as-designed C bracket (``docs/hardware.md`` section 13);
+dimensions are the as-designed C bracket (``docs/hardware.md`` section 2);
 the case and arm come from ``Body`` / ``Horn`` in ``stewart/performance.py``.
 """
 from __future__ import annotations

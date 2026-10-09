@@ -883,7 +883,7 @@ and the branch reopens — the maths stops describing the machine. A cant of 1°
 costs 0.10 mm of out-of-plane tip error, systematic rather than random, so it's
 a target for the mounting jig rather than a hard limit. It now sits in
 `STATUS.md` next to the design, and as B1 in the bracket spec
-(`docs/hardware.md` §13), which I wrote ahead of the FEA so the thresholds come
+(`docs/hardware.md` §2), which I wrote ahead of the FEA so the thresholds come
 from the error budget instead of from whatever the CAD happens to give.
 
 The 16 September candidate would have been built with 2.7 mm between a
@@ -1058,7 +1058,7 @@ all the time, and trim and the camera loop remove a fixed offset.
 test.** An FEA would mostly model the parts I'm least sure of, the lugs and the
 screw threads, with guesses. If tilt precision comes up short once it's
 assembled, they're the first thing to check. The load case and the numbers
-are in `docs/hardware.md` §13.
+are in `docs/hardware.md` §2.
 
 Next, the top-plate end of the rods. The evaluator had only ever reported the
 ideal bolt axis there (4.2°), never one I'd actually build. The simplest mount
@@ -1068,7 +1068,7 @@ optimum is just 2.1° off that line and 0.7° off horizontal. So both mounts in
 a pair face the same way, one part does all six, and at 4.2° the rod end can
 bolt flat against it without the insert spacers the arm end needs. The other
 obvious choices are worse: a vertical bolt binds at 69°, and a bolt along the
-anchor's own radius costs 18°. The spec is `docs/hardware.md` §14.
+anchor's own radius costs 18°. The spec is `docs/hardware.md` §3.
 
 Turning that into a part turned up one more constraint. The rod end's shank
 starts 4.95 mm from the ball centre, and the rod heads steeply downward, so
@@ -1119,7 +1119,7 @@ The base plate ended up as **laser-cut 5 mm acrylic** after all, not the
 three printed wedges: one flat piece, no glue seams, and the twelve bracket
 holes cut straight from the layout. The servos are mounted on it. The top
 plate is **3D-printed in PLA**, with the six rod-end anchors from
-`docs/hardware.md` §14.
+`docs/hardware.md` §3.
 
 With the zeros saved I put it together — arms held at home, rods on, top
 plate on with its notch over servos 1 and 2 — so **the platform is
@@ -1185,10 +1185,3 @@ compares what I measure with what was asked. `r2` goes to the same 3° tilt
 ten times, half from level and half from 6°. The scatter within each half is
 repeatability, and the gap between the halves is the deadband the loop will
 never see. Neither has been run yet.
-
----
-
-## Where Phase 0 stands
-
-See `STATUS.md` at the repo root for the current state. The earlier version of
-this section went stale and is in git history.

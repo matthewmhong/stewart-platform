@@ -45,7 +45,7 @@ CONE_DEG = 28.0             # rod-end bind is ~30 (2026-09-18); 2 deg of margin
 
 # Bolt axes as built, for the rod-end cone check: arm end parallel to the shaft
 # (``n_i``, so the check is on the rod's component along n in the arm frame);
-# plate end horizontal, parallel to each pair's bisector (hardware.md sec 14).
+# plate end horizontal, parallel to each pair's bisector (hardware.md sec 3).
 PLATE_BOLT = np.array([[np.cos(np.radians(a)), np.sin(np.radians(a)), 0.0]
                        for a in (0.0, 0.0, 120.0, 120.0, 240.0, 240.0)]).T
 
