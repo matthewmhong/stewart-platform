@@ -4,6 +4,14 @@ Design toolkit for a 6-RSS (rotary servo) Stewart platform built to balance a
 ping-pong ball: base and platform ring geometry, closed-form inverse
 kinematics, numerical forward kinematics, and plotting.
 
+<p align="center">
+  <img src="docs/img/build.jpg" width="100%" alt="The assembled platform: six servos in green brackets on a clear acrylic base, rods up to a white hexagonal top plate, with the Arduino, joystick, breadboard and AA battery pack beside it">
+</p>
+
+The stage 1 build, October 2026.  The six MG90S servos sit in printed PLA+
+brackets on a laser-cut 5 mm acrylic base, and the top plate is printed PLA.
+An Arduino Uno reads the joystick and drives the servos from 4× AA.
+
 **Where it stands.** The platform is built and driven from a joystick (stage
 1).  The kinematics are done and tested, the servos are bench-measured and
 calibrated, and the geometry was chosen because it passes every requirement:
@@ -25,6 +33,15 @@ measured yet, so R1-R3 are still predictions.  Measuring them is next, then
 stage 2: a camera and closed-loop balancing.
 Details in [STATUS.md](STATUS.md); the reasoning, including the wrong turns, is
 in [docs/design-log.md](docs/design-log.md).
+
+<p align="center">
+  <img src="docs/img/build-closeup.jpg" width="100%" alt="Close-up of the legs: red printed arms on the servo horns, M3 rod ends spaced off the arms on brass threaded inserts, rods up to the top-plate anchors">
+</p>
+
+Each red arm is printed over the servo's stock horn, so the moulded spline
+still sets its angle, and carries an M3 rod end at 22.5 mm.  The brass threaded
+inserts on either side of each ball space it off the arm, which lets the joint
+swing to about 30° with a straight bolt.
 
 <p align="center">
   <img src="docs/img/design-tilted.png" width="48%" alt="The design to build, tilted 4.5 degrees: base ring, servo arms, rods and platform">
